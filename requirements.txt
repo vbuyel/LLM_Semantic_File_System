@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+pydantic
+gradio
+requests
+openai
+python-dotenv
+langchain-community
+duckduckgo-search
+langchain-text-splitters
+langchain-unstructured
+unstructured
+numpy
+faiss-cpu
+sentence-transformers

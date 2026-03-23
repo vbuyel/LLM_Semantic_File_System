@@ -19,7 +19,7 @@ app.add_middleware(
 agent_researcher = AgentResearcher()
 
 @app.get("/research_agent")
-async def get_response_from_web_research_and_rag_agent(text: str, file_path: str = None) -> SearchResponse:
+async def get_response_from_web_research_and_rag_agent(text: str, file_path: str | None = None) -> SearchResponse:
     query = SearchRequest(text=text, file_path=file_path)
     response = agent_researcher.get_response(query)
     return response
