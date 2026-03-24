@@ -61,11 +61,15 @@ class AgenticAI:
                 messages=[
                     {
                         "role": "system",
-                        "content": f"You are a helpful AI assistant.{file_context} If a file path is mentioned in the user's message, you MUST pass it to the call_agent_researcher tool as the 'file_path' parameter."
+                        "content": "You are a helpful AI assistant."
                     },
                     {
                         "role": "system",
-                        "content": f"You are a helpful AI assistant. If user want to search through internet or to ask on the query web search needed, you MUST use tool call_agent_researcher."
+                        "content": f"{file_context} If a file path is mentioned in the user's message, you MUST pass it to the call_agent_researcher tool as the 'file_path' parameter."
+                    },
+                    {
+                        "role": "system",
+                        "content": f"If user want to search through internet or to ask on the query web search needed, you MUST use tool call_agent_researcher."
                     },
                     {
                         "role": "user",
@@ -73,7 +77,7 @@ class AgenticAI:
                     }
                 ],
                 temperature=0.7,
-                max_tokens=10000,
+                max_tokens=2000,
                 top_p=0.95,
             )
 
@@ -98,6 +102,10 @@ class AgenticAI:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[
+                        {
+                            "role": "system",
+                            "content": "You are a helpful AI assistant."
+                        },
                         {
                             "role": "system",
                             "content": "You have to answer on user query only based on tool content. If you do not know the answer, try to call tools one more time",
