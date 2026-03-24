@@ -13,3 +13,5 @@ unstructured
 numpy
 faiss-cpu
 sentence-transformers
+psycopg
+pgvector
