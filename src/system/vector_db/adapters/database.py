@@ -3,8 +3,10 @@ import psycopg
 from pgvector.psycopg import register_vector
 from typing import Optional
 
+from src.system.vector_db.adapters.abs_database import AbstractDataBase
 
-class DataBase:
+
+class DataBase(AbstractDataBase):
     def __init__(self):
         self.url = f"postgresql://{os.genenv('POSTGRESQL_USERNAME')}:{os.getenv('POSTGRESQL_PASSWORD')}@{os.getenv('POSTGRESQL_HOST')}:{os.getenv('POSTGRESQL_PORT')}/{os.getenv('POSTGRESQL_DB')}"
         self.vector_dim = 384

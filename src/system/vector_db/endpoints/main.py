@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.system.vector_db.adapters.database import DataBase
+from src.system.vector_db.adapters.abs_database import AbstractDataBase
 from src.system.vector_db.domain.domain import DocumentCreate, DocumentResponse, DocumentSearch, SearchResult
 
 app = FastAPI()
@@ -13,7 +13,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-db = DataBase()
+db = AbstractDataBase()
 
 
 @app.post("/documents", response_model=DocumentResponse)
