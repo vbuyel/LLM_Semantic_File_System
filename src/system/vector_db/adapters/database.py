@@ -8,7 +8,7 @@ from src.system.vector_db.adapters.abs_database import AbstractDataBase
 
 class DataBase(AbstractDataBase):
     def __init__(self):
-        self.url = f"postgresql://{os.genenv('POSTGRESQL_USERNAME')}:{os.getenv('POSTGRESQL_PASSWORD')}@{os.getenv('POSTGRESQL_HOST')}:{os.getenv('POSTGRESQL_PORT')}/{os.getenv('POSTGRESQL_DB')}"
+        self.url = f"postgresql://{os.getenv('POSTGRESQL_USERNAME')}:{os.getenv('POSTGRESQL_PASSWORD')}@{os.getenv('POSTGRESQL_HOST')}:{os.getenv('POSTGRESQL_PORT')}/{os.getenv('POSTGRESQL_DB')}"
         self.vector_dim = 384
         self.table = "document_embeddings"
 
@@ -18,7 +18,7 @@ class DataBase(AbstractDataBase):
         return conn
 
     def _create_vector_extension(self, conn: psycopg.Connection) -> None:
-        conn.execute("CREATE EXTENTION IF NOT EXISTS vector")
+        conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
 
     def _drop_table_if_exists(self, conn: psycopg.Connection, table_name: str) -> None:
         conn.execute(f"DROP TABLE IF EXISTS {table_name} CASCADE")
@@ -61,7 +61,7 @@ class DataBase(AbstractDataBase):
         conn = self._get_connection()
         try:
             result = conn.execute(
-                f"INSERT INTO {self.table} (metadata, embedding) VALUES (%s, %s, %s) RETURNING id",
+                f"INSERT INTO {self.table} (metadata, embedding) VALUES (%s, %s) RETURNING id",
                 (metadata, embedding),
             )
             return result[0]["id"]

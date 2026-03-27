@@ -19,7 +19,7 @@ def get_response(text: str, file_obj) -> str:
 
     params = {"text": text, "file_path": file_path}
     response = requests.post(
-        "http://127.0.0.1:8000/get_response",
+        "http://127.0.0.1:8000/get_response",           # temp http://127.0.0.1:8000
         json=params,
         timeout=60,
     )

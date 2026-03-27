@@ -18,15 +18,15 @@ class AgenticAI:
         )
         self.model = os.getenv("MODEL")
         self.tool_functions = {
-            "call_agent_researcher": self.call_agent_researcher,
+            "call_agent_researcher": self._call_agent_researcher,
         }
 
-    def call_agent_researcher(self, query: Request) -> Response:
+    def _call_agent_researcher(self, query: Request) -> Response:
         params = {"text": query.text}
         if query.file_path:
             params["file_path"] = query.file_path
         
-        response = requests.get(f"{os.getenv("LSFS_URL")}:8001/research_agent", params=params)
+        response = requests.get(f"{os.getenv("LSFS_URL")}:8001/research_agent", params=params)      # temp os.getenv("LSFS_URL")}:8001
         return Response(text=response.text)
 
     def get_response(self, request: Request) -> Response:
