@@ -26,6 +26,7 @@ class AgentResearcher:
             "call_rag": self.rag.do_search,
         }
 
+
     def get_response(self, request: SearchRequest) -> SearchResponse:
         available_files = ""
         if request.file_path:
