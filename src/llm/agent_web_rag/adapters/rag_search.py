@@ -1,14 +1,14 @@
 import os
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_unstructured import UnstructuredLoader
-# from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from openai import OpenAI
 from typing import List
-
 from numpy import float32
 import faiss
-from src.llm.agent_web_rag.domain.domain import DataForExtraction, DataExtracted, RAGRequest, RAGResponse
 from sentence_transformers import SentenceTransformer
+
+from src.llm.agent_web_rag.domain.domain import DataForExtraction, DataExtracted, RAGRequest, RAGResponse
+
 
 class RAGSearch:
     def __init__(self):

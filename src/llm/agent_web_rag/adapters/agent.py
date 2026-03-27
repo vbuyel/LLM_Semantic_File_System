@@ -12,7 +12,6 @@ load_dotenv()
 
 
 class AgentResearcher:
-
     def __init__(self):
         self.client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
