@@ -226,6 +226,50 @@ body {
     margin: 0 auto;
 }
 
+.recent-section {
+    margin-top: 40px;
+}
+
+.recent-section h2 {
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    color: var(--text-secondary);
+}
+
+.recent-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+}
+
+.recent-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px;
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.recent-item:hover {
+    background: var(--bg-hover);
+    transform: translateY(-2px);
+}
+
+.recent-item span {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
 .search-hero {
     text-align: center;
     margin-bottom: 40px;
@@ -463,6 +507,32 @@ body {
 }
 
 /* ===== FILES GRID ===== */
+.files-view-header {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.add-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 16px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s ease;
+}
+
+.add-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--accent);
+}
+
 .files-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -476,11 +546,17 @@ body {
     text-align: center;
     cursor: pointer;
     transition: all 0.15s ease;
+    position: relative;
 }
 
 .file-card:hover {
     background: var(--bg-hover);
     transform: translateY(-2px);
+}
+
+.file-card:hover .favorite-btn,
+.file-card:hover .delete-btn {
+    opacity: 1;
 }
 
 .file-icon {
@@ -494,6 +570,36 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.favorite-btn,
+.delete-btn {
+    position: absolute;
+    top: 8px;
+    background: var(--bg-card);
+    border: none;
+    border-radius: 4px;
+    padding: 4px;
+    cursor: pointer;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: all 0.15s ease;
+}
+
+.favorite-btn {
+    right: 8px;
+}
+
+.favorite-btn:hover {
+    color: #FFC107;
+}
+
+.delete-btn {
+    right: 32px;
+}
+
+.delete-btn:hover {
+    color: #f85149;
 }
 
 /* ===== CHAT ===== */

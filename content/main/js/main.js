@@ -15,19 +15,18 @@
     const errorState = document.getElementById('error-state');
     const errorMessage = document.getElementById('error-message');
     const retryBtn = document.getElementById('retry-btn');
-    const globalSearch = document.getElementById('global-search');
-    const chatInput = document.getElementById('chat-input');
-    const sendChatBtn = document.getElementById('send-chat');
-    const chatMessages = document.getElementById('chat-messages');
     const navItems = document.querySelectorAll('.nav-item[data-view]');
     const viewPanels = document.querySelectorAll('.view-panel');
 
     let currentQuery = '';
     let attachedFilePath = '';
+    let currentFolderPath = '/';
+    const favorites = new Set();
 
     function init() {
         setupEventListeners();
         loadApiEndpoint();
+        setupFilesView();
     }
 
     function setupEventListeners() {
@@ -64,20 +63,21 @@
             performSearch();
         });
 
-        globalSearch.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                aiQueryInput.value = this.value;
-                switchToSearchView();
-                performSearch();
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+                e.preventDefault();
+                aiQueryInput.focus();
+                aiQueryInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         });
 
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 'e') {
-                e.preventDefault();
-                aiQueryInput.focus();
-            }
-        });
+        const sidebarHeader = document.querySelector('.sidebar-header');
+        if (sidebarHeader) {
+            sidebarHeader.addEventListener('click', function() {
+                switchView('search');
+            });
+            sidebarHeader.style.cursor = 'pointer';
+        }
 
         navItems.forEach(item => {
             item.addEventListener('click', function() {
@@ -85,14 +85,6 @@
                 switchView(view);
             });
         });
-
-        chatInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendChatMessage();
-            }
-        });
-
-        sendChatBtn.addEventListener('click', sendChatMessage);
     }
 
     function switchView(viewId) {
@@ -104,13 +96,11 @@
             panel.classList.toggle('active', panel.id === `view-${viewId}`);
         });
 
-        if (viewId === 'files' || viewId === 'recent' || viewId === 'favorites' || viewId === 'shared') {
+        if (viewId === 'search') {
+            document.querySelector('.breadcrumb-item.current').textContent = 'Home';
+        } else if (viewId === 'files' || viewId === 'favorites' || viewId === 'shared') {
             document.querySelector('.breadcrumb-item.current').textContent = 
                 viewId.charAt(0).toUpperCase() + viewId.slice(1);
-        } else if (viewId === 'search') {
-            document.querySelector('.breadcrumb-item.current').textContent = 'Semantic Search';
-        } else if (viewId === 'chat') {
-            document.querySelector('.breadcrumb-item.current').textContent = 'AI Chat';
         } else if (viewId === 'settings') {
             document.querySelector('.breadcrumb-item.current').textContent = 'Settings';
         }
@@ -202,80 +192,6 @@
         errorState.style.display = 'none';
     }
 
-    function sendChatMessage() {
-        const message = chatInput.value.trim();
-        
-        if (!message) return;
-
-        const userMessageDiv = document.createElement('div');
-        userMessageDiv.className = 'message user';
-        userMessageDiv.innerHTML = `
-            <div class="message-avatar">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                </svg>
-            </div>
-            <div class="message-content">${escapeHtml(message)}</div>
-        `;
-        
-        chatMessages.appendChild(userMessageDiv);
-        chatInput.value = '';
-
-        const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'message bot loading-message';
-        loadingDiv.innerHTML = `
-            <div class="message-avatar">
-                <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
-                    <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
-                </svg>
-            </div>
-            <div class="message-content">Thinking...</div>
-        `;
-        chatMessages.appendChild(loadingDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-
-        fetch(API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ text: message })
-        })
-        .then(response => response.json())
-        .then(data => {
-            chatMessages.removeChild(loadingDiv);
-            
-            const botMessageDiv = document.createElement('div');
-            botMessageDiv.className = 'message bot';
-            botMessageDiv.innerHTML = `
-                <div class="message-avatar">
-                    <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
-                        <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
-                    </svg>
-                </div>
-                <div class="message-content">${escapeHtml(data.text || 'No response')}</div>
-            `;
-            chatMessages.appendChild(botMessageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        })
-        .catch(error => {
-            chatMessages.removeChild(loadingDiv);
-            
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'message bot';
-            errorDiv.innerHTML = `
-                <div class="message-avatar">
-                    <svg viewBox="0 0 24 24" width="32" height="32" fill="#f85149">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-                    </svg>
-                </div>
-                <div class="message-content" style="color: #f85149;">Error: ${escapeHtml(error.message)}</div>
-            `;
-            chatMessages.appendChild(errorDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        });
-    }
-
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
@@ -293,6 +209,140 @@
     document.getElementById('api-endpoint')?.addEventListener('change', function(e) {
         localStorage.setItem('apiEndpoint', e.target.value);
     });
+
+    function setupFilesView() {
+        const filesGrid = document.querySelector('.files-grid');
+        if (!filesGrid) return;
+
+        filesGrid.addEventListener('dblclick', function(e) {
+            const card = e.target.closest('.file-card');
+            if (!card) return;
+
+            if (card.classList.contains('folder')) {
+                const folderName = card.querySelector('.file-name').textContent;
+                currentFolderPath = currentFolderPath === '/' ? '/' + folderName : currentFolderPath + '/' + folderName;
+                document.querySelector('.breadcrumb-item.current').textContent = folderName;
+            }
+        });
+
+        filesGrid.addEventListener('click', function(e) {
+            const card = e.target.closest('.file-card');
+            if (!card) return;
+
+            const deleteBtn = e.target.closest('.delete-btn');
+            if (deleteBtn) {
+                e.stopPropagation();
+                if (confirm('Are you sure you want to delete this item?')) {
+                    card.remove();
+                }
+                return;
+            }
+
+            const favoriteBtn = e.target.closest('.favorite-btn');
+            if (favoriteBtn) {
+                e.stopPropagation();
+                const fileName = card.querySelector('.file-name').textContent;
+                toggleFavorite(fileName, card, favoriteBtn);
+                return;
+            }
+        });
+
+        const addButtonsContainer = document.querySelector('.files-view-header');
+        if (!addButtonsContainer) {
+            const filesView = document.getElementById('view-files');
+            const header = document.createElement('div');
+            header.className = 'files-view-header';
+            header.innerHTML = `
+                <button class="add-btn" id="add-folder-btn">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                        <path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 8h-3v3h-2v-3h-3v-2h3V9h2v3h3v2z"/>
+                    </svg>
+                    New Folder
+                </button>
+                <button class="add-btn" id="add-file-btn">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                        <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 14h-3v3h-2v-3H8v-2h3v-3h2v3h3v2zm-3-7V3.5L18.5 9H13z"/>
+                    </svg>
+                    Add File
+                </button>
+                <input type="file" id="local-file-input" style="display: none;" multiple>
+            `;
+            filesView.insertBefore(header, filesGrid);
+            
+            const fileInput = document.getElementById('local-file-input');
+            
+            document.getElementById('add-folder-btn').addEventListener('click', async function() {
+                if (window.showDirectoryPicker) {
+                    try {
+                        const dirHandle = await window.showDirectoryPicker();
+                        addNewItem(dirHandle.name, 'folder');
+                    } catch (err) {
+                        if (err.name !== 'AbortError') {
+                            alert('Error selecting folder: ' + err.message);
+                        }
+                    }
+                } else {
+                    const name = prompt('Enter folder name:');
+                    if (name) {
+                        addNewItem(name, 'folder');
+                    }
+                }
+            });
+
+            document.getElementById('add-file-btn').addEventListener('click', function() {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', function(e) {
+                for (const file of e.target.files) {
+                    addNewItem(file.name, 'file');
+                }
+                fileInput.value = '';
+            });
+        }
+    }
+
+    function addNewItem(name, type) {
+        const filesGrid = document.querySelector('.files-grid');
+        const isFolder = type === 'folder';
+        const color = isFolder ? '#FFC107' : '#4285F4';
+        const iconPath = isFolder 
+            ? 'M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z'
+            : 'M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z';
+
+        const card = document.createElement('div');
+        card.className = `file-card ${isFolder ? 'folder' : ''}`;
+        card.innerHTML = `
+            <div class="file-icon">
+                <svg viewBox="0 0 24 24" width="48" height="48" fill="${color}">
+                    <path d="${iconPath}"/>
+                </svg>
+            </div>
+            <span class="file-name">${escapeHtml(name)}</span>
+            <button class="favorite-btn" title="Add to favorites">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                </svg>
+            </button>
+            <button class="delete-btn" title="Delete">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+            </button>
+        `;
+        filesGrid.appendChild(card);
+    }
+
+    function toggleFavorite(fileName, card, btn) {
+        const svg = btn.querySelector('svg');
+        if (favorites.has(fileName)) {
+            favorites.delete(fileName);
+            svg.setAttribute('fill', 'none');
+        } else {
+            favorites.add(fileName);
+            svg.setAttribute('fill', '#FFC107');
+        }
+    }
 
     init();
 })();
