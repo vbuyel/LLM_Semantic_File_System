@@ -10,7 +10,6 @@
     const suggestionChips = document.querySelectorAll('.suggestion-chip');
     const resultsPanel = document.getElementById('results-panel');
     const resultsContent = document.getElementById('results-content');
-    const resultCount = document.getElementById('result-count');
     const loadingState = document.getElementById('loading-state');
     const errorState = document.getElementById('error-state');
     const errorMessage = document.getElementById('error-message');
@@ -18,7 +17,6 @@
     const navItems = document.querySelectorAll('.nav-item[data-view]');
     const viewPanels = document.querySelectorAll('.view-panel');
 
-    let currentQuery = '';
     let attachedFilePath = '';
     let currentFolderPath = '/';
     const favorites = new Set();
@@ -32,10 +30,16 @@
     function setupEventListeners() {
         submitSearchBtn.addEventListener('click', performSearch);
         
-        aiQueryInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
+        aiQueryInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
                 performSearch();
             }
+        });
+
+        aiQueryInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
         });
 
         attachFileBtn.addEventListener('click', function() {
@@ -121,6 +125,9 @@
         currentQuery = query;
         attachedFilePath = filePathInput.value.trim();
 
+        aiQueryInput.value = '';
+        aiQueryInput.style.height = 'auto';
+
         hideResults();
         showLoading();
 
@@ -166,8 +173,7 @@
     }
 
     function showResults(text) {
-        resultsContent.textContent = text;
-        resultCount.textContent = '1 result';
+        resultsContent.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
         resultsPanel.style.display = 'block';
     }
 
@@ -196,6 +202,40 @@
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    function parseMarkdown(text) {
+        let html = escapeHtml(text);
+        
+        html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+        html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+        html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+        
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        
+        html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+        html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+        
+        html = html.replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>');
+        
+        html = html.replace(/^\- (.*$)/gm, '<li>$1</li>');
+        html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+        
+        html = html.replace(/^(\d+)\. (.*$)/gm, '<li>$2</li>');
+        
+        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+        
+        html = html.replace(/^---$/gm, '<hr>');
+        
+        html = html.replace(/\n/g, '<br>');
+        
+        return html;
+    }
+
+    function showResults(text) {
+        resultsContent.innerHTML = parseMarkdown(text);
+        resultsPanel.style.display = 'block';
     }
 
     function loadApiEndpoint() {
