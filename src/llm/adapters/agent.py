@@ -3,9 +3,9 @@ import os
 from dotenv import load_dotenv
 import json
 
-from src.llm.agent_web_rag.domain.domain import SearchRequest, SearchResponse, RAGRequest
-from src.llm.agent_web_rag.adapters.web_search import WebSearch
-from src.llm.agent_web_rag.adapters.rag_search import RAGSearch
+from src.llm.domain.domain import SearchRequest, SearchResponse, RAGRequest
+from src.llm.adapters.web_search import WebSearch
+from src.llm.adapters.rag_search import RAGSearch
 
 
 load_dotenv()

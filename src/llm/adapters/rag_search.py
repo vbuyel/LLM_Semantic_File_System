@@ -7,7 +7,7 @@ from numpy import float32
 import faiss
 from sentence_transformers import SentenceTransformer
 
-from src.llm.agent_web_rag.domain.domain import DataForExtraction, DataExtracted, RAGRequest, RAGResponse
+from src.llm.domain.domain import DataForExtraction, DataExtracted, RAGRequest, RAGResponse
 
 
 class RAGSearch:

@@ -1,5 +1,5 @@
 from langchain_community.tools import DuckDuckGoSearchRun
-from src.llm.agent_web_rag.domain.domain import SearchResponse
+from src.llm.domain.domain import SearchResponse
 import logging
 
 logger = logging.getLogger(__name__)
