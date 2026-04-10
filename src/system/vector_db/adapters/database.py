@@ -27,13 +27,15 @@ class DataBase(AbstractDataBase):
         conn.execute(f"""
             CREATE TABLE {self.table} (
                 id bigserial PRIMARY KEY,
-                created_at timestamp DEFAULT now()
+                created_at timestamp DEFAULT now(),
                 metadata jsonb,
                 embedding vector({dimension}) NOT NULL,
             )
         """)
 
-    def _create_hnsw_index(self, conn: psycopg.Connection, dimension: int = 384) -> None:
+    def _create_hnsw_index(
+        self, conn: psycopg.Connection, dimension: int = 384
+    ) -> None:
         conn.execute(f"""
             CREATE INDEX IF NOT EXISTS idx_{self.table}_embedding_hnsw 
             ON {self.table} USING hnsw ((embedding::vector({dimension})) vector_l2_ops)
