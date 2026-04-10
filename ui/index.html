@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Semantic File System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="title-bar">
+            <div class="title-bar-left">
+                <span class="app-title">LLM Semantic File System</span>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <div class="sidebar-title">Quick Access</div>
+                    <ul class="nav-list">
+                        <li class="nav-item active" data-path="/">
+                            <span>Home</span>
+                        </li>
+                        <li class="nav-item" data-path="/documents">
+                            <span>Documents</span>
+                        </li>
+                        <li class="nav-item" data-path="/images">
+                            <span>Images</span>
+                        </li>
+                        <li class="nav-item" data-path="/downloads">
+                            <span>Downloads</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <div class="sidebar-title">Cloud Storage</div>
+                    <ul class="nav-list">
+                        <li class="nav-item" data-provider="google-drive">
+                            <span>Google Drive</span>
+                            <span class="status-dot connected"></span>
+                        </li>
+                        <li class="nav-item" data-provider="gcs">
+                            <span>Google Cloud Storage</span>
+                            <span class="status-dot disconnected"></span>
+                        </li>
+                    </ul>
+                </div>
+            </aside>
+
+            <main class="file-explorer">
+                <div class="toolbar">
+                    <div class="toolbar-left">
+                        <button class="toolbar-btn" id="btn-back" title="Back" disabled>◀</button>
+                        <button class="toolbar-btn" id="btn-forward" title="Forward" disabled>▶</button>
+                        <div class="breadcrumb">
+                            <span class="breadcrumb-item" data-path="/">This PC</span>
+                            <span class="breadcrumb-separator">/</span>
+                            <span class="breadcrumb-item current">Home</span>
+                        </div>
+                    </div>
+                    <div class="toolbar-right">
+                        <div class="search-container">
+                            <input type="text" class="search-input" placeholder="Semantic search..." id="semantic-search">
+                            <button class="search-btn" id="btn-search">🔍</button>
+                        </div>
+                        <button class="toolbar-btn" id="btn-view" title="Toggle View">
+                            <span id="view-icon">▦</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="file-list-container">
+                    <div class="file-list-header">
+                        <span class="col-name">Name</span>
+                        <span class="col-type">Type</span>
+                        <span class="col-size">Size</span>
+                        <span class="col-modified">Modified</span>
+                    </div>
+                    <div class="file-list" id="file-list">
+                    </div>
+                </div>
+
+                <div class="status-bar">
+                    <span id="status-text">0 items</span>
+                    <span id="selection-info"></span>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div class="modal" id="upload-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Upload Files</span>
+                <button class="modal-close" id="modal-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-zone" id="upload-zone">
+                    <p>Drag and drop files here</p>
+                    <p>or</p>
+                    <button class="btn-browse" id="btn-browse">Browse Files</button>
+                    <input type="file" id="file-input" multiple hidden>
+                </div>
+                <div class="upload-progress" id="upload-progress" style="display: none;">
+                    <div class="progress-item">
+                        <span class="file-name">filename.txt</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <span class="progress-percent">0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="context-menu" id="context-menu">
+        <div class="context-menu-item" data-action="open">
+            <span>📂</span> Open
+        </div>
+        <div class="context-menu-item" data-action="download">
+            <span>⬇️</span> Download
+        </div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" data-action="rename">
+            <span>✏️</span> Rename
+        </div>
+        <div class="context-menu-item" data-action="move">
+            <span>📋</span> Move to...
+        </div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" data-action="delete">
+            <span>🗑️</span> Delete
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
