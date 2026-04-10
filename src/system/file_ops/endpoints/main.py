@@ -7,16 +7,17 @@ Run the server:
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
-from typing import Optional
-import os
 from pathlib import Path
 
-from src.system.file_ops.local_ops import LocalFileOperations
-from src.system.file_ops.google_drive_ops import GoogleDriveOperations
-from src.system.file_ops.gcs_ops import GCSOperations
+from src.system.file_ops.domain.domain import MoveRequest, RenameRequest, DeleteRequest
+
+from src.system.file_ops.adapters.local_ops import LocalFileOperations
+from src.system.file_ops.adapters.google_drive_ops import GoogleDriveOperations
+from src.system.file_ops.adapters.gcs_ops import GCSOperations
+
 
 app = FastAPI()
+
 
 app.add_middleware(
     CORSMiddleware,
