@@ -2,10 +2,15 @@ export const state = {
     _data: {
         user: null,
         currentPath: '/',
+        storageSource: 'local', // local, drive, gcs
         files: [],
         integrations: { googleDrive: 'idle', gcs: 'idle' },
+        isLoading: false,
         isSearching: false,
-        activeView: 'grid' // grid or list
+        searchQuery: '',
+        searchResult: null,
+        activeView: 'grid', // grid or list
+        breadcrumbs: [{ name: 'Root', path: '/' }]
     },
     _listeners: [],
 
@@ -16,6 +21,11 @@ export const state = {
 
     get(key) {
         return this._data[key];
+    },
+
+    update(updater) {
+        updater(this._data);
+        this._notify();
     },
 
     subscribe(listener) {

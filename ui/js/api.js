@@ -1,10 +1,10 @@
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const BASE_URL = 'http://localhost:8000';
 
 export const api = {
     auth: {
         async loginWithGoogle() {
-            await sleep(800);
-            const user = { id: '1', name: 'Alex Rivera', email: 'alex@example.com' };
+            // Demo login - just sets a user in local storage
+            const user = { id: '1', name: 'User', email: 'user@example.com' };
             localStorage.setItem('user', JSON.stringify(user));
             return user;
         },
@@ -12,35 +12,52 @@ export const api = {
             localStorage.removeItem('user');
         },
         getUser() {
-            return JSON.parse(localStorage.getItem('user'));
+            try {
+                const userStr = localStorage.getItem('user');
+                return userStr ? JSON.parse(userStr) : null;
+            } catch {
+                return null;
+            }
         }
     },
     files: {
         async getFiles(path = '/') {
-            await sleep(400);
-            return [
-                { id: '1', name: 'Q4 Strategy.pdf', type: 'file', size: '2.4 MB', modified: '2024-03-10' },
-                { id: '2', name: 'Design Assets', type: 'folder', size: '--', modified: '2024-03-08' },
-                { id: '3', name: 'Research Notes.docx', type: 'file', size: '840 KB', modified: '2024-03-05' },
-                { id: '4', name: 'Product Roadmap.xlsx', type: 'file', size: '1.2 MB', modified: '2024-03-01' },
-                { id: '5', name: 'Interviews', type: 'folder', size: '--', modified: '2024-02-28' },
-            ];
+            const response = await fetch(`${BASE_URL}/files?path=${encodeURIComponent(path)}`);
+            if (!response.ok) throw new Error('Failed to fetch files');
+            return await response.json();
         },
-        async search(query) {
-            await sleep(600);
-            // Simulated semantic search
-            return [
-                { id: '1', name: 'Q4 Strategy.pdf', relevance: 0.98 },
-                { id: '4', name: 'Product Roadmap.xlsx', relevance: 0.85 }
-            ];
+        async uploadFile(file, path = '/') {
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch(`${BASE_URL}/files/upload?path=${encodeURIComponent(path)}`, {
+                method: 'POST',
+                body: formData
+            });
+            return await response.json();
+        },
+        async deleteFile(path) {
+            const response = await fetch(`${BASE_URL}/files/delete`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path })
+            });
+            return await response.json();
+        },
+        async rename(path, newName) {
+            const response = await fetch(`${BASE_URL}/files/rename`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path, newName })
+            });
+            return await response.json();
         }
     },
-    integrations: {
-        async getStatus() {
-            return {
-                googleDrive: 'connected',
-                gcs: 'connected'
-            };
+    ai: {
+        async search(text, filePath = null) {
+            let url = `${BASE_URL}/ai_agent?text=${encodeURIComponent(text)}`;
+            if (filePath) url += `&file_path=${encodeURIComponent(filePath)}`;
+            const response = await fetch(url);
+            return await response.json();
         }
     }
 };
