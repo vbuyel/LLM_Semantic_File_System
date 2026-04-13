@@ -1,6 +1,6 @@
 from kafka import KafkaConsumer
 import json
-import requests
+import httpx
 
 
 TOPICS = [
@@ -10,22 +10,48 @@ TOPICS = [
 ]
 
 SERVERS_URL = {
-    TOPICS[0]: "localhost:.../",
-    TOPICS[1]: "localhost:.../",
-    TOPICS[2]: "localhost:.../",
+    "ai_agent": "http://localhost:.../",
+    "cloud_storage": "http://localhost:.../",
+    "vector_db": "http://localhost:.../",
 }
 
-consumer = KafkaConsumer(
-    ["ai_agent", ],
-    bootstrap_servers=["localhost:9000"],
-    group_id="group_consumer",
-    value_deserializer=lambda m: json.loads(m.decode("utf-8")),
-)
+
+def create_consumer():
+    return KafkaConsumer(
+        *TOPICS,
+        bootstrap_servers=["localhost:9092"],
+        group_id="group_consumer",
+        value_deserializer=lambda m: json.loads(m.decode("utf-8")),
+        auto_offset_reset="earliest",
+        enable_auto_commit=True,
+    )
 
 
-def consume(topic: str):
-    responses = []
-    for message in consumer:
-        payload = message.value
-        responses.append(requests.post(SERVERS_URL[topic] + topic, json=payload))
-    return responses
+async def forward_message(topic: str, payload: dict):
+    url = SERVERS_URL.get(topic)
+    if not url:
+        raise ValueError(f"Unknown topic: {topic}")
+    async with httpx.AsyncClient() as client:
+        await client.post(f"{url}{topic}", json=payload, timeout=10.0)
+
+
+async def consume():
+    consumer = create_consumer()
+    try:
+        while True:
+            messages = consumer.poll(timeout_ms=1000)
+            for topic_partition, records in messages.items():
+                topic = topic_partition.topic
+                for record in records:
+                    try:
+                        await forward_message(topic, record.value)
+                    except Exception as e:
+                        print(f"Error processing message: {e}")
+    finally:
+        consumer.close()
+
+
+# if __name__ == "__main__":
+#     import asyncio
+
+#     asyncio.run(consume())

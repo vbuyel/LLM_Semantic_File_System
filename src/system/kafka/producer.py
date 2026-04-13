@@ -1,23 +1,31 @@
 from kafka import KafkaProducer
 import json
-from fastapi import FastAPI
-from contextlib import asynccontextmanager
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    app.state.producer = KafkaProducer(
-        bootstrap_servers=["localhost:9000"],
-        value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+def serialize(value):
+    try:
+        return json.dumps(value).encode("utf-8")
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"Message is not JSON-serializable: {e}")
+
+
+def create_producer():
+    return KafkaProducer(
+        bootstrap_servers=["localhost:9092"],
+        value_serializer=serialize,
     )
-    yield
-    app.state.producer.flush()
-    app.state.producer.close()
 
 
-app = FastAPI(lifespan=lifespan)
+async def send(topic: str, message: dict):
+    producer = create_producer()
+    try:
+        producer.send(topic, value=message)
+        producer.flush()
+    finally:
+        producer.close()
 
 
-@app.post("/produce/{topic}")
-def sendto_broker_ai_agent(topic: str, message: dict):
-    app.state.producer.send(topic, value=message)
+# if __name__ == "__main__":
+#     import asyncio
+
+#     asyncio.run(send("ai_agent", {"test": "message"}))
