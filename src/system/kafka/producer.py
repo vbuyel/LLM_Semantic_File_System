@@ -18,7 +18,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-# == User's request to Message Broker ==
 @app.post("/produce/{topic}")
 def sendto_broker_ai_agent(topic: str, message: dict):
     app.state.producer.send(topic, value=message)
