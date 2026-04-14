@@ -2,12 +2,9 @@ from kafka import KafkaConsumer
 import json
 import httpx
 
+from src.system.kafka.broker import TOPICS
+from src.system.kafka.broker import BROKER_HOSTS
 
-TOPICS = [
-    "ai_agent",
-    "cloud_storage",
-    "vector_db",
-]
 
 SERVERS_URL = {
     "ai_agent": "http://localhost:.../",
@@ -16,10 +13,10 @@ SERVERS_URL = {
 }
 
 
-def create_consumer():
+def create_consumer() -> KafkaConsumer:
     return KafkaConsumer(
         *TOPICS,
-        bootstrap_servers=["localhost:9092"],
+        bootstrap_servers=[*BROKER_HOSTS],
         group_id="group_consumer",
         value_deserializer=lambda m: json.loads(m.decode("utf-8")),
         auto_offset_reset="earliest",
@@ -27,7 +24,7 @@ def create_consumer():
     )
 
 
-async def forward_message(topic: str, payload: dict):
+async def forward_message(topic: str, payload: dict) -> None:
     url = SERVERS_URL.get(topic)
     if not url:
         raise ValueError(f"Unknown topic: {topic}")
@@ -35,7 +32,7 @@ async def forward_message(topic: str, payload: dict):
         await client.post(f"{url}{topic}", json=payload, timeout=10.0)
 
 
-async def consume():
+async def consume() -> None:
     consumer = create_consumer()
     try:
         while True:

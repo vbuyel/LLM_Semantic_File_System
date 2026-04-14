@@ -1,5 +1,25 @@
 from kafka import KafkaProducer
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 import json
+import logging
+
+from src.system.kafka.broker import BROKER_HOSTS
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = FastAPI()
+
+
+class Message(BaseModel):
+    data: dict
+
+
+class TopicResponse(BaseModel):
+    topic: str
+    status: str
+    message: str
 
 
 def serialize(value):
@@ -11,7 +31,7 @@ def serialize(value):
 
 def create_producer():
     return KafkaProducer(
-        bootstrap_servers=["localhost:9092"],
+        bootstrap_servers=[*BROKER_HOSTS],
         value_serializer=serialize,
     )
 
@@ -25,7 +45,11 @@ async def send(topic: str, message: dict):
         producer.close()
 
 
-# if __name__ == "__main__":
-#     import asyncio
-
-#     asyncio.run(send("ai_agent", {"test": "message"}))
+@app.post("/send/{topic}", response_model=TopicResponse)
+async def send_message(topic: str, message: Message):
+    try:
+        await send(topic, message.data)
+        return TopicResponse(topic=topic, status="sent", message="OK")
+    except Exception as e:
+        logger.error(f"Failed to send message: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
