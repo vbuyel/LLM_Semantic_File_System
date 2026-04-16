@@ -1,15 +1,11 @@
+from ast import Pass
 import os
 from langchain_text_splitters import CharacterTextSplitter
-from langchain_unstructured import UnstructuredLoader
 from openai import OpenAI
 from typing import List
-from numpy import float32
-import faiss
 from sentence_transformers import SentenceTransformer
 
 from src.llm.domain.domain import (
-    DataForExtraction,
-    DataExtracted,
     RAGRequest,
     RAGResponse,
 )
@@ -32,43 +28,48 @@ class RAGSearch:
             is_separator_regex=False,
         )
 
-    def __get_text_from_file(self, file_path: str) -> str:
-        loader = UnstructuredLoader(file_path)
-        loaded_docs = loader.load()
-        return "\n\n".join(
-            doc.page_content
-            for doc in loaded_docs
-            if getattr(doc, "page_content", None)
-        )
+    # def __get_text_from_file(self, file_path: str) -> str:
+    #     loader = UnstructuredLoader(file_path)
+    #     loaded_docs = loader.load()
+    #     return "\n\n".join(
+    #         doc.page_content
+    #         for doc in loaded_docs
+    #         if getattr(doc, "page_content", None)
+    #     )
 
-    def _extract_text_from_file(self, file_path: str) -> List[str]:
-        text_from_file = self.__get_text_from_file(file_path)
-        splited_texts = self.text_splitter.split_text(text_from_file)
-        return splited_texts
+    # def _extract_text_from_file(self, file_path: str) -> List[str]:
+    #     text_from_file = self.__get_text_from_file(file_path)
+    #     splited_texts = self.text_splitter.split_text(text_from_file)
+    #     return splited_texts
 
-    def _get_file_content_based_on_query_text(
-        self, query: DataForExtraction
-    ) -> DataExtracted:
-        doc_embeddings = self.model_embed.encode(query.additional_data).astype(
-            "float32"
-        )
+    # def _get_file_content_based_on_query_text(
+    #     self, query: DataForExtraction
+    # ) -> DataExtracted:
+    #     doc_embeddings = self.model_embed.encode(query.additional_data).astype("float32")
 
-        index = faiss.IndexFlatL2(doc_embeddings.shape[1])
-        index.add(doc_embeddings)
+    #     index = faiss.IndexFlatL2(doc_embeddings.shape[1])
+    #     index.add(doc_embeddings)
 
-        query_embedding = self.model_embed.encode([query.text]).astype("float32")
-        distances, indexes = index.search(query_embedding, self.num_top_results)
+    #     query_embedding = self.model_embed.encode([query.text]).astype("float32")
+    #     _, indexes = index.search(query_embedding, self.num_top_results)
 
-        founded_context = ""
-        for ind in indexes[0]:
-            if ind < len(query.additional_data):
-                founded_context += query.additional_data[ind] + "\n"
+    #     founded_context = ""
+    #     for ind in indexes[0]:
+    #         if ind < len(query.additional_data):
+    #             founded_context += query.additional_data[ind] + "\n"
 
-        return DataExtracted(text=founded_context)
+    #     return DataExtracted(text=founded_context)
+
+
+    def _encode_user_query(query: str) -> List[float]:
+        pass
+
+
+    def _get_most_relevant_text_from_files() -> List[str]:
+        pass
+
 
     def do_search(self, query: RAGRequest) -> RAGResponse:
-        query.additional_data = self._extract_text_from_file(query.additional_data)
-        file_content = self._get_file_content_based_on_query_text(
-            DataForExtraction(text=query.text, additional_data=query.additional_data)
-        )
-        return RAGResponse(text=file_content.text)
+        encoded_query = self._encode_user_query(query.text)
+        best_text_parts = self._get_most_relevant_text_from_files(encoded_query) # connect to vector db
+        return RAGResponse(text=best_text_parts)

@@ -29,6 +29,6 @@ agent_researcher = AgentResearcher()
 
 @app.get("/ai_agent")
 async def get_response_from_ai_agent(text: str) -> SearchResponse:
-    query = SearchRequest(text=text, file_path=None)
+    query = SearchRequest(text=text)
     response = agent_researcher.get_response(query)
     return response

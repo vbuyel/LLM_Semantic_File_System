@@ -3,10 +3,9 @@ import os
 from dotenv import load_dotenv
 import json
 
-from src.llm.domain.domain import SearchRequest, SearchResponse, RAGRequest
+from src.llm.domain.domain import SearchRequest, SearchResponse
 from src.llm.adapters.web_search import WebSearch
 from src.llm.adapters.rag_search import RAGSearch
-
 
 load_dotenv()
 
@@ -27,17 +26,13 @@ class AgentResearcher:
         }
 
     def get_response(self, request: SearchRequest) -> SearchResponse:
-        available_files = ""
-        if request.file_path:
-            available_files = f"\n\nIMPORTANT: The user has uploaded file: {request.file_path}. You MUST use the call_rag tool to analyze this file."
-
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {
                         "role": "system",
-                        "content": f"You are a research assistant.{available_files}",
+                        "content": f"You are a research assistant.",
                     },
                     {"role": "user", "content": request.text},
                 ],
@@ -63,20 +58,16 @@ class AgentResearcher:
                         "type": "function",
                         "function": {
                             "name": "call_rag",
-                            "description": "Finding information in user file (Retrieval Augmented Generation)",
+                            "description": "Finding information in user files (Retrieval Augmented Generation)",
                             "parameters": {
                                 "type": "object",
                                 "properties": {
                                     "text": {
                                         "type": "string",
                                         "description": "The search query text",
-                                    },
-                                    "file_path": {
-                                        "type": "string",
-                                        "description": "File path/URL",
-                                    },
+                                    }
                                 },
-                                "required": ["text", "file_path"],
+                                "required": ["text"],
                             },
                         },
                     },
@@ -105,14 +96,7 @@ class AgentResearcher:
                         text="Tool call missing required argument: text"
                     )
 
-                tool_file_path = func_args.get("file_path")
-
-                if function_name == "call_rag" and tool_file_path:
-                    tool_result = callable_func(
-                        RAGRequest(text=tool_text, additional_data=tool_file_path)
-                    )
-                else:
-                    tool_result = callable_func(tool_text)
+                tool_result = callable_func(tool_text)
 
                 try:
                     response = self.client.chat.completions.create(
@@ -154,20 +138,16 @@ class AgentResearcher:
                                 "type": "function",
                                 "function": {
                                     "name": "call_rag",
-                                    "description": "Finding information in user file (Retrieval Augmented Generation)",
+                                    "description": "Finding information in user files (Retrieval Augmented Generation)",
                                     "parameters": {
                                         "type": "object",
                                         "properties": {
                                             "text": {
                                                 "type": "string",
                                                 "description": "The search query text",
-                                            },
-                                            "file_path": {
-                                                "type": "string",
-                                                "description": "File path/URL",
-                                            },
+                                            }
                                         },
-                                        "required": ["text", "file_path"],
+                                        "required": ["text"],
                                     },
                                 },
                             },
