@@ -1,4 +1,4 @@
-from kafka import KafkaConsumer
+from aiokafka import AIOKafkaConsumer
 import json
 import httpx
 
@@ -7,18 +7,17 @@ from src.system.kafka.broker import BROKER_HOSTS
 
 
 SERVERS_URL = {
-    "ai_agent": "http://localhost:.../",
-    "cloud_storage": "http://localhost:.../",
-    "vector_db": "http://localhost:.../",
+    "web_rag": "http://localhost:9000/",
+    "cloud_storage": "http://localhost:9001/",
+    "vector_db": "http://localhost:9002/",
 }
 
 
-def create_consumer() -> KafkaConsumer:
-    return KafkaConsumer(
+def create_consumer() -> AIOKafkaConsumer:
+    return AIOKafkaConsumer(
         *TOPICS,
         bootstrap_servers=[*BROKER_HOSTS],
         group_id="group_consumer",
-        value_deserializer=lambda m: json.loads(m.decode("utf-8")),
         auto_offset_reset="earliest",
         enable_auto_commit=True,
     )
@@ -34,21 +33,18 @@ async def forward_message(topic: str, payload: dict) -> None:
 
 async def consume() -> None:
     consumer = create_consumer()
+    await consumer.start()
     try:
-        while True:
-            messages = consumer.poll(timeout_ms=1000)
-            for topic_partition, records in messages.items():
-                topic = topic_partition.topic
-                for record in records:
-                    try:
-                        await forward_message(topic, record.value)
-                    except Exception as e:
-                        print(f"Error processing message: {e}")
+        async for msg in consumer:
+            try:
+                await forward_message(msg.topic, msg.value)
+            except Exception as e:
+                print(f"Error processing message: {e}")
     finally:
-        consumer.close()
+        await consumer.stop()
 
 
-# if __name__ == "__main__":
-#     import asyncio
+if __name__ == "__main__":
+    import asyncio
 
-#     asyncio.run(consume())
+    asyncio.run(consume())

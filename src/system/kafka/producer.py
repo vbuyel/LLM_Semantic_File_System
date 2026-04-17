@@ -1,4 +1,4 @@
-from kafka import KafkaProducer
+from aiokafka import AIOKafkaProducer
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import json
@@ -10,6 +10,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+_producer = None
 
 
 class Message(BaseModel):
@@ -22,27 +23,20 @@ class TopicResponse(BaseModel):
     message: str
 
 
-def serialize(value):
-    try:
-        return json.dumps(value).encode("utf-8")
-    except (TypeError, ValueError) as e:
-        raise ValueError(f"Message is not JSON-serializable: {e}")
-
-
-def create_producer():
-    return KafkaProducer(
-        bootstrap_servers=[*BROKER_HOSTS],
-        value_serializer=serialize,
-    )
+async def get_producer():
+    global _producer
+    if _producer is None:
+        _producer = AIOKafkaProducer(
+            bootstrap_servers=[*BROKER_HOSTS],
+            value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+        )
+        await _producer.start()
+    return _producer
 
 
 async def send(topic: str, message: dict):
-    producer = create_producer()
-    try:
-        producer.send(topic, value=message)
-        producer.flush()
-    finally:
-        producer.close()
+    producer = await get_producer()
+    await producer.send_and_wait(topic, message)
 
 
 @app.post("/send/{topic}", response_model=TopicResponse)
