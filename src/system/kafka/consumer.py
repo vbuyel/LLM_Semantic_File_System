@@ -7,7 +7,7 @@ from src.system.kafka.broker import BROKER_HOSTS
 
 
 SERVERS_URL = {
-    "web_rag": "http://localhost:9000/",
+    "user_db": "http://localhost:9000/",
     "cloud_storage": "http://localhost:9001/",
     "vector_db": "http://localhost:9002/",
 }

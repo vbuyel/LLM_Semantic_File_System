@@ -1,23 +1,29 @@
-fastapi
-uvicorn
-pydantic
-gradio
-requests
-openai
-python-dotenv
-langchain-community
-duckduckgo-search
-langchain-text-splitters
-langchain-unstructured
-unstructured
-numpy
-faiss-cpu
-sentence-transformers
-psycopg
-pgvector
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
-google-cloud-storage
+# Web Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+httpx>=0.26.0
+
+# Kafka
+aiokafka>=0.10.0
+kafka-python>=2.0.2
+
+# Database
+psycopg[binary,pool]>=3.1.0
+pgvector>=0.2.0
+
+# LLM / AI
+openai>=1.10.0
+sentence-transformers>=2.2.0
+langchain-community>=0.0.20
+python-dotenv>=1.0.0
+requests>=2.31.0
 ddgs
-kafka-python
+
+# Google Cloud Storage
+google-cloud-storage>=2.14.0
+
+# Google Drive / API
+google-api-python-client>=2.115.0
+google-auth-httplib2>=0.2.0
+google-auth-oauthlib>=1.2.0
