@@ -1,12 +1,12 @@
 from aiokafka import AIOKafkaConsumer
-import json
 import httpx
-
-from src.system.kafka.broker import TOPICS
-from src.system.kafka.broker import BROKER_HOSTS
+import os
 
 
 SERVERS_URL = {
+    "response_to_auth": "http://localhost:8000/",
+    "response_to_file_ops": "http://localhost:8001/",
+    "response_to_agent": "http://localhost:8002/",
     "user_db": "http://localhost:9000/",
     "cloud_storage": "http://localhost:9001/",
     "vector_db": "http://localhost:9002/",
@@ -15,8 +15,8 @@ SERVERS_URL = {
 
 def create_consumer() -> AIOKafkaConsumer:
     return AIOKafkaConsumer(
-        *TOPICS,
-        bootstrap_servers=[*BROKER_HOSTS],
+        os.getenv("TOPICS").split(","),
+        bootstrap_servers=[os.getenv("BROKER_HOSTS").split(",")],
         group_id="group_consumer",
         auto_offset_reset="earliest",
         enable_auto_commit=True,

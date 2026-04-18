@@ -3,8 +3,8 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import json
 import logging
+import os
 
-from src.system.kafka.broker import BROKER_HOSTS
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ async def get_producer():
     global _producer
     if _producer is None:
         _producer = AIOKafkaProducer(
-            bootstrap_servers=[*BROKER_HOSTS],
+            bootstrap_servers=[os.getenv("BROKER_HOSTS").split(",")],
             value_serializer=lambda v: json.dumps(v).encode("utf-8"),
         )
         await _producer.start()
@@ -43,7 +43,7 @@ async def send(topic: str, message: dict):
 async def send_message(topic: str, message: Message):
     try:
         await send(topic, message.data)
-        return TopicResponse(topic=topic, status="sent", message="OK")
+        # return TopicResponse(topic=topic, status="sent", message="OK")
     except Exception as e:
         logger.error(f"Failed to send message: {e}")
         raise HTTPException(status_code=500, detail=str(e))
