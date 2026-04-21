@@ -15,7 +15,7 @@ class DataBase(RepositoryDataBase):
 
 
     def _get_connection(self):
-        conn = psycopg.connect(self.url)
+        conn = psycopg.connect(self.url, autocommit=True)
         register_vector(conn)
         return conn
 
@@ -23,10 +23,11 @@ class DataBase(RepositoryDataBase):
     def _setup_database(self):
         conn = self._get_connection()
         try:
-            conn.execute("""CREATE EXTENTION IF NOT EXISTS vector""")
+            conn.execute("""CREATE EXTENSION IF NOT EXISTS vector""")
 
             conn.execute(f'''
                 CREATE TABLE IF NOT EXISTS {self.table} (
+                    id bigserial PRIMARY KEY,
                     created_at timestamp DEFAULT CURRENT_TIMESTAMP,
                     file_name TEXT,
                     text_chunk TEXT,
@@ -49,7 +50,8 @@ class DataBase(RepositoryDataBase):
         conn = self._get_connection()
         try:
             result = conn.execute(f'''
-                SELECT * FROM {self.table} WHERE embedding <=> %s::vector AS distance
+                SELECT *, embedding <=> %s AS distance
+                FROM {self.table}
                 ORDER BY distance ASC
                 LIMIT %s
                 ''',
