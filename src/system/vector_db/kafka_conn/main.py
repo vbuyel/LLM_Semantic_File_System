@@ -4,23 +4,26 @@ import os
 from sentence_transformers import SentenceTransformer
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
-from system.vector_db.adapters.database import DataBase
+from src.system.vector_db.adapters.database import DataBase
 
 
 _embedding_model = SentenceTransformer(os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"))
 _bootstrap_servers = os.getenv("BROKER_HOSTS", "localhost:9092").split(",")
 _request_topic = os.getenv("REQUEST_TOPIC", "service.requests")
-_reply_topic = os.getenv("REPLY_TOPIC", "service.replies")
 
 db = DataBase()
 
 
 async def process_requests():
     """Listen for Kafka requests, search DB, send replies."""
-    producer = AIOKafkaProducer(bootstrap_servers=_bootstrap_servers)
+    producer = AIOKafkaProducer(
+        bootstrap_servers=_bootstrap_servers,
+        value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+    )
     consumer = AIOKafkaConsumer(
         _request_topic,
         bootstrap_servers=_bootstrap_servers,
+        value_deserializer=lambda v: json.loads(v.decode("utf-8")),
         group_id="vector-db-service",
         auto_offset_reset="latest",
     )
@@ -31,8 +34,9 @@ async def process_requests():
     try:
         async for msg in consumer:
             try:
-                data = json.loads(msg.value.decode("utf-8"))
+                data = json.loads(msg.value)
                 correlation_id = data["correlation_id"]
+                reply_topic = data["reply_topic"]
                 payload = data["payload"]
                 
                 # Search
@@ -40,8 +44,8 @@ async def process_requests():
                 results = db.search_similar(embedding, limit=payload.get("limit", 3))
                 
                 # Reply
-                reply = {"correlation_id": correlation_id, "data": results}
-                await producer.send_and_wait(_reply_topic, json.dumps(reply).encode("utf-8"))
+                reply_message = {"correlation_id": correlation_id, "data": results}
+                await producer.send_and_wait(reply_topic, reply_message)
             except Exception as e:
                 print(f"Error: {e}")
     finally:

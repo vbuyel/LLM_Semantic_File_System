@@ -3,12 +3,12 @@ from typing import List
 from datetime import datetime
 
 
-class FoundDocPart(BaseModel):
+class DocMetadata(BaseModel):
     id: int
     created_at: datetime
     file_name: str
     file_path: str
     text_chunk: str
 
-class SearchResult(BaseModel):
-    data: List[FoundDocPart] | None = None
+class RAGResults(BaseModel):
+    data: List[DocMetadata] | None = None

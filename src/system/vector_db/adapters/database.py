@@ -4,7 +4,7 @@ from pgvector.psycopg import register_vector
 import numpy as np
 
 from src.system.vector_db.adapters.repo_database import RepositoryDataBase
-from src.system.vector_db.domain.domain import FoundDocPart, SearchResult
+from src.system.vector_db.domain.domain import DocMetadata, RAGResults
 
 
 class DataBase(RepositoryDataBase):
@@ -47,7 +47,7 @@ class DataBase(RepositoryDataBase):
             conn.close()
 
 
-    def search_similar(self, embedding: list[float], limit: int = 3) -> SearchResult:
+    def search_similar(self, embedding: list[float], limit: int = 3) -> RAGResults:
         conn = self._get_connection()
         try:
             result = conn.execute(f'''
@@ -58,6 +58,6 @@ class DataBase(RepositoryDataBase):
                 ''',
                 (np.array(embedding, dtype=np.float32), limit),
             )
-            return SearchResult(data=[FoundDocPart(**row) for row in result])
+            return RAGResults(data=[DocMetadata(**row) for row in result])
         finally:
             conn.close()
