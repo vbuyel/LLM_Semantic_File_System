@@ -4,3 +4,10 @@ __pycache__
 .ruff_cache
 .pytest_cache
 __tests__
+.continue
+.DS_Store
+.vscode
+.bash_history
+.bash_profile
+.bashrc
+.zshrc

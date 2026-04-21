@@ -16,6 +16,7 @@ class KafkaManager:
 
     @staticmethod
     def _get_topics() -> list[str]:
+        """Возвращает список всех существующих топиков"""
         topics = []
         topics_env = os.getenv("TOPICS", "")
         if topics_env.strip():

@@ -2,7 +2,8 @@ import json
 import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any
+from sentence_transformers import SentenceTransformer
+from typing import Any, List
 
 import asyncio
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
@@ -14,6 +15,7 @@ from src.llm.domain.domain import (
 
 class RAGSearch:
     def __init__(self):
+        self.embedding_model = SentenceTransformer(os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"))
         self._bootstrap_servers = os.getenv("BROKER_HOSTS", "localhost:9092").split(",")
         self._request_topic = os.getenv("REQUEST_TOPIC", "service.requests")
         self._reply_topic = os.getenv("REPLY_TOPIC", "service.replies")
@@ -47,8 +49,8 @@ class RAGSearch:
                 "correlation_id": correlation_id,
                 "reply_topic": self._reply_topic,
                 "payload": {
-                    "action": "rag_search",
                     "text": query_text,
+                    "limit": 3,
                 },
             }
             await producer.send_and_wait(self._request_topic, event)

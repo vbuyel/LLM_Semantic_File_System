@@ -1,8 +1,11 @@
+import os
+from sentence_transformers import SentenceTransformer
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.system.vector_db.adapters.abs_database import AbstractDataBase
-from src.system.vector_db.domain.domain import DocumentCreate, DocumentResponse, DocumentSearch, SearchResult
+from system.vector_db.adapters.repo_database import RepositoryDataBase
+from src.system.vector_db.domain.domain import SearchResult
 
 app = FastAPI()
 app.add_middleware(
@@ -13,39 +16,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-db = AbstractDataBase()
+# Setup Database
+db = RepositoryDataBase()
+
+# === Into Adapters ===
+embedding_model = SentenceTransformer(os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"))
+
+_bootstrap_servers = os.getenv("BROKER_HOSTS", "localhost:9092").split(",")
+_request_topic = os.getenv("REQUEST_TOPIC", "service.requests")
+_reply_topic = os.getenv("REPLY_TOPIC", "service.replies")
+# ===
 
 
-@app.post("/documents", response_model=DocumentResponse)
-def create_document(doc: DocumentCreate):
-    doc_id = db.insert_embedding(doc.embedding, doc.metadata)
-    result = db.get_by_id(doc_id)
-    return DocumentResponse(**result)
-
-
-# @app.get("/documents/{doc_id}", response_model=DocumentResponse)
-# def get_document(doc_id: int):
-#     result = db.get_by_id(doc_id)
-#     if not result:
-#         raise HTTPException(status_code=404, detail="Document not found")
-#     return DocumentResponse(**result)
-
-
-@app.delete("/documents/{doc_id}")
-def delete_document(doc_id: int):
-    deleted = db.delete_by_id(doc_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Document not found")
-    return {"message": "Document deleted"}
-
-
-@app.post("/search", response_model=list[SearchResult])
-def search_documents(search: DocumentSearch):
-    results = db.search_similar(search.embedding, search.limit)
-    return [SearchResult(**result) for result in results]
-
-
-@app.post("/setup")
-def setup_database(recreate: bool = False):
-    db.setup_vector_db(recreate=recreate)
-    return {"message": "Database setup complete"}
+@app.post("/search")
+async def search_text_endpoint(text: str, limit: int = 3):
+    """
+    Raw text -> encode to vector -> search -> return results
+    """
+    try:
+        embedding = embedding_model.encode(text).tolist()
+        results = db.search_similar(embedding, limit=limit)
+        formatted_results = [SearchResult(**result) for result in results]
+        return formatted_results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
