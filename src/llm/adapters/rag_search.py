@@ -3,7 +3,7 @@ import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from sentence_transformers import SentenceTransformer
-from typing import Any, List
+from typing import Any
 
 import asyncio
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
