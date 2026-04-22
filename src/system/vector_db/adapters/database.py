@@ -1,5 +1,6 @@
 import os
 import psycopg
+from psycopg.rows import dict_row
 from pgvector.psycopg import register_vector
 import numpy as np
 
@@ -16,7 +17,7 @@ class DataBase(RepositoryDataBase):
 
 
     def _get_connection(self):
-        conn = psycopg.connect(self.url, autocommit=True)
+        conn = psycopg.connect(self.url, autocommit=True, row_factory=dict_row)
         register_vector(conn)
         return conn
 
@@ -51,9 +52,9 @@ class DataBase(RepositoryDataBase):
         conn = self._get_connection()
         try:
             result = conn.execute(f'''
-                SELECT (id, created_at, file_name, file_path, text_chunk), embedding <=> %s AS distance
+                SELECT id, created_at, file_name, file_path, text_chunk
                 FROM {self.table}
-                ORDER BY distance ASC
+                ORDER BY embedding <=> %s ASC
                 LIMIT %s
                 ''',
                 (np.array(embedding, dtype=np.float32), limit),

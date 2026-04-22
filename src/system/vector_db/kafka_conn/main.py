@@ -1,21 +1,51 @@
 import asyncio
 import json
 import os
-from sentence_transformers import SentenceTransformer
-from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+
+try:
+    from sentence_transformers import SentenceTransformer
+except ImportError:  # pragma: no cover - for lightweight test environments
+    SentenceTransformer = None
+
+try:
+    from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+except ImportError:  # pragma: no cover - for lightweight test environments
+    AIOKafkaConsumer = None
+    AIOKafkaProducer = None
 
 from src.system.vector_db.adapters.database import DataBase
 
 
-_embedding_model = SentenceTransformer(os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"))
 _bootstrap_servers = os.getenv("BROKER_HOSTS", "localhost:9092").split(",")
 _request_topic = os.getenv("REQUEST_TOPIC", "service.requests")
 
-db = DataBase()
+_embedding_model = None
+_db = None
+
+
+def get_embedding_model():
+    global _embedding_model
+    if _embedding_model is None:
+        if SentenceTransformer is None:
+            raise RuntimeError("sentence-transformers is not installed")
+        _embedding_model = SentenceTransformer(
+            os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+        )
+    return _embedding_model
+
+
+def get_db():
+    global _db
+    if _db is None:
+        _db = DataBase()
+    return _db
 
 
 async def process_requests():
     """Listen for Kafka requests, search DB, send replies."""
+    if AIOKafkaProducer is None or AIOKafkaConsumer is None:
+        raise RuntimeError("aiokafka is not installed")
+
     producer = AIOKafkaProducer(
         bootstrap_servers=_bootstrap_servers,
         value_serializer=lambda v: json.dumps(v).encode("utf-8"),
@@ -34,17 +64,21 @@ async def process_requests():
     try:
         async for msg in consumer:
             try:
-                data = json.loads(msg.value)
+                # msg.value is already deserialized by value_deserializer.
+                data = msg.value
                 correlation_id = data["correlation_id"]
                 reply_topic = data["reply_topic"]
                 payload = data["payload"]
                 
                 # Search
-                embedding = _embedding_model.encode(payload["text"]).tolist()
-                results = db.search_similar(embedding, limit=payload.get("limit", 3))
+                embedding = get_embedding_model().encode(payload["text"]).tolist()
+                results = get_db().search_similar(embedding, limit=payload.get("limit", 3))
                 
                 # Reply
-                reply_message = {"correlation_id": correlation_id, "data": results}
+                reply_message = {
+                    "correlation_id": correlation_id,
+                    "data": results.model_dump(mode="json"),
+                }
                 await producer.send_and_wait(reply_topic, reply_message)
             except Exception as e:
                 print(f"Error: {e}")
