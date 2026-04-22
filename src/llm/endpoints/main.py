@@ -27,4 +27,6 @@ agent_researcher = AgentResearcher()
 async def get_response_from_ai_agent(text: str) -> SearchResponse:
     query = SearchRequest(text=text)
     response = agent_researcher.get_response(query)
+    print(f"[DEBUG] Full response: {response}")
+    print(f"[DEBUG] response.text: {response.text}")
     return response

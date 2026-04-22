@@ -1,7 +1,15 @@
+"""
+Run the server:
+    python -m src.system.vector_db.kafka_conn.main
+"""
+
+
 import asyncio
 import json
 import os
+from pathlib import Path
 
+from dotenv import load_dotenv
 try:
     from sentence_transformers import SentenceTransformer
 except ImportError:  # pragma: no cover - for lightweight test environments
@@ -15,9 +23,15 @@ except ImportError:  # pragma: no cover - for lightweight test environments
 
 from src.system.vector_db.adapters.database import DataBase
 
+load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
+
 
 _bootstrap_servers = os.getenv("BROKER_HOSTS", "localhost:9092").split(",")
-_request_topic = os.getenv("REQUEST_TOPIC", "service.requests")
+_request_topic = (
+    os.getenv("REQUEST_TOPIC")
+    or os.getenv("TOPIC_GET_TEXT_IDS")
+    or "service.requests"
+)
 
 _embedding_model = None
 _db = None
@@ -60,6 +74,7 @@ async def process_requests():
     
     await producer.start()
     await consumer.start()
+    print("Server is running")
     
     try:
         async for msg in consumer:

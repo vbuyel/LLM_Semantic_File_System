@@ -2,23 +2,34 @@ import json
 import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from sentence_transformers import SentenceTransformer
 from typing import Any
 
 import asyncio
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+from sentence_transformers import SentenceTransformer
 
-from src.llm.domain.domain import (
-    RAGResponse,
-)
+from src.llm.domain.domain import RAGResponse
 
 
 class RAGSearch:
     def __init__(self):
-        self.embedding_model = SentenceTransformer(os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"))
-        self._bootstrap_servers = os.getenv("BROKER_HOSTS", "localhost:9092").split(",")
-        self._request_topic = os.getenv("REQUEST_TOPIC", "service.requests")
-        self._reply_topic = os.getenv("REPLY_TOPIC", "service.replies")
+        self.embedding_model = SentenceTransformer(
+            os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+        )
+        raw_broker_hosts = os.getenv("BROKER_HOSTS", "localhost:9092")
+        self._bootstrap_servers = [host.strip() for host in raw_broker_hosts.split(",") if host.strip()]
+
+        # Keep backward compatibility with older env names used in this project.
+        self._request_topic = (
+            os.getenv("REQUEST_TOPIC")
+            or os.getenv("TOPIC_GET_TEXT_IDS")
+            or "service.requests"
+        )
+        self._reply_topic = (
+            os.getenv("REPLY_TOPIC")
+            or os.getenv("TOPICS_FOR_RAG_CONSUMER")
+            or "service.replies"
+        )
         self._timeout_sec = float(os.getenv("RAG_KAFKA_TIMEOUT_SEC", "20"))
         self._executor = ThreadPoolExecutor(max_workers=1)
 

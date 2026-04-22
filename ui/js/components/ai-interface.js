@@ -39,7 +39,7 @@ export const AIInterface = {
                     <span>Semantic Search Results</span>
                     <button id="close-search" class="close-btn">&times;</button>
                 </div>
-                <div class="search-results__summary">${result.answer || 'Found some relevant files:'}</div>
+                <div class="search-results__summary">${result.text || 'Found some relevant files:'}</div>
                 <div class="search-results__list">
                     ${files.map(f => `
                         <div class="search-item" data-path="${f}">
