@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = 'http://localhost:8002';
 
 export const api = {
     auth: {
@@ -21,36 +21,27 @@ export const api = {
         }
     },
     files: {
-        async getFiles(path = '/') {
-            const response = await fetch(`${BASE_URL}/files?path=${encodeURIComponent(path)}`);
-            if (!response.ok) throw new Error('Failed to fetch files');
-            return await response.json();
-        },
         async uploadFile(file, path = '/') {
             const formData = new FormData();
             formData.append('file', file);
-            const response = await fetch(`${BASE_URL}/files/upload?path=${encodeURIComponent(path)}`, {
+
+            const headers = {};
+            const storageSource = state.get('storageSource');
+
+            if (storageSource === 'drive') {
+                headers['X-Auth-Provider'] = 'google';
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+                if (user.accessToken) {
+                    headers['Authorization'] = `Bearer ${user.accessToken}`;
+                }
+            }
+            const res = await fetch(`${BASE_URL}/upload`, {
                 method: 'POST',
-                body: formData
+                body: formData, headers
             });
-            return await response.json();
+            return res.json();
         },
-        async deleteFile(path) {
-            const response = await fetch(`${BASE_URL}/files/delete`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path })
-            });
-            return await response.json();
-        },
-        async rename(path, newName) {
-            const response = await fetch(`${BASE_URL}/files/rename`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path, newName })
-            });
-            return await response.json();
-        }
     },
     ai: {
         async search(text, filePath = null) {
