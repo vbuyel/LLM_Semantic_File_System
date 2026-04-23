@@ -7,8 +7,8 @@ from pgvector.psycopg import register_vector
 import numpy as np
 from dotenv import load_dotenv
 
-from src.system.vector_db.adapters.repo_database import RepositoryDataBase
-from src.system.vector_db.domain.domain import DocMetadata, RAGResults
+from src.vector_db.adapters.repo_database import RepositoryDataBase
+from src.vector_db.domain.domain import DocMetadata, RAGResults
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 

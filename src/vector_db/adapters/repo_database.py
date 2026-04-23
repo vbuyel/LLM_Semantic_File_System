@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from src.system.vector_db.domain.domain import RAGResults
+from src.vector_db.domain.domain import RAGResults
 
 class RepositoryDataBase(ABC):
     @abstractmethod
