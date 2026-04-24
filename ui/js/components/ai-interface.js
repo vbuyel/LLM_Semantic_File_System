@@ -29,8 +29,10 @@ export const AIInterface = {
     },
 
     renderSearchResults(result) {
-        // Result is SearchResponse from backend
         const files = result.relevant_files || [];
+        const markdownHtml = result.text
+            ? DOMPurify.sanitize(marked.parse(result.text))
+            : 'Found some relevant files:';
         
         return `
             <div class="search-results fade-in">
@@ -39,7 +41,7 @@ export const AIInterface = {
                     <span>Semantic Search Results</span>
                     <button id="close-search" class="close-btn">&times;</button>
                 </div>
-                <div class="search-results__summary">${result.text || 'Found some relevant files:'}</div>
+                <div class="search-results__summary markdown-body">${markdownHtml}</div>
                 <div class="search-results__list">
                     ${files.map(f => `
                         <div class="search-item" data-path="${f}">

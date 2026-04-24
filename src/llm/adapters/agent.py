@@ -114,7 +114,7 @@ class AgentResearcher:
                 "tools": self.tools,
                 "top_p": 0.95,
                 "temperature": 0.3,
-                "max_tokens": 1000,
+                "max_tokens": 5000,
             }
             if self._should_force_rag(request.text):
                 request_kwargs["tool_choice"] = {
@@ -163,7 +163,7 @@ class AgentResearcher:
                     tools=self.tools,
                     top_p=0.9,
                     temperature=0.3,
-                    max_tokens=1000,
+                    max_tokens=5000,
                 )
                 tool_calls = response.choices[0].message.tool_calls or []
             except Exception as e:
