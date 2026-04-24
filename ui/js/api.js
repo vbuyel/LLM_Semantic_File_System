@@ -1,4 +1,6 @@
-const BASE_URL = 'http://localhost:8002';
+const FILE_URL = 'http://localhost:8002';
+const AI_URL = 'http://localhost:8003';
+
 
 export const api = {
     auth: {
@@ -36,7 +38,7 @@ export const api = {
                     headers['Authorization'] = `Bearer ${user.accessToken}`;
                 }
             }
-            const res = await fetch(`${BASE_URL}/upload`, {
+            const res = await fetch(`${FILE_URL}/upload`, {
                 method: 'POST',
                 body: formData, headers
             });
@@ -45,7 +47,7 @@ export const api = {
     },
     ai: {
         async search(text, filePath = null) {
-            let url = `${BASE_URL}/ai_agent?text=${encodeURIComponent(text)}`;
+            let url = `${AI_URL}/ai_agent?text=${encodeURIComponent(text)}`;
             if (filePath) url += `&file_path=${encodeURIComponent(filePath)}`;
             const response = await fetch(url);
             return await response.json();

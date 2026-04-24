@@ -1,6 +1,6 @@
 """
 Run the server:
-    uvicorn src.llm.endpoints.main:app --port 8000
+    uvicorn src.llm.endpoints.main:app --port 8003
 """
 
 from fastapi import FastAPI
