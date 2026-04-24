@@ -1,11 +1,11 @@
+import { state } from './state.js';
+
 const FILE_URL = 'http://localhost:8002';
 const AI_URL = 'http://localhost:8003';
-
 
 export const api = {
     auth: {
         async loginWithGoogle() {
-            // Demo login - just sets a user in local storage
             const user = { id: '1', name: 'User', email: 'user@example.com' };
             localStorage.setItem('user', JSON.stringify(user));
             return user;
@@ -23,27 +23,48 @@ export const api = {
         }
     },
     files: {
+        async getFiles(path = '/') {
+            const storageSource = state.get('storageSource');
+            const headers = { 'X-Storage-Source': storageSource };
+            const res = await fetch(`${FILE_URL}/files?path=${encodeURIComponent(path)}`, {
+                method: 'GET',
+                headers
+            });
+            if (!res.ok) throw new Error('Failed to list files');
+            const data = await res.json();
+            return data.files || [];
+        },
         async uploadFile(file, path = '/') {
             const formData = new FormData();
             formData.append('file', file);
 
-            const headers = {};
             const storageSource = state.get('storageSource');
+            const headers = { 'X-Storage-Source': storageSource };
 
             if (storageSource === 'drive') {
                 headers['X-Auth-Provider'] = 'google';
                 const user = JSON.parse(localStorage.getItem('user') || '{}');
-
                 if (user.accessToken) {
                     headers['Authorization'] = `Bearer ${user.accessToken}`;
                 }
             }
             const res = await fetch(`${FILE_URL}/upload`, {
                 method: 'POST',
-                body: formData, headers
+                body: formData,
+                headers
             });
             return res.json();
         },
+        async deleteFile(path) {
+            const storageSource = state.get('storageSource');
+            const headers = { 'X-Storage-Source': storageSource };
+            const res = await fetch(`${FILE_URL}/delete?path=${encodeURIComponent(path)}`, {
+                method: 'DELETE',
+                headers
+            });
+            if (!res.ok) throw new Error('Failed to delete file');
+            return res.json();
+        }
     },
     ai: {
         async search(text, filePath = null) {

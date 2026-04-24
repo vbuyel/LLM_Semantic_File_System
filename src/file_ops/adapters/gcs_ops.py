@@ -28,3 +28,9 @@ class GCSOperations:
             "url": blob.public_url,
             "storage_type": "gcs",
         }
+
+    def list_files(self, directory_path: str = "/") -> list:
+        raise NotImplementedError("GCS list_files not yet implemented")
+
+    def delete_file(self, file_path: str) -> None:
+        raise NotImplementedError("GCS delete_file not yet implemented")

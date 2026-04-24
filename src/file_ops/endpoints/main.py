@@ -3,12 +3,13 @@ Run the server:
     uvicorn src.file_ops.endpoints.main:app --port 8002
 """
 import os
-from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Header
+from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
-from src.file_ops.domain.domain import UploadResponse
+from src.file_ops.domain.domain import UploadResponse, ListFilesResponse, FileItem
 from src.file_ops.adapters.gcs_ops import GCSOperations
 from src.file_ops.adapters.google_drive_ops import GoogleDriveOperations
+from src.file_ops.adapters.local import LocalOperations
 
 
 app = FastAPI()
@@ -22,21 +23,24 @@ app.add_middleware(
 
 
 # Инициализация один раз при старте
-gcs_ops = GCSOperations(bucket_name="your-bucket-name")
+gcs_ops = GCSOperations(bucket_name=os.getenv("GCS_BUCKET_NAME"))
+local_ops = LocalOperations()
 
 
 async def _get_current_user(
     x_auth_provider: Optional[str] = Header(None, alias="X-Auth-Provider"),
+    x_storage_source: Optional[str] = Header(None, alias="X-Storage-Source"),
     authorization: Optional[str] = Header(None),
 ):
     """
     Stub auth dependency.
     В реальности сюда подключишь JWT декодинг или проверку сессии.
-    Возвращает: provider = "google" | "local"
+    Возвращает: provider = "google" | "local", storage_source = "local" | "gcs" | "drive"
     """
     provider = x_auth_provider or "local"
+    storage_source = x_storage_source or "local"
     token = authorization.replace("Bearer ", "") if authorization else None
-    return {"provider": provider, "token": token}
+    return {"provider": provider, "storage_source": storage_source, "token": token}
 
 
 @app.post("/upload", response_model=UploadResponse)
@@ -51,8 +55,8 @@ async def upload_file(
         f.write(await file.read())
 
     try:
-        if user["provider"] == "google":
-            # Google OAuth user -> Google Drive
+        storage_source = user["storage_source"]
+        if storage_source == "drive":
             if not user.get("token"):
                 raise HTTPException(401, "Google access token required for Drive upload")
             drive_ops = GoogleDriveOperations(access_token=user["token"])
@@ -61,13 +65,20 @@ async def upload_file(
                 file_name=file.filename,
                 mime_type=file.content_type,
             )
-        else:
-            # Local user -> Google Cloud Storage
+        elif storage_source == "gcs":
             result = gcs_ops.upload_file(
                 source_path=temp_path,
                 destination_name=file.filename,
                 mime_type=file.content_type,
             )
+        elif storage_source == "local":
+            result = local_ops.upload_file(
+                source_path=temp_path,
+                dest_name=file.filename,
+                mime_type=file.content_type,
+            )
+        else:
+            raise HTTPException(400, f"Unsupported storage source: {storage_source}")
     finally:
         # Cleanup
         if os.path.exists(temp_path):
@@ -80,3 +91,56 @@ async def upload_file(
         url=result.get("url"),
         message=f"File uploaded to {result['storage_type']}",
     )
+
+
+@app.get("/files", response_model=ListFilesResponse)
+async def list_files(
+    path: str = Query(default="/"),
+    user=Depends(_get_current_user),
+):
+    storage_source = user["storage_source"]
+    try:
+        if storage_source == "local":
+            files = local_ops.list_files(path)
+        elif storage_source == "gcs":
+            files = gcs_ops.list_files(path)
+        elif storage_source == "drive":
+            if not user.get("token"):
+                raise HTTPException(401, "Access token required for Google Drive")
+            drive_ops = GoogleDriveOperations(access_token=user["token"])
+            files = drive_ops.list_files(path)
+        else:
+            raise HTTPException(400, f"Unsupported storage source: {storage_source}")
+        file_items = [FileItem(**f) for f in files] if files else []
+        return ListFilesResponse(files=file_items, storage_type=storage_source)
+    except NotImplementedError as e:
+        raise HTTPException(501, str(e))
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        raise HTTPException(500, f"Failed to list files: {str(e)}")
+
+
+@app.delete("/delete")
+async def delete_file(
+    path: str = Query(...),
+    user=Depends(_get_current_user),
+):
+    storage_source = user["storage_source"]
+    try:
+        if storage_source == "local":
+            local_ops.delete_file(path)
+        elif storage_source == "gcs":
+            gcs_ops.delete_file(path)
+        elif storage_source == "drive":
+            if not user.get("token"):
+                raise HTTPException(401, "Access token required for Google Drive")
+            drive_ops = GoogleDriveOperations(access_token=user["token"])
+            drive_ops.delete_file(path)
+        else:
+            raise HTTPException(400, f"Unsupported storage source: {storage_source}")
+        return {"message": f"File {path} deleted from {storage_source}"}
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        raise HTTPException(500, f"Failed to delete file: {str(e)}")

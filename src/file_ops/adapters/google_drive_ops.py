@@ -32,3 +32,9 @@ class GoogleDriveOperations:
             "url": file.get("webViewLink"),
             "storage_type": "drive",
         }
+
+    def list_files(self, directory_path: str = "/") -> list:
+        raise NotImplementedError("Google Drive list_files not yet implemented")
+
+    def delete_file(self, file_path: str) -> None:
+        raise NotImplementedError("Google Drive delete_file not yet implemented")
