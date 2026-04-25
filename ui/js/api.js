@@ -6,7 +6,17 @@ const AI_URL = 'http://localhost:8003';
 export const api = {
     auth: {
         async loginWithGoogle() {
-            const user = { id: '1', name: 'User', email: 'user@example.com' };
+            const user = { id: 'google_1', name: 'Google User', email: 'google@example.com' };
+            localStorage.setItem('user', JSON.stringify(user));
+            return user;
+        },
+        async loginWithCredentials(name, email, password) {
+            const user = { id: Date.now().toString(), name, email };
+            localStorage.setItem('user', JSON.stringify(user));
+            return user;
+        },
+        async loginAsGuest() {
+            const user = { id: 'guest', name: 'Guest', isGuest: true };
             localStorage.setItem('user', JSON.stringify(user));
             return user;
         },

@@ -12,17 +12,8 @@ class App {
     }
 
     async init() {
-        // Subscribe to state changes
         state.subscribe(() => this.render());
-
-        // Check for existing session
-        const user = api.auth.getUser();
-        if (user) {
-            state.set('user', user);
-            this.loadInitialData();
-        } else {
-            this.render();
-        }
+        this.render();
     }
 
     async loadInitialData() {
