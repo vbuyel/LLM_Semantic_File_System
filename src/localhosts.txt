@@ -1,10 +1,9 @@
 Start:
-web gateway -> 8000
+gateway+auth -> 8000
 
 Left:
-auth -> 8001
-file ops -> 8002
-agent -> 8003
+file ops -> 8001
+agent -> 8002
 
 Middle:
 provider (kafka) -> 8500
