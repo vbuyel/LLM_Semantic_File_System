@@ -7,15 +7,9 @@ settings = Settings()
 def generate_google_oauth_redirect_url():
     query_params = {
         "client_id": settings.OAUTH_GOOGLE_CLIENT_ID,
-        "redirect_uri": "http://localhost:8000/auth/google",
+        "redirect_uri": settings.OAUTH_GOOGLE_REDIRECT_URI,
         "response_type": "code",
-        "scope": " ".join([
-            "openid",
-            "profile",
-            "email",
-            "https://www.googleapis.com/auth/drive",
-        ]),
-        # state ...
+        "scope": " ".join(settings.GOOGLE_DRIVE_SCOPE),
     }
 
     query_string = urllib.parse.urlencode(query_params, quote_via=urllib.parse.quote)

@@ -12,6 +12,18 @@ class App {
     }
 
     async init() {
+        const queryParams = new URLSearchParams(window.location.search);
+        const code = queryParams.get('code');
+        if (code) {
+            try {
+                const user = await api.auth.loginWithGoogle(code);
+                state.set('user', user);
+            } catch (err) {
+                console.error('OAuth callback error:', err);
+            }
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+
         state.subscribe(() => this.render());
         this.render();
     }

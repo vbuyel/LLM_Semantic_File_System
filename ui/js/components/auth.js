@@ -106,9 +106,8 @@ export const Auth = {
             state.set('user', user);
         };
 
-        document.getElementById('google-login').onclick = async () => {
-            const user = await api.auth.loginWithGoogle();
-            state.set('user', user);
+        document.getElementById('google-login').onclick = () => {
+            window.location.href = 'http://localhost:8000/auth/google/url';
         };
 
         document.getElementById('skip-login').onclick = async () => {
