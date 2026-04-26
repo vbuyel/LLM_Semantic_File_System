@@ -12,16 +12,32 @@ class App {
     }
 
     async init() {
+        // Load user from localStorage on startup
+        const savedUser = api.auth.getUser();
+        if (savedUser) {
+            state.set('user', savedUser);
+        }
+
         const queryParams = new URLSearchParams(window.location.search);
         const code = queryParams.get('code');
-        if (code) {
+        const oauthState = queryParams.get('state');
+
+        if (code && oauthState) {
             try {
-                const user = await api.auth.loginWithGoogle(code);
+                const user = await api.auth.loginWithGoogle(code, oauthState);
                 state.set('user', user);
             } catch (err) {
-                console.error('OAuth callback error:', err);
+                console.error('[App] OAuth callback error:', err);
             }
-            window.history.replaceState({}, '', window.location.pathname);
+            window.history.replaceState({}, '', '/');
+        } else if (window.location.pathname === '/auth/google') {
+            this.appElement.innerHTML = `
+                <div class="auth fade-in">
+                    <div class="auth__container" style="justify-content: center; text-align: center;">
+                        <h2>Processing authorization...</h2>
+                    </div>
+                </div>
+            `;
         }
 
         state.subscribe(() => this.render());

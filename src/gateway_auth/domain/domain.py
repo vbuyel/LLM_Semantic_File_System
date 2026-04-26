@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+oauth_states: set = set()
+
 
 class Settings(BaseSettings):
     OAUTH_GOOGLE_CLIENT_ID: str

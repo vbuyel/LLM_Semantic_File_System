@@ -5,7 +5,7 @@ import aiohttp
 import jwt
 
 from src.gateway_auth.adapters.oauth_google import generate_google_oauth_redirect_uri
-from src.gateway_auth.domain.domain import Settings
+from src.gateway_auth.domain.domain import Settings, oauth_states
 
 settings = Settings()
 router = APIRouter(prefix="/auth")
@@ -18,9 +18,17 @@ def get_google_oauth_redirect_url():
 
 
 @router.post("/google/callback")
-async def handle_google_oauth_callback(code: Annotated[str, Body(embed=True)]):
+async def handle_google_oauth_callback(
+    code: Annotated[str, Body()],
+    state: Annotated[str, Body()],
+):
+    # Validate state for CSRF protection
+    if state not in oauth_states:
+        return {"error": "Invalid state"}, 400
+    oauth_states.discard(state)
+
     google_token_url = "https://oauth2.googleapis.com/token"
-    
+
     async with aiohttp.ClientSession() as session:
         async with session.post(
             url=google_token_url,
@@ -30,14 +38,28 @@ async def handle_google_oauth_callback(code: Annotated[str, Body(embed=True)]):
                 "client_secret": settings.OAUTH_GOOGLE_CLIENT_SECRET,
                 "grant_type": "authorization_code",
                 "redirect_uri": settings.OAUTH_GOOGLE_REDIRECT_URI,
-        }) as response:
-            result = await response.json()
-            print(f"GOOGLE TOKEN RESPONSE: {result}")
-            id_token = result["id_token"]
+            },
+            ssl=False,
+        ) as response:
+            try:
+                result = await response.json()
+            except Exception as e:
+                return {"error": f"Failed to parse Google response: {e}"}, 500
+
+            if "error" in result:
+                return {"error": result.get("error", "Unknown error")}, 400
+
+            id_token = result.get("id_token")
+            if not id_token:
+                return {"error": "No id_token in response"}, 400
+
             user_data = jwt.decode(
                             id_token,
                             algorithms=["RS256"],
                             options={"verify_signature": False},
                         )
-    
-    return {"user": user_data}
+
+    return {
+        "user": user_data,
+        "access_token": result.get("access_token"),
+    }
