@@ -6,18 +6,26 @@ const AI_URL = 'http://localhost:8003';
 export const api = {
     auth: {
         async loginWithGoogle(code) {
-            const res = await fetch('http://localhost:8000/auth/google/callback', {
+            fetch('http://localhost:8000/auth/google/callback', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ code }),
-            });
-            if (!res.ok) {
-                throw new Error('Google login failed');
-            }
-            const data = await res.json();
-            const user = data.user;
-            localStorage.setItem('user', JSON.stringify(user));
-            return user;
+            })
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error('Google login failed');
+                }
+                return res.json();
+            })
+            .then(data => {
+                // data.picture
+                const email = data.user.email
+                const name = data.user.name
+
+                const user = { id: Date.now().toString(), name, email };
+                localStorage.setItem('user', JSON.stringify(user));
+                return user;
+            })
         },
         async loginWithCredentials(name, email, password) {
             const user = { id: Date.now().toString(), name, email };

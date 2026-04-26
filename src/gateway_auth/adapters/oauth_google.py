@@ -4,7 +4,7 @@ from src.gateway_auth.domain.domain import Settings
 settings = Settings()
 
 
-def generate_google_oauth_redirect_url():
+def generate_google_oauth_redirect_uri():
     query_params = {
         "client_id": settings.OAUTH_GOOGLE_CLIENT_ID,
         "redirect_uri": settings.OAUTH_GOOGLE_REDIRECT_URI,

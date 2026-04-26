@@ -2,26 +2,22 @@ from fastapi import APIRouter, Body
 from typing import Annotated
 from fastapi.responses import RedirectResponse
 import aiohttp
+import jwt
 
-from src.gateway_auth.adapters.oauth_google import generate_google_oauth_redirect_url
+from src.gateway_auth.adapters.oauth_google import generate_google_oauth_redirect_uri
 from src.gateway_auth.domain.domain import Settings
 
 settings = Settings()
 router = APIRouter(prefix="/auth")
 
 
-@router.get("/google")
-async def google_callback(code: str):
-    return {"status": "success", "code": code}
-
-
 @router.get("/google/url")
 def get_google_oauth_redirect_url():
-    uri = generate_google_oauth_redirect_url()
+    uri = generate_google_oauth_redirect_uri()
     return RedirectResponse(url=uri, status_code=302)
 
 
-@router.get("/google/callback")
+@router.post("/google/callback")
 async def handle_google_oauth_callback(code: Annotated[str, Body(embed=True)]):
     google_token_url = "https://oauth2.googleapis.com/token"
     
@@ -37,5 +33,11 @@ async def handle_google_oauth_callback(code: Annotated[str, Body(embed=True)]):
         }) as response:
             result = await response.json()
             print(f"GOOGLE TOKEN RESPONSE: {result}")
-
-        
+            id_token = result["id_token"]
+            user_data = jwt.decode(
+                            id_token,
+                            algorithms=["RS256"],
+                            options={"verify_signature": False},
+                        )
+    
+    return {"user": user_data}
