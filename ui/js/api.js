@@ -51,6 +51,15 @@ export const api = {
         async getFiles(path = '/') {
             const storageSource = state.get('storageSource');
             const headers = { 'X-Storage-Source': storageSource };
+
+            if (storageSource === 'drive') {
+                headers['X-Auth-Provider'] = 'google';
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                if (user.accessToken) {
+                    headers['Authorization'] = `Bearer ${user.accessToken}`;
+                }
+            }
+
             const res = await fetch(`${FILE_URL}/files?path=${encodeURIComponent(path)}`, {
                 method: 'GET',
                 headers

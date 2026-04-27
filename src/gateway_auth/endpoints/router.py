@@ -50,6 +50,7 @@ async def handle_google_oauth_callback(
                 return {"error": result.get("error", "Unknown error")}, 400
 
             id_token = result.get("id_token")
+            access_token = result.get("access_token")
             if not id_token:
                 return {"error": "No id_token in response"}, 400
 
@@ -58,8 +59,7 @@ async def handle_google_oauth_callback(
                             algorithms=["RS256"],
                             options={"verify_signature": False},
                         )
-
     return {
         "user": user_data,
-        "access_token": result.get("access_token"),
+        "access_token": access_token,
     }

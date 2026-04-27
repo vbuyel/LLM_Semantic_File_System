@@ -4,11 +4,25 @@ from typing import Optional
 
 class GCSOperations:
     def __init__(self, bucket_name: str, credentials_path: Optional[str] = None):
-        if credentials_path:
-            self.client = storage.Client.from_service_account_json(credentials_path)
-        else:
-            self.client = storage.Client()
-        self.bucket = self.client.bucket(bucket_name)
+        self.bucket_name = bucket_name
+        self.credentials_path = credentials_path
+        self._client = None
+        self._bucket = None
+
+    @property
+    def client(self):
+        if self._client is None:
+            if self.credentials_path:
+                self._client = storage.Client.from_service_account_json(self.credentials_path)
+            else:
+                self._client = storage.Client()
+        return self._client
+
+    @property
+    def bucket(self):
+        if self._bucket is None:
+            self._bucket = self.client.bucket(self.bucket_name)
+        return self._bucket
 
 
     def upload_file(self,

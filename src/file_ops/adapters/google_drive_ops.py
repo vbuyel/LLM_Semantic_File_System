@@ -34,7 +34,25 @@ class GoogleDriveOperations:
         }
 
     def list_files(self, directory_path: str = "/") -> list:
-        raise NotImplementedError("Google Drive list_files not yet implemented")
+        results = self.service.files().list(
+            pageSize=100,
+            fields="nextPageToken, files(id, name, mimeType, size, modifiedTime)",
+            q="'me' in owners and trashed=false"
+        ).execute()
+        
+        items = results.get('files', [])
+        file_items = []
+        for item in items:
+            is_dir = item.get('mimeType') == 'application/vnd.google-apps.folder'
+            size = item.get('size')
+            file_items.append({
+                "path": item.get('id'),
+                "name": item.get('name'),
+                "isDirectory": is_dir,
+                "size": int(size) if size else None,
+                "modified": item.get('modifiedTime')
+            })
+        return file_items
 
     def delete_file(self, file_path: str) -> None:
         raise NotImplementedError("Google Drive delete_file not yet implemented")
