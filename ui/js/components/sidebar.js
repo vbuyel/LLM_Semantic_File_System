@@ -16,11 +16,6 @@ export const Sidebar = {
                 <nav class="sidebar__nav">
                     <div class="sidebar__section-title">Storage</div>
                     
-                    <div class="sidebar__item ${activeSource === 'local' ? 'sidebar__item--active' : ''}" data-source="local">
-                        <i data-lucide="hard-drive"></i>
-                        <span>Local Files</span>
-                    </div>
-                    
                     <div class="sidebar__item ${activeSource === 'drive' ? 'sidebar__item--active' : ''}" data-source="drive">
                         <i data-lucide="cloud"></i>
                         <span>Google Drive</span>
@@ -33,24 +28,50 @@ export const Sidebar = {
                         <div class="status-dot status-dot--online"></div>
                     </div>
 
-                    <div class="sidebar__section-title">Views</div>
-                    <div class="sidebar__item">
-                        <i data-lucide="star"></i>
-                        <span>Favorites</span>
-                    </div>
-                    <div class="sidebar__item">
-                        <i data-lucide="clock"></i>
-                        <span>Recent</span>
-                    </div>
                 </nav>
                 
                 <div class="sidebar__footer">
-                    <div class="sidebar__item" id="logout-btn">
-                        <i data-lucide="log-out"></i>
-                        <span>Logout</span>
-                    </div>
+                    ${this.renderFooter()}
                 </div>
             </aside>
+        `;
+    },
+
+    renderFooter() {
+        const user = state.get('user');
+        
+        if (user && user.isGuest) {
+            return `
+                <div class="sidebar__guest-warning">
+                    <i data-lucide="alert-triangle"></i>
+                    <span>You have to sign in with Google to see your Google Drive files</span>
+                </div>
+                <div class="sidebar__item" id="sign-in-google-guest">
+                    <i data-lucide="log-in"></i>
+                    <span>Sign in with Google</span>
+                </div>
+                <div class="sidebar__item" id="logout-btn">
+                    <i data-lucide="log-out"></i>
+                    <span>Logout</span>
+                </div>
+            `;
+        }
+        
+        if (user && user.picture) {
+            return `
+                <div class="sidebar__item" id="logout-btn">
+                    <img src="${user.picture}" alt="${user.name}" class="avatar-avatar" style="width: 28px; height: 28px; border-radius: 50%;" />
+                    <span>Logout</span>
+                    <i data-lucide="log-out"></i>
+                </div>
+            `;
+        }
+        
+        return `
+            <div class="sidebar__item" id="logout-btn">
+                <i data-lucide="log-out"></i>
+                <span>Logout</span>
+            </div>
         `;
     },
 
@@ -69,5 +90,12 @@ export const Sidebar = {
                 window.app.loadInitialData();
             };
         });
+
+        const signInGoogleGuest = document.getElementById('sign-in-google-guest');
+        if (signInGoogleGuest) {
+            signInGoogleGuest.onclick = async () => {
+                window.location.href = 'http://localhost:8000/auth/google/url';
+            };
+        }
     }
 };

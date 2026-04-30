@@ -25,11 +25,7 @@ export const api = {
             localStorage.setItem('user', JSON.stringify(user));
             return user;
         },
-        async loginWithCredentials(name, email, password) {
-            const user = { id: Date.now().toString(), name, email };
-            localStorage.setItem('user', JSON.stringify(user));
-            return user;
-        },
+
         async loginAsGuest() {
             const user = { id: 'guest', name: 'Guest', isGuest: true };
             localStorage.setItem('user', JSON.stringify(user));

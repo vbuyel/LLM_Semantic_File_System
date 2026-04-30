@@ -28,35 +28,8 @@ export const Auth = {
                     
                     <div class="auth__card">
                         <div class="auth__header">
-                            <h1 class="auth__title">Welcome Back</h1>
+                            <h1 class="auth__title">Welcome</h1>
                             <p class="auth__subtitle">Sign in to manage your intelligent workspace</p>
-                        </div>
-                        
-                        <div class="auth__tabs">
-                            <button class="auth__tab active" id="tab-login">Login</button>
-                            <button class="auth__tab" id="tab-register">Register</button>
-                        </div>
-
-                        <form id="auth-form" class="auth__form">
-                            <div class="form-group" id="name-group" style="display: none;">
-                                <label class="auth__label">Full Name</label>
-                                <input type="text" id="auth-name" placeholder="John Doe" class="auth__input">
-                            </div>
-                            <div class="form-group">
-                                <label class="auth__label">Email Address</label>
-                                <input type="email" id="auth-email" placeholder="name@example.com" required class="auth__input">
-                            </div>
-                            <div class="form-group">
-                                <label class="auth__label">Password</label>
-                                <input type="password" id="auth-password" placeholder="••••••••" required class="auth__input">
-                            </div>
-                            <button type="submit" class="btn btn--primary auth__submit-btn" id="submit-btn">
-                                Sign In
-                            </button>
-                        </form>
-
-                        <div class="auth__divider">
-                            <span>OR</span>
                         </div>
 
                         <button id="google-login" class="auth__google-btn">
@@ -74,38 +47,6 @@ export const Auth = {
         
         lucide.createIcons();
         
-        let isLogin = true;
-        const nameGroup = document.getElementById('name-group');
-        const submitBtn = document.getElementById('submit-btn');
-        const tabLogin = document.getElementById('tab-login');
-        const tabRegister = document.getElementById('tab-register');
-        const title = document.querySelector('.auth__title');
-        const subtitle = document.querySelector('.auth__subtitle');
-
-        const switchTab = (toLogin) => {
-            isLogin = toLogin;
-            nameGroup.style.display = isLogin ? 'none' : 'block';
-            submitBtn.textContent = isLogin ? 'Sign In' : 'Create Account';
-            title.textContent = isLogin ? 'Welcome Back' : 'Get Started';
-            subtitle.textContent = isLogin ? 'Sign in to manage your intelligent workspace' : 'Create an account to unlock all features';
-            
-            tabLogin.classList.toggle('active', isLogin);
-            tabRegister.classList.toggle('active', !isLogin);
-        };
-
-        tabLogin.onclick = () => switchTab(true);
-        tabRegister.onclick = () => switchTab(false);
-        
-        document.getElementById('auth-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('auth-email').value;
-            const password = document.getElementById('auth-password').value;
-            const name = isLogin ? 'Existing User' : document.getElementById('auth-name').value;
-            
-            const user = await api.auth.loginWithCredentials(name, email, password);
-            state.set('user', user);
-        };
-
         document.getElementById('google-login').onclick = () => {
             window.location.href = 'http://localhost:8000/auth/google/url';
         };

@@ -2,7 +2,7 @@ export const state = {
     _data: {
         user: null,
         currentPath: '/',
-        storageSource: 'local', // local, drive, gcs
+        storageSource: 'drive', // drive, gcs
         files: [],
         integrations: { googleDrive: 'idle', gcs: 'idle' },
         isLoading: false,
