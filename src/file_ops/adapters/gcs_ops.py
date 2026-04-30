@@ -35,16 +35,44 @@ class GCSOperations:
         kwargs = {"content_type": mime_type} if mime_type else {}
 
         blob.upload_from_filename(source_path, **kwargs)
-        blob.make_public()
 
         return {
             "file_id": blob.name,
-            "url": blob.public_url,
+            "url": f"gs://{self.bucket_name}/{blob_name}",
             "storage_type": "gcs",
         }
 
     def list_files(self, directory_path: str = "/") -> list:
-        raise NotImplementedError("GCS list_files not yet implemented")
+        prefix = directory_path.lstrip("/")
+        if prefix and not prefix.endswith("/"):
+            prefix += "/"
+        
+        files = []
+
+        blobs = self.client.list_blobs(self.bucket, prefix=prefix, delimiter="/")
+
+        for prefix_name in blobs.prefixes:
+            folder_name = prefix_name.rstrip("/").split("/")[-1]
+            files.append({
+                "path": prefix_name,
+                "name": folder_name,
+                "isDirectory": True,
+                "size": None,
+                "modified": None,
+            })
+        
+        for blob in blobs:
+            files.append({
+                "path": blob.name,
+                "name": blob.name.split("/")[-1],
+                "isDirectory": False,
+                "size": blob.size,
+                "modified": blob.updated.isoformat() if blob.updated else None,
+            })
+        
+        return files
+
 
     def delete_file(self, file_path: str) -> None:
-        raise NotImplementedError("GCS delete_file not yet implemented")
+        blob = self.bucket.blob(file_path)
+        blob.delete()

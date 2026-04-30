@@ -3,7 +3,9 @@ import { state } from '../state.js';
 export const Sidebar = {
     render() {
         const activeSource = state.get('storageSource');
-        
+        const user = state.get('user');
+        const statusClass = (user && user.isGuest) ? 'status-dot--guest' : 'status-dot--online';
+
         return `
             <aside class="sidebar">
                 <div class="sidebar__header">
@@ -12,16 +14,16 @@ export const Sidebar = {
                     </div>
                     <span class="logo-text">Semantic FS</span>
                 </div>
-                
+
                 <nav class="sidebar__nav">
                     <div class="sidebar__section-title">Storage</div>
-                    
+
                     <div class="sidebar__item ${activeSource === 'drive' ? 'sidebar__item--active' : ''}" data-source="drive">
                         <i data-lucide="cloud"></i>
                         <span>Google Drive</span>
-                        <div class="status-dot status-dot--online"></div>
+                        <div class="status-dot ${statusClass}"></div>
                     </div>
-                    
+
                     <div class="sidebar__item ${activeSource === 'gcs' ? 'sidebar__item--active' : ''}" data-source="gcs">
                         <i data-lucide="database"></i>
                         <span>Cloud Storage</span>
@@ -29,7 +31,7 @@ export const Sidebar = {
                     </div>
 
                 </nav>
-                
+
                 <div class="sidebar__footer">
                     ${this.renderFooter()}
                 </div>

@@ -628,3 +628,7 @@ kbd {
     border-radius: 50%;
     background: #22c55e;
 }
+
+.status-dot--guest {
+    background: var(--danger);
+}

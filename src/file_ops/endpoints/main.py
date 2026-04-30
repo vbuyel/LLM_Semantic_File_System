@@ -3,13 +3,14 @@ Run the server:
     uvicorn src.file_ops.endpoints.main:app --port 8002
 """
 import os
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from src.file_ops.domain.domain import UploadResponse, ListFilesResponse, FileItem
 from src.file_ops.adapters.gcs_ops import GCSOperations
 from src.file_ops.adapters.google_drive_ops import GoogleDriveOperations
-from src.file_ops.adapters.local import LocalOperations
 
 
 app = FastAPI()
@@ -24,7 +25,6 @@ app.add_middleware(
 
 # Инициализация один раз при старте
 gcs_ops = GCSOperations(bucket_name=os.getenv("GCS_BUCKET_NAME"))
-local_ops = LocalOperations()
 
 
 async def _get_current_user(
@@ -68,12 +68,6 @@ async def upload_file(
         elif storage_source == "gcs":
             result = gcs_ops.upload_file(
                 source_path=temp_path,
-                destination_name=file.filename,
-                mime_type=file.content_type,
-            )
-        elif storage_source == "local":
-            result = local_ops.upload_file(
-                source_path=temp_path,
                 dest_name=file.filename,
                 mime_type=file.content_type,
             )
@@ -100,9 +94,7 @@ async def list_files(
 ):
     storage_source = user["storage_source"]
     try:
-        if storage_source == "local":
-            files = local_ops.list_files(path)
-        elif storage_source == "gcs":
+        if storage_source == "gcs":
             files = gcs_ops.list_files(path)
         elif storage_source == "drive":
             if not user.get("token"):
@@ -128,9 +120,7 @@ async def delete_file(
 ):
     storage_source = user["storage_source"]
     try:
-        if storage_source == "local":
-            local_ops.delete_file(path)
-        elif storage_source == "gcs":
+        if storage_source == "gcs":
             gcs_ops.delete_file(path)
         elif storage_source == "drive":
             if not user.get("token"):
