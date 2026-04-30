@@ -122,14 +122,17 @@
 
 .auth__card {
     flex: 1;
-    padding: var(--space-2xl);
+    padding: var(--space-xl);
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
+    gap: var(--space-lg);
     background: var(--bg-secondary);
+    text-align: center;
 }
 
-.auth__header { margin-bottom: var(--space-xl); }
+.auth__header { margin-bottom: 0; }
 
 .auth__title {
     font-size: 1.8rem;
@@ -243,7 +246,6 @@
     align-items: center;
     justify-content: center;
     gap: var(--space-sm);
-    margin-bottom: var(--space-md);
     border: 1px solid #e2e8f0;
     transition: all 0.2s;
 }

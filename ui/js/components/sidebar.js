@@ -44,7 +44,7 @@ export const Sidebar = {
             return `
                 <div class="sidebar__guest-warning">
                     <i data-lucide="alert-triangle"></i>
-                    <span>You have to sign in with Google to see your Google Drive files</span>
+                    <span>You have to sign in to see your Google Drive files</span>
                 </div>
                 <div class="sidebar__item" id="sign-in-google-guest">
                     <i data-lucide="log-in"></i>
