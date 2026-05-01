@@ -1,6 +1,6 @@
 """
 Run the server:
-    uvicorn src.llm.endpoints.main:app --port 8003
+    uvicorn src.llm.endpoints.main:app --port 8001
 """
 
 from fastapi import FastAPI
@@ -23,10 +23,7 @@ app.add_middleware(
 agent_researcher = AgentResearcher()
 
 
-@app.get("/ai_agent")
-async def get_response_from_ai_agent(text: str) -> SearchResponse:
-    query = SearchRequest(text=text)
-    response = agent_researcher.get_response(query)
-    print(f"[DEBUG] Full response: {response}")
-    print(f"[DEBUG] response.text: {response.text}")
+@app.post("/get_response")
+async def get_response_from_ai_agent(request: SearchRequest) -> SearchResponse:
+    response = agent_researcher.get_response(request)
     return response

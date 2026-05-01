@@ -5,19 +5,19 @@ import aiohttp
 import jwt
 
 from src.gateway_auth.adapters.oauth_google import generate_google_oauth_redirect_uri
-from src.gateway_auth.domain.domain import Settings, oauth_states
-
-settings = Settings()
-router = APIRouter(prefix="/auth")
+from src.gateway_auth.domain.settings import settings, oauth_states
 
 
-@router.get("/google/url")
+oauth_router = APIRouter(prefix="/auth")
+
+
+@oauth_router.get("/google/url")
 def get_google_oauth_redirect_url():
     uri = generate_google_oauth_redirect_uri()
     return RedirectResponse(url=uri, status_code=302)
 
 
-@router.post("/google/callback")
+@oauth_router.post("/google/callback")
 async def handle_google_oauth_callback(
     code: Annotated[str, Body()],
     state: Annotated[str, Body()],

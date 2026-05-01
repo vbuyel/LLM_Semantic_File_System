@@ -5,7 +5,8 @@ Run the server:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.gateway_auth.endpoints.router import router
+from src.gateway_auth.endpoints.gateway_router import gateway_router
+from src.gateway_auth.endpoints.oauth_router import oauth_router
 
 
 app = FastAPI()
@@ -17,7 +18,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router)
+app.include_router(gateway_router)
+app.include_router(oauth_router)
 
 
 @app.get("/health")

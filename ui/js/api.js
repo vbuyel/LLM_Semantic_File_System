@@ -1,12 +1,11 @@
 import { state } from './state.js';
 
-const FILE_URL = 'http://localhost:8002';
-const AI_URL = 'http://localhost:8003';
+const GATEWAY_SERVER = 'http://localhost:8000';
 
 export const api = {
     auth: {
         async loginWithGoogle(code, state) {
-            const res = await fetch('http://localhost:8000/auth/google/callback', {
+            const res = await fetch(`${GATEWAY_SERVER}/auth/google/callback`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ code, state }),
@@ -56,7 +55,7 @@ export const api = {
                 }
             }
 
-            const res = await fetch(`${FILE_URL}/files?path=${encodeURIComponent(path)}`, {
+            const res = await fetch(`${GATEWAY_SERVER}/gateway/file_ops?path=${encodeURIComponent(path)}`, {
                 method: 'GET',
                 headers
             });
@@ -78,7 +77,7 @@ export const api = {
                     headers['Authorization'] = `Bearer ${user.accessToken}`;
                 }
             }
-            const res = await fetch(`${FILE_URL}/upload`, {
+            const res = await fetch(`${GATEWAY_SERVER}/gateway/file_ops/upload`, {
                 method: 'POST',
                 body: formData,
                 headers
@@ -88,7 +87,7 @@ export const api = {
         async deleteFile(path) {
             const storageSource = state.get('storageSource');
             const headers = { 'X-Storage-Source': storageSource };
-            const res = await fetch(`${FILE_URL}/delete?path=${encodeURIComponent(path)}`, {
+            const res = await fetch(`${GATEWAY_SERVER}/gateway/file_ops/delete?path=${encodeURIComponent(path)}`, {
                 method: 'DELETE',
                 headers
             });
@@ -97,10 +96,12 @@ export const api = {
         }
     },
     ai: {
-        async search(text, filePath = null) {
-            let url = `${AI_URL}/ai_agent?text=${encodeURIComponent(text)}`;
-            if (filePath) url += `&file_path=${encodeURIComponent(filePath)}`;
-            const response = await fetch(url);
+        async search(text) {;
+            const response = await fetch(`${GATEWAY_SERVER}/gateway/ai_agent`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text }),
+            });
             return await response.json();
         }
     }

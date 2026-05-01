@@ -14,5 +14,9 @@ class Settings(BaseSettings):
         "email",
         "https://www.googleapis.com/auth/drive",
     ]
+    AGENT_SERVER: str
+    FILE_OPS_SERVER: str
 
     model_config = SettingsConfigDict(env_file="src/gateway_auth/.env")
+
+settings = Settings()
