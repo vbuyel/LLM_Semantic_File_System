@@ -5,6 +5,7 @@ Run the server:
 import os
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
+
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
@@ -35,10 +36,10 @@ async def _get_current_user(
     """
     Stub auth dependency.
     В реальности сюда подключишь JWT декодинг или проверку сессии.
-    Возвращает: provider = "google" | "local", storage_source = "local" | "gcs" | "drive"
+    Возвращает: provider = "google" | "local", storage_source = "gcs" | "drive"
     """
     provider = x_auth_provider or "local"
-    storage_source = x_storage_source or "local"
+    storage_source = x_storage_source or "gcs"
     token = authorization.replace("Bearer ", "") if authorization else None
     return {"provider": provider, "storage_source": storage_source, "token": token}
 
@@ -87,7 +88,7 @@ async def upload_file(
     )
 
 
-@app.get("/files", response_model=ListFilesResponse)
+@app.get("/get_all", response_model=ListFilesResponse)
 async def list_files(
     path: str = Query(default="/"),
     user=Depends(_get_current_user),

@@ -55,9 +55,9 @@ export const api = {
                 }
             }
 
-            const res = await fetch(`${GATEWAY_SERVER}/gateway/file_ops?path=${encodeURIComponent(path)}`, {
+            const res = await fetch(`${GATEWAY_SERVER}/gateway/get_objects?path=${encodeURIComponent(path)}`, {
                 method: 'GET',
-                headers
+                headers,
             });
             if (!res.ok) throw new Error('Failed to list files');
             const data = await res.json();
@@ -77,7 +77,7 @@ export const api = {
                     headers['Authorization'] = `Bearer ${user.accessToken}`;
                 }
             }
-            const res = await fetch(`${GATEWAY_SERVER}/gateway/file_ops/upload`, {
+            const res = await fetch(`${GATEWAY_SERVER}/gateway/upload_object`, {
                 method: 'POST',
                 body: formData,
                 headers
@@ -87,7 +87,7 @@ export const api = {
         async deleteFile(path) {
             const storageSource = state.get('storageSource');
             const headers = { 'X-Storage-Source': storageSource };
-            const res = await fetch(`${GATEWAY_SERVER}/gateway/file_ops/delete?path=${encodeURIComponent(path)}`, {
+            const res = await fetch(`${GATEWAY_SERVER}/gateway/delete_object?path=${encodeURIComponent(path)}`, {
                 method: 'DELETE',
                 headers
             });
