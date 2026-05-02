@@ -12,7 +12,6 @@ class FileItem(BaseModel):
     size: Optional[int] = None
     modified: Optional[str] = None
 
-
 class ListOfObjects(BaseModel):
     files: List[FileItem]
     storage_type: str

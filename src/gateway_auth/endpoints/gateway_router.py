@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi import APIRouter, Depends, File, Query, Request, HTTPException, UploadFile
 import requests
 
 from src.gateway_auth.domain.file_ops import ListOfObjects, PathToGetObjects
@@ -53,12 +53,68 @@ def get_objects_from_storage(request: Request, query: PathToGetObjects = Depends
 
 
 @gateway_router.post("/upload_object")
-def upload_object_into_storage():
+def upload_object_into_storage(request: Request, file: UploadFile = File(...)):
     """Upload user's file or object into Cloud"""
-    pass
+    headers = {}
+    if auth := request.headers.get("Authorization"):
+        headers["Authorization"] = auth
+    if storage_source := request.headers.get("X-Storage-Source"):
+        headers["X-Storage-Source"] = storage_source
+    if auth_provider := request.headers.get("X-Auth-Provider"):
+        headers["X-Auth-Provider"] = auth_provider
+
+    files = {"file": (file.filename, file.file, file.content_type)}
+
+    try:
+        response = requests.post(
+            url=f"{settings.FILE_OPS_SERVER}/upload",
+            files=files,
+            headers=headers,
+            timeout=60,
+        )
+        if response.status_code != 200:
+            detail = response.json().get("detail", "Unknown error") if "application/json" in response.headers.get("content-type", "") else response.text
+            raise HTTPException(status_code=response.status_code, detail=detail)
+
+        return response.json()
+    except requests.exceptions.ConnectionError:
+        raise HTTPException(status_code=503, detail="File service unavailable")
+    except requests.exceptions.Timeout:
+        raise HTTPException(status_code=504, detail="File service timeout")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
 
 
 @gateway_router.delete("/delete_object")
-def delete_object_from_storage():
+def delete_object_from_storage(request: Request, path: str = Query(...)):
     """Delete user's file or folder from Cloud"""
-    pass
+    headers = {}
+    if auth := request.headers.get("Authorization"):
+        headers["Authorization"] = auth
+    if storage_source := request.headers.get("X-Storage-Source"):
+        headers["X-Storage-Source"] = storage_source
+    if auth_provider := request.headers.get("X-Auth-Provider"):
+        headers["X-Auth-Provider"] = auth_provider
+
+    try:
+        response = requests.delete(
+            url=f"{settings.FILE_OPS_SERVER}/delete",
+            params={"path": path},
+            headers=headers,
+            timeout=30,
+        )
+        if response.status_code != 200:
+            detail = response.json().get("detail", "Unknown error") if "application/json" in response.headers.get("content-type", "") else response.text
+            raise HTTPException(status_code=response.status_code, detail=detail)
+        
+        return response.json()
+    except requests.exceptions.ConnectionError:
+        raise HTTPException(status_code=503, detail="File service unavailable")
+    except requests.exceptions.Timeout:
+        raise HTTPException(status_code=504, detail="File service timeout")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
