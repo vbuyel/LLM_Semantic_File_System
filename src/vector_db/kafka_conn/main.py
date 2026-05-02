@@ -12,12 +12,12 @@ from pathlib import Path
 from dotenv import load_dotenv
 try:
     from sentence_transformers import SentenceTransformer
-except ImportError:  # pragma: no cover - for lightweight test environments
+except ImportError:
     SentenceTransformer = None
 
 try:
     from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-except ImportError:  # pragma: no cover - for lightweight test environments
+except ImportError:
     AIOKafkaConsumer = None
     AIOKafkaProducer = None
 

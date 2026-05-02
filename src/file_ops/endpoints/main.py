@@ -28,6 +28,11 @@ app.add_middleware(
 gcs_ops = GCSOperations(bucket_name=os.getenv("GCS_BUCKET_NAME"))
 
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+
 async def _get_current_user(
     x_auth_provider: Optional[str] = Header(None, alias="X-Auth-Provider"),
     x_storage_source: Optional[str] = Header(None, alias="X-Storage-Source"),

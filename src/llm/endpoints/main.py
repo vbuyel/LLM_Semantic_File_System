@@ -23,6 +23,11 @@ app.add_middleware(
 agent_researcher = AgentResearcher()
 
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+
 @app.post("/get_response")
 async def get_response_from_ai_agent(request: SearchRequest) -> SearchResponse:
     response = agent_researcher.get_response(request)
