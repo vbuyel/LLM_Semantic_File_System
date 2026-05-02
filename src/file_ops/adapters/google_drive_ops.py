@@ -34,10 +34,15 @@ class GoogleDriveOperations:
         }
 
     def list_files(self, directory_path: str = "/") -> list:
+        query = "'me' in owners and trashed=false"
+        
+        if directory_path != "/":
+            query += f" and '{directory_path}' in parents"
+        
         results = self.service.files().list(
             pageSize=100,
             fields="nextPageToken, files(id, name, mimeType, size, modifiedTime)",
-            q="'me' in owners and trashed=false"
+            q=query
         ).execute()
         
         items = results.get('files', [])
