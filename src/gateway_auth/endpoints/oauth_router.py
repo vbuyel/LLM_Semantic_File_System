@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body
+from fastapi import status, APIRouter, Body
 from typing import Annotated
 from fastapi.responses import RedirectResponse
 import aiohttp
@@ -24,7 +24,7 @@ async def handle_google_oauth_callback(
 ):
     # Validate state for CSRF protection
     if state not in oauth_states:
-        return {"error": "Invalid state"}, 400
+        return {"error": "Invalid state"}, status.HTTP_400_BAD_REQUEST
     oauth_states.discard(state)
 
     google_token_url = "https://oauth2.googleapis.com/token"
@@ -44,15 +44,15 @@ async def handle_google_oauth_callback(
             try:
                 result = await response.json()
             except Exception as e:
-                return {"error": f"Failed to parse Google response: {e}"}, 500
+                return {"error": f"Failed to parse Google response: {e}"}, status.HTTP_500_INTERNAL_SERVER_ERROR
 
             if "error" in result:
-                return {"error": result.get("error", "Unknown error")}, 400
+                return {"error": result.get("error", "Unknown error")}, status.HTTP_400_BAD_REQUEST
 
             id_token = result.get("id_token")
             access_token = result.get("access_token")
             if not id_token:
-                return {"error": "No id_token in response"}, 400
+                return {"error": "No id_token in response"}, status.HTTP_400_BAD_REQUEST
 
             user_data = jwt.decode(
                             id_token,

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Query, Request, HTTPException, UploadFile
+from fastapi import status, APIRouter, Depends, File, Query, Request, HTTPException, UploadFile
 import requests
 
 from src.gateway_auth.domain.file_ops import ListOfObjects, PathToGetObjects
@@ -37,19 +37,19 @@ def get_objects_from_storage(request: Request, query: PathToGetObjects = Depends
             headers=headers,
             timeout=30,
         )
-        if response.status_code != 200:
+        if response.status_code != status.HTTP_200_OK:
             detail = response.json().get("detail", "Unknown error") if "application/json" in response.headers.get("content-type", "") else response.text
             raise HTTPException(status_code=response.status_code, detail=detail)
 
         return ListOfObjects(**response.json())
     except requests.exceptions.ConnectionError:
-        raise HTTPException(status_code=503, detail="File service unavailable")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="File service unavailable")
     except requests.exceptions.Timeout:
-        raise HTTPException(status_code=504, detail="File service timeout")
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="File service timeout")
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal error: {str(e)}")
 
 
 @gateway_router.post("/upload_object")
@@ -72,19 +72,19 @@ def upload_object_into_storage(request: Request, file: UploadFile = File(...)):
             headers=headers,
             timeout=60,
         )
-        if response.status_code != 200:
+        if response.status_code != status.HTTP_200_OK:
             detail = response.json().get("detail", "Unknown error") if "application/json" in response.headers.get("content-type", "") else response.text
             raise HTTPException(status_code=response.status_code, detail=detail)
 
         return response.json()
     except requests.exceptions.ConnectionError:
-        raise HTTPException(status_code=503, detail="File service unavailable")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="File service unavailable")
     except requests.exceptions.Timeout:
-        raise HTTPException(status_code=504, detail="File service timeout")
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="File service timeout")
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal error: {str(e)}")
 
 
 @gateway_router.delete("/delete_object")
@@ -105,16 +105,16 @@ def delete_object_from_storage(request: Request, path: str = Query(...)):
             headers=headers,
             timeout=30,
         )
-        if response.status_code != 200:
+        if response.status_code != status.HTTP_200_OK:
             detail = response.json().get("detail", "Unknown error") if "application/json" in response.headers.get("content-type", "") else response.text
             raise HTTPException(status_code=response.status_code, detail=detail)
         
         return response.json()
     except requests.exceptions.ConnectionError:
-        raise HTTPException(status_code=503, detail="File service unavailable")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="File service unavailable")
     except requests.exceptions.Timeout:
-        raise HTTPException(status_code=504, detail="File service timeout")
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="File service timeout")
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal error: {str(e)}")

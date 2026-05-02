@@ -6,7 +6,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
 
-from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Header, Query
+from fastapi import status, FastAPI, UploadFile, File, Depends, HTTPException, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from src.file_ops.domain.domain import UploadResponse, ListFilesResponse, FileItem
@@ -64,7 +64,7 @@ async def upload_file(
         storage_source = user["storage_source"]
         if storage_source == "drive":
             if not user.get("token"):
-                raise HTTPException(401, "Google access token required for Drive upload")
+                raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google access token required for Drive upload")
             drive_ops = GoogleDriveOperations(access_token=user["token"])
             result = drive_ops.upload_file(
                 source_path=temp_path,
@@ -78,7 +78,7 @@ async def upload_file(
                 mime_type=file.content_type,
             )
         else:
-            raise HTTPException(400, f"Unsupported storage source: {storage_source}")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unsupported storage source: {storage_source}")
     finally:
         # Cleanup
         if os.path.exists(temp_path):
@@ -104,19 +104,19 @@ async def list_files(
             files = gcs_ops.list_files(path)
         elif storage_source == "drive":
             if not user.get("token"):
-                raise HTTPException(401, "Access token required for Google Drive")
+                raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Access token required for Google Drive")
             drive_ops = GoogleDriveOperations(access_token=user["token"])
             files = drive_ops.list_files(path)
         else:
-            raise HTTPException(400, f"Unsupported storage source: {storage_source}")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unsupported storage source: {storage_source}")
         file_items = [FileItem(**f) for f in files] if files else []
         return ListFilesResponse(files=file_items, storage_type=storage_source)
     except NotImplementedError as e:
-        raise HTTPException(501, str(e))
+        raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, str(e))
     except ValueError as e:
-        raise HTTPException(404, str(e))
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
     except Exception as e:
-        raise HTTPException(500, f"Failed to list files: {str(e)}")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Failed to list files: {str(e)}")
 
 
 @app.delete("/delete")
@@ -130,13 +130,13 @@ async def delete_file(
             gcs_ops.delete_file(path)
         elif storage_source == "drive":
             if not user.get("token"):
-                raise HTTPException(401, "Access token required for Google Drive")
+                raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Access token required for Google Drive")
             drive_ops = GoogleDriveOperations(access_token=user["token"])
             drive_ops.delete_file(path)
         else:
-            raise HTTPException(400, f"Unsupported storage source: {storage_source}")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unsupported storage source: {storage_source}")
         return {"message": f"File {path} deleted from {storage_source}"}
     except ValueError as e:
-        raise HTTPException(404, str(e))
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
     except Exception as e:
-        raise HTTPException(500, f"Failed to delete file: {str(e)}")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Failed to delete file: {str(e)}")
