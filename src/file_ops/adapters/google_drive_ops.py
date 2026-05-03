@@ -1,7 +1,8 @@
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 from typing import Optional
+import io
 
 
 class GoogleDriveOperations:
@@ -58,6 +59,48 @@ class GoogleDriveOperations:
                 "modified": item.get('modifiedTime')
             })
         return file_items
+
+    def download_file(self, file_id: str) -> tuple[bytes, str, str]:
+        """Download a file from Google Drive.
+
+        Handles both regular binary files (via get_media) and Google Workspace
+        files such as Docs, Sheets, and Slides (via export_media).
+
+        Returns:
+            (file_bytes, filename, mime_type)
+        """
+        # Google Workspace MIME types → preferred export formats
+        EXPORT_FORMATS = {
+            "application/vnd.google-apps.document":
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.google-apps.spreadsheet":
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.google-apps.presentation":
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        }
+
+        meta = self.service.files().get(
+            fileId=file_id, fields="name,mimeType"
+        ).execute()
+        mime_type = meta.get("mimeType", "application/octet-stream")
+        file_name = meta.get("name", file_id)
+
+        buffer = io.BytesIO()
+        if mime_type in EXPORT_FORMATS:
+            export_mime = EXPORT_FORMATS[mime_type]
+            request = self.service.files().export_media(
+                fileId=file_id, mimeType=export_mime
+            )
+            mime_type = export_mime
+        else:
+            request = self.service.files().get_media(fileId=file_id)
+
+        downloader = MediaIoBaseDownload(buffer, request)
+        done = False
+        while not done:
+            _, done = downloader.next_chunk()
+
+        return buffer.getvalue(), file_name, mime_type
 
     def delete_file(self, file_path: str) -> None:
         raise NotImplementedError("Google Drive delete_file not yet implemented")

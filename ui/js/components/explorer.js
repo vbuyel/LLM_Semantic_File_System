@@ -47,6 +47,10 @@ export const Explorer = {
                     </div>
                 </div>
                 <div class="explorer__actions">
+                    ${!file.isDirectory ? `
+                    <button class="action-btn download-btn" title="Download">
+                        <i data-lucide="download" size="16"></i>
+                    </button>` : ''}
                     <button class="action-btn delete-btn" title="Delete">
                         <i data-lucide="trash-2" size="16"></i>
                     </button>
@@ -108,6 +112,26 @@ export const Explorer = {
                     if (confirm(`Delete ${item.dataset.name}?`)) {
                         await api.files.deleteFile(item.dataset.path);
                         window.app.loadInitialData();
+                    }
+                };
+            }
+
+            const downloadBtn = item.querySelector('.download-btn');
+            if (downloadBtn) {
+                downloadBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    const originalHTML = downloadBtn.innerHTML;
+                    downloadBtn.disabled = true;
+                    downloadBtn.innerHTML = '<i data-lucide="loader-circle" size="16"></i>';
+                    if (window.lucide) lucide.createIcons();
+                    try {
+                        await api.files.downloadFile(item.dataset.path);
+                    } catch (err) {
+                        alert(`Download failed: ${err.message}`);
+                    } finally {
+                        downloadBtn.disabled = false;
+                        downloadBtn.innerHTML = originalHTML;
+                        if (window.lucide) lucide.createIcons();
                     }
                 };
             }

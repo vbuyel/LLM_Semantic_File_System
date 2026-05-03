@@ -73,6 +73,19 @@ class GCSOperations:
         return files
 
 
+    def download_file(self, file_path: str) -> tuple[bytes, str, str]:
+        """Download a blob from GCS.
+
+        Returns:
+            (file_bytes, filename, mime_type)
+        """
+        blob = self.bucket.blob(file_path)
+        blob.reload()  # fetch server-side metadata (content_type, etc.)
+        mime_type = blob.content_type or "application/octet-stream"
+        file_name = file_path.split("/")[-1]
+        content = blob.download_as_bytes()
+        return content, file_name, mime_type
+
     def delete_file(self, file_path: str) -> None:
         blob = self.bucket.blob(file_path)
         blob.delete()

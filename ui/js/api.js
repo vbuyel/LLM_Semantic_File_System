@@ -93,6 +93,43 @@ export const api = {
             });
             if (!res.ok) throw new Error('Failed to delete file');
             return res.json();
+        },
+        async downloadFile(path) {
+            const storageSource = state.get('storageSource');
+            const headers = { 'X-Storage-Source': storageSource };
+
+            if (storageSource === 'drive') {
+                headers['X-Auth-Provider'] = 'google';
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                if (user.accessToken) {
+                    headers['Authorization'] = `Bearer ${user.accessToken}`;
+                }
+            }
+
+            const res = await fetch(
+                `${GATEWAY_SERVER}/gateway/download_object?path=${encodeURIComponent(path)}`,
+                { method: 'GET', headers }
+            );
+
+            if (!res.ok) throw new Error('Download failed');
+
+            // Extract filename from Content-Disposition header
+            const disposition = res.headers.get('Content-Disposition') || '';
+            const match = disposition.match(/filename="?([^"]+)"?/);
+            const filename = match ? match[1] : path.split('/').pop();
+
+            // Trigger browser save dialog
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            return filename;
         }
     },
     ai: {

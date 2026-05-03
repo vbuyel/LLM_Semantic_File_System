@@ -3,11 +3,13 @@ Run the server:
     uvicorn src.file_ops.endpoints.main:app --port 8002
 """
 import os
+import io
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
 
 from fastapi import status, FastAPI, UploadFile, File, Depends, HTTPException, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from typing import Optional
 from src.file_ops.domain.domain import UploadResponse, ListFilesResponse, FileItem
 from src.file_ops.adapters.gcs_ops import GCSOperations
@@ -140,3 +142,44 @@ async def delete_file(
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
     except Exception as e:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Failed to delete file: {str(e)}")
+
+
+@app.get("/download")
+async def download_file(
+    path: str = Query(..., description="file_id for Drive, blob path for GCS"),
+    user=Depends(_get_current_user),
+):
+    """Download a file from cloud storage and stream it to the client."""
+    storage_source = user["storage_source"]
+    try:
+        if storage_source == "gcs":
+            content, file_name, mime_type = gcs_ops.download_file(path)
+        elif storage_source == "drive":
+            if not user.get("token"):
+                raise HTTPException(
+                    status.HTTP_401_UNAUTHORIZED,
+                    "Google access token required for Drive download",
+                )
+            drive_ops = GoogleDriveOperations(access_token=user["token"])
+            content, file_name, mime_type = drive_ops.download_file(path)
+        else:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                f"Unsupported storage source: {storage_source}",
+            )
+
+        return StreamingResponse(
+            io.BytesIO(content),
+            media_type=mime_type,
+            headers={
+                "Content-Disposition": f'attachment; filename="{file_name}"',
+                "Content-Length": str(len(content)),
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            f"Failed to download file: {str(e)}",
+        )
