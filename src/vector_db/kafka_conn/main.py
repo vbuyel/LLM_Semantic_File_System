@@ -22,6 +22,7 @@ except ImportError:
     AIOKafkaProducer = None
 
 from src.vector_db.adapters.database import DataBase
+from src.vector_db.domain.domain import UploadObject
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
@@ -32,6 +33,7 @@ _request_topic = (
     or os.getenv("TOPIC_GET_TEXT_IDS")
     or "service.requests"
 )
+_upload_topic = os.getenv("UPLOAD_TOPIC", "service.uploads")
 
 _embedding_model = None
 _db = None
@@ -79,21 +81,34 @@ async def process_requests():
     try:
         async for msg in consumer:
             try:
-                # msg.value is already deserialized by value_deserializer.
                 data = msg.value
                 correlation_id = data["correlation_id"]
                 reply_topic = data["reply_topic"]
                 payload = data["payload"]
+                owner = payload.get("owner", None)
+                # action = payload.get("action", "")
+                action = payload.get("action", "search")
                 
-                # Search
-                embedding = get_embedding_model().encode(payload["text"]).tolist()
-                results = get_db().search_similar(embedding, limit=payload.get("limit", 3))
+                if action == "upload":
+                    upload = UploadObject(
+                        file_name=payload.get("file_name", ""),
+                        file_path=payload.get("file_path", ""),
+                        text=payload.get("text"),
+                    )
+                    result = get_db().upload_object(upload, get_embedding_model())
+                    reply_message = {
+                        "correlation_id": correlation_id,
+                        "data": result.model_dump(mode="json"),
+                    }
+                # elif action == "search":
+                else:
+                    embedding = get_embedding_model().encode(payload["text"]).tolist()
+                    results = get_db().search_similar(embedding, limit=payload.get("limit", 3))
+                    reply_message = {
+                        "correlation_id": correlation_id,
+                        "data": results.model_dump(mode="json"),
+                    }
                 
-                # Reply
-                reply_message = {
-                    "correlation_id": correlation_id,
-                    "data": results.model_dump(mode="json"),
-                }
                 await producer.send_and_wait(reply_topic, reply_message)
             except Exception as e:
                 print(f"Error: {e}")

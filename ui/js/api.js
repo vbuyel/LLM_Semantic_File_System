@@ -71,6 +71,7 @@ export const api = {
             const headers = { 'X-Storage-Source': storageSource };
 
             if (storageSource === 'drive') {
+                headers['X-Owner-Email'] = localStorage.getItem('user').get('email', None)
                 headers['X-Auth-Provider'] = 'google';
                 const user = JSON.parse(localStorage.getItem('user') || '{}');
                 if (user.accessToken) {

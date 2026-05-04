@@ -27,8 +27,10 @@ class GCSOperations:
 
     def upload_file(self,
                     source_path: str,
+                    owner: Optional[str] = None,
                     dest_name: Optional[str] = None,
-                    mime_type: Optional[str] = None) -> dict:
+                    mime_type: Optional[str] = None,
+    ) -> dict:
         blob_name = dest_name or source_path.split("/")[-1]
         blob = self.bucket.blob(blob_name)
 
@@ -36,11 +38,14 @@ class GCSOperations:
 
         blob.upload_from_filename(source_path, **kwargs)
 
+        # Send Command to Kafka to upload into vectordb and send Event to user
+
         return {
             "file_id": blob.name,
             "url": f"gs://{self.bucket_name}/{blob_name}",
             "storage_type": "gcs",
         }
+
 
     def list_files(self, directory_path: str = "/") -> list:
         prefix = directory_path.lstrip("/")
@@ -74,13 +79,8 @@ class GCSOperations:
 
 
     def download_file(self, file_path: str) -> tuple[bytes, str, str]:
-        """Download a blob from GCS.
-
-        Returns:
-            (file_bytes, filename, mime_type)
-        """
         blob = self.bucket.blob(file_path)
-        blob.reload()  # fetch server-side metadata (content_type, etc.)
+        blob.reload()
         mime_type = blob.content_type or "application/octet-stream"
         file_name = file_path.split("/")[-1]
         content = blob.download_as_bytes()

@@ -8,7 +8,7 @@ import numpy as np
 from dotenv import load_dotenv
 
 from src.vector_db.adapters.repo_database import RepositoryDataBase
-from src.vector_db.domain.domain import DocMetadata, RAGResults
+from src.vector_db.domain.domain import DocMetadata, RAGResults, ObjectUploaded, UploadObject
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
@@ -57,7 +57,7 @@ class DataBase(RepositoryDataBase):
             conn.execute(f'''
                 CREATE TABLE IF NOT EXISTS {self.table} (
                     id bigserial PRIMARY KEY,
-                    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+                    owner TEXT
                     file_name TEXT,
                     file_path TEXT,
                     text_chunk TEXT,
@@ -76,18 +76,40 @@ class DataBase(RepositoryDataBase):
 
 
     def search_similar(self, embedding: list[float], limit: int = 3) -> RAGResults:
-        print("Searching for simular text")
+        print("[DEBUG] Searching for simular text")
         conn = self._get_connection()
         try:
             result = conn.execute(f'''
-                SELECT id, created_at, file_name, file_path, text_chunk
+                SELECT id, owner, file_name, file_path, text_chunk
                 FROM {self.table}
                 ORDER BY embedding <=> %s ASC
                 LIMIT %s
                 ''',
                 (np.array(embedding, dtype=np.float32), limit),
             )
-            print(f"Found text: {result}")
             return RAGResults(data=[DocMetadata(**row) for row in result])
+        finally:
+            conn.close()
+    
+
+    def upload_object(self, object: UploadObject, embedding_model) -> ObjectUploaded:
+        print("[DEBUG] Uploading object")
+        text = object.text
+        if not text:
+            raise ValueError("No text provided to upload")
+
+        chunks = object.divide_into_chunks(text, chunk_size=500, overlap=50)
+        conn = self._get_connection()
+        try:
+            for chunk in chunks:
+                embedding = embedding_model.encode(chunk).tolist()
+                conn.execute(
+                    f'''
+                    INSERT INTO {self.table} (owner, file_name, file_path, text_chunk, embedding)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ''',
+                    (object.owner, object.file_name, object.file_path, chunk, np.array(embedding, dtype=np.float32)),
+                )
+            return ObjectUploaded(name=object.file_name, chunks_added=len(chunks))
         finally:
             conn.close()

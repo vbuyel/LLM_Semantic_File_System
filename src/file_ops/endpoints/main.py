@@ -36,6 +36,7 @@ def health_check():
 
 
 async def _get_current_user(
+    x_owner_email: Optional[str] = Header(None, alias="X-Owner-Email"),
     x_auth_provider: Optional[str] = Header(None, alias="X-Auth-Provider"),
     x_storage_source: Optional[str] = Header(None, alias="X-Storage-Source"),
     authorization: Optional[str] = Header(None),
@@ -45,10 +46,16 @@ async def _get_current_user(
     В реальности сюда подключишь JWT декодинг или проверку сессии.
     Возвращает: provider = "google" | "local", storage_source = "gcs" | "drive"
     """
+    email = x_owner_email or None
     provider = x_auth_provider or "local"
     storage_source = x_storage_source or "gcs"
     token = authorization.replace("Bearer ", "") if authorization else None
-    return {"provider": provider, "storage_source": storage_source, "token": token}
+    return {
+        "owner": email,
+        "provider": provider,
+        "storage_source": storage_source,
+        "token": token
+    }
 
 
 @app.post("/upload", response_model=UploadResponse)
@@ -63,19 +70,22 @@ async def upload_file(
         f.write(await file.read())
 
     try:
-        storage_source = user["storage_source"]
+        storage_source = user.get("storage_source")
         if storage_source == "drive":
             if not user.get("token"):
                 raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google access token required for Drive upload")
+            owner = user.get("email")
             drive_ops = GoogleDriveOperations(access_token=user["token"])
             result = drive_ops.upload_file(
                 source_path=temp_path,
+                owner=owner,
                 file_name=file.filename,
                 mime_type=file.content_type,
             )
         elif storage_source == "gcs":
             result = gcs_ops.upload_file(
                 source_path=temp_path,
+                owner=owner,
                 dest_name=file.filename,
                 mime_type=file.content_type,
             )
@@ -100,7 +110,7 @@ async def list_files(
     path: str = Query(default="/"),
     user=Depends(_get_current_user),
 ):
-    storage_source = user["storage_source"]
+    storage_source = user.get("storage_source")
     try:
         if storage_source == "gcs":
             files = gcs_ops.list_files(path)
@@ -149,7 +159,6 @@ async def download_file(
     path: str = Query(..., description="file_id for Drive, blob path for GCS"),
     user=Depends(_get_current_user),
 ):
-    """Download a file from cloud storage and stream it to the client."""
     storage_source = user["storage_source"]
     try:
         if storage_source == "gcs":

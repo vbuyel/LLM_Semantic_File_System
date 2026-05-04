@@ -11,9 +11,13 @@ class GoogleDriveOperations:
         self.service = build("drive", "v3", credentials=creds)
 
 
-    def upload_file(self, source_path: str, file_name: Optional[str] = None,
-                   mime_type: Optional[str] = None,
-                   folder_id: Optional[str] = None) -> dict:
+    def upload_file(self,
+                    source_path: str,
+                    owner: Optional[str] = None,
+                    file_name: Optional[str] = None,
+                    mime_type: Optional[str] = None,
+                    folder_id: Optional[str] = None
+    ) -> dict:
         meta = {"name": file_name or source_path.split("/")[-1]}
 
         if folder_id:
@@ -28,11 +32,14 @@ class GoogleDriveOperations:
             body=meta, media_body=media, fields="id,webViewLink"
         ).execute()
 
+        # Send Command to Kafka to upload into vectordb and send Event to user
+
         return {
             "file_id": file["id"],
             "url": file.get("webViewLink"),
             "storage_type": "drive",
         }
+
 
     def list_files(self, directory_path: str = "/") -> list:
         query = "'me' in owners and trashed=false"
@@ -60,16 +67,8 @@ class GoogleDriveOperations:
             })
         return file_items
 
+
     def download_file(self, file_id: str) -> tuple[bytes, str, str]:
-        """Download a file from Google Drive.
-
-        Handles both regular binary files (via get_media) and Google Workspace
-        files such as Docs, Sheets, and Slides (via export_media).
-
-        Returns:
-            (file_bytes, filename, mime_type)
-        """
-        # Google Workspace MIME types → preferred export formats
         EXPORT_FORMATS = {
             "application/vnd.google-apps.document":
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -101,6 +100,7 @@ class GoogleDriveOperations:
             _, done = downloader.next_chunk()
 
         return buffer.getvalue(), file_name, mime_type
+
 
     def delete_file(self, file_path: str) -> None:
         raise NotImplementedError("Google Drive delete_file not yet implemented")
