@@ -11,3 +11,4 @@ __tests__
 .bash_profile
 .bashrc
 .zshrc
+.DS_Store
