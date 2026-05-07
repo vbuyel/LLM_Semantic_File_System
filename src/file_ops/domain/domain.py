@@ -21,3 +21,17 @@ class FileItem(BaseModel):
 class ListFilesResponse(BaseModel):
     files: List[FileItem]
     storage_type: str
+
+
+class UploadObject(BaseModel):
+    file_name: str
+    file_path: str
+    text: str
+    owner: Optional[str] = None
+    storage_type: str = "gcs"
+
+
+class ObjectUploaded(BaseModel):
+    file_name: str
+    chunks_added: int = 0
+    storage_type: str = "gcs"

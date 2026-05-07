@@ -3,26 +3,69 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 from typing import Optional
 import io
+import os
+import json
+import asyncio
+import logging
+import uuid
+
+from aiokafka import AIOKafkaProducer
+from src.file_ops.adapters.text_extractor import extract_text_from_file
+
+logger = logging.getLogger(__name__)
 
 
 class GoogleDriveOperations:
     def __init__(self, access_token: str):
         creds = Credentials(token=access_token)
         self.service = build("drive", "v3", credentials=creds)
+        self._access_token = access_token
+        self._bootstrap_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+        self._request_topic = os.getenv("REQUEST_TOPICS", "service.requests").split(",")[1]
+        self._reply_topic = os.getenv("REPLY_TOPIC", "service.replies")
 
 
-    def upload_file(self,
-                    source_path: str,
-                    owner: Optional[str] = None,
-                    file_name: Optional[str] = None,
-                    mime_type: Optional[str] = None,
-                    folder_id: Optional[str] = None
+    async def _send_kafka_upload_event(self, file_id: str, file_name: str, text: str, owner: Optional[str] = None):
+        correlation_id = str(uuid.uuid4())
+        payload = {
+            "action": "upload",
+            "file_name": file_name,
+            "file_path": file_id,
+            "text": text,
+            "owner": owner,
+            "storage_type": "drive",
+        }
+        event = {
+            "correlation_id": correlation_id,
+            "reply_topic": self._reply_topic,
+            "payload": payload,
+        }
+        producer = AIOKafkaProducer(
+            bootstrap_servers=self._bootstrap_servers,
+            value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+        )
+        try:
+            await producer.start()
+            await producer.send_and_wait(self._request_topic, event)
+        except Exception as e:
+            logger.warning(f"Failed to send upload event to Kafka: {e}")
+        finally:
+            await producer.stop()
+
+
+    def upload_file(
+        self,
+        source_path: str,
+        owner: Optional[str] = None,
+        file_name: Optional[str] = None,
+        mime_type: Optional[str] = None,
+        folder_id: Optional[str] = None
     ) -> dict:
         meta = {"name": file_name or source_path.split("/")[-1]}
 
         if folder_id:
             meta["parents"] = [folder_id]
-        
+
         media = MediaFileUpload(
             source_path,
             mimetype=mime_type or "application/octet-stream",
@@ -32,7 +75,19 @@ class GoogleDriveOperations:
             body=meta, media_body=media, fields="id,webViewLink"
         ).execute()
 
-        # Send Command to Kafka to upload into vectordb and send Event to user
+        try:
+            text = extract_text_from_file(source_path)
+        except Exception as e:
+            logger.warning(f"Text extraction failed for {source_path}: {e}")
+            text = ""
+
+        try:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(
+                self._send_kafka_upload_event(file["id"], meta["name"], text, owner)
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send Kafka event: {e}")
 
         return {
             "file_id": file["id"],
@@ -43,16 +98,16 @@ class GoogleDriveOperations:
 
     def list_files(self, directory_path: str = "/") -> list:
         query = "'me' in owners and trashed=false"
-        
+
         if directory_path != "/":
             query += f" and '{directory_path}' in parents"
-        
+
         results = self.service.files().list(
             pageSize=100,
             fields="nextPageToken, files(id, name, mimeType, size, modifiedTime)",
             q=query
         ).execute()
-        
+
         items = results.get('files', [])
         file_items = []
         for item in items:
@@ -68,7 +123,7 @@ class GoogleDriveOperations:
         return file_items
 
 
-    def download_file(self, file_id: str) -> tuple[bytes, str, str]:
+    def download_file(self, file_id: str) -> tuple:
         EXPORT_FORMATS = {
             "application/vnd.google-apps.document":
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

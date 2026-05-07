@@ -4,6 +4,7 @@ from pathlib import Path
 import psycopg
 from psycopg.rows import dict_row
 from pgvector.psycopg import register_vector
+from sentence_transformers import SentenceTransformer
 import numpy as np
 from dotenv import load_dotenv
 
@@ -42,6 +43,10 @@ class DataBase(RepositoryDataBase):
         self.table = "documents"
         self._setup_database()
 
+        self._embedding_model = SentenceTransformer(
+            os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+        )
+
 
     def _get_connection(self):
         conn = psycopg.connect(self.url, autocommit=True, row_factory=dict_row)
@@ -53,26 +58,37 @@ class DataBase(RepositoryDataBase):
         conn = self._get_connection()
         try:
             conn.execute("""CREATE EXTENSION IF NOT EXISTS vector""")
-
+        except Exception as e:
+            print(f"Warning: Could not create vector extension: {e}")
+        
+        try:
             conn.execute(f'''
                 CREATE TABLE IF NOT EXISTS {self.table} (
                     id bigserial PRIMARY KEY,
-                    owner TEXT
+                    owner TEXT,
                     file_name TEXT,
                     file_path TEXT,
                     text_chunk TEXT,
                     embedding vector({self.vector_dim})
                 )
             ''')
-
+        except Exception as e:
+            print(f"Warning creating table: {e}")
+        
+        try:
             conn.execute(f'''
                 CREATE INDEX IF NOT EXISTS idx_embedding
                 ON {self.table} USING hnsw (embedding vector_cosine_ops)
             ''')
         except Exception as e:
-            print(f"Error setting up database: {e}")
-        finally:
-            conn.close()
+            print(f"Warning creating index: {e}")
+        
+        conn.close()
+
+
+    def _convert_to_embedding(self, chunk: str) -> np.array:
+        embedding = self._embedding_model.encode(chunk).tolist()
+        return  np.array(embedding, dtype=np.float32)
 
 
     def search_similar(self, embedding: list[float], limit: int = 3) -> RAGResults:
@@ -92,23 +108,24 @@ class DataBase(RepositoryDataBase):
             conn.close()
     
 
-    def upload_object(self, object: UploadObject, embedding_model) -> ObjectUploaded:
+    def upload_object(self, object: UploadObject) -> ObjectUploaded:
         print("[DEBUG] Uploading object")
         text = object.text
         if not text:
             raise ValueError("No text provided to upload")
 
+        text = text.replace("\x00", "")
         chunks = object.divide_into_chunks(text, chunk_size=500, overlap=50)
         conn = self._get_connection()
         try:
             for chunk in chunks:
-                embedding = embedding_model.encode(chunk).tolist()
+                embedding = self._convert_to_embedding(chunk)
                 conn.execute(
                     f'''
                     INSERT INTO {self.table} (owner, file_name, file_path, text_chunk, embedding)
                     VALUES (%s, %s, %s, %s, %s)
                     ''',
-                    (object.owner, object.file_name, object.file_path, chunk, np.array(embedding, dtype=np.float32)),
+                    (object.owner, object.file_name, object.file_path, chunk, embedding),
                 )
             return ObjectUploaded(name=object.file_name, chunks_added=len(chunks))
         finally:

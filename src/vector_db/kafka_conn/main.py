@@ -3,7 +3,6 @@ Run the server:
     python -m src.vector_db.kafka_conn.main
 """
 
-
 import asyncio
 import json
 import os
@@ -28,12 +27,7 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
 
 _bootstrap_servers = os.getenv("BROKER_HOSTS", "localhost:9092").split(",")
-_request_topic = (
-    os.getenv("REQUEST_TOPIC")
-    or os.getenv("TOPIC_GET_TEXT_IDS")
-    or "service.requests"
-)
-_upload_topic = os.getenv("UPLOAD_TOPIC", "service.uploads")
+# _request_topics = os.getenv("REQUEST_TOPIC", "service.requests")
 
 _embedding_model = None
 _db = None
@@ -62,12 +56,20 @@ async def process_requests():
     if AIOKafkaProducer is None or AIOKafkaConsumer is None:
         raise RuntimeError("aiokafka is not installed")
 
+    topics_str = os.getenv("REQUEST_TOPICS", "service.requests")
+    topics_list = [t.strip() for t in topics_str.split(",") if t.strip()]
+    if not topics_list:
+        topics_list = ["service.requests"]
+
+    print(f"[DEBUG] VectorDB listening on topics: {topics_list}")
+    print(f"[DEBUG] Bootstrap servers: {_bootstrap_servers}")
+
     producer = AIOKafkaProducer(
         bootstrap_servers=_bootstrap_servers,
         value_serializer=lambda v: json.dumps(v).encode("utf-8"),
     )
     consumer = AIOKafkaConsumer(
-        _request_topic,
+        *topics_list,
         bootstrap_servers=_bootstrap_servers,
         value_deserializer=lambda v: json.loads(v.decode("utf-8")),
         group_id="vector-db-service",
@@ -85,17 +87,19 @@ async def process_requests():
                 correlation_id = data["correlation_id"]
                 reply_topic = data["reply_topic"]
                 payload = data["payload"]
-                owner = payload.get("owner", None)
                 # action = payload.get("action", "")
                 action = payload.get("action", "search")
+                print(f"[DEBUG] Payload data: {payload}")
                 
                 if action == "upload":
+                    print("File is starting to upload")
                     upload = UploadObject(
+                        owner=payload.get("owner"),
                         file_name=payload.get("file_name", ""),
                         file_path=payload.get("file_path", ""),
                         text=payload.get("text"),
                     )
-                    result = get_db().upload_object(upload, get_embedding_model())
+                    result = get_db().upload_object(upload)
                     reply_message = {
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),
@@ -109,6 +113,7 @@ async def process_requests():
                         "data": results.model_dump(mode="json"),
                     }
                 
+                print("Vector DB operations are completed")
                 await producer.send_and_wait(reply_topic, reply_message)
             except Exception as e:
                 print(f"Error: {e}")

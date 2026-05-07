@@ -71,13 +71,14 @@ export const api = {
             const headers = { 'X-Storage-Source': storageSource };
 
             if (storageSource === 'drive') {
-                headers['X-Owner-Email'] = localStorage.getItem('user').get('email', None)
-                headers['X-Auth-Provider'] = 'google';
                 const user = JSON.parse(localStorage.getItem('user') || '{}');
+                headers['X-Owner-Email'] = user.email || '';
+                headers['X-Auth-Provider'] = 'google';
                 if (user.accessToken) {
                     headers['Authorization'] = `Bearer ${user.accessToken}`;
                 }
             }
+
             const res = await fetch(`${GATEWAY_SERVER}/gateway/upload_object`, {
                 method: 'POST',
                 body: formData,
@@ -134,7 +135,7 @@ export const api = {
         }
     },
     ai: {
-        async search(text) {;
+        async search(text) {
             const response = await fetch(`${GATEWAY_SERVER}/gateway/ai_agent`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

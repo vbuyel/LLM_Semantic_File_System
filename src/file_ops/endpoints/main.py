@@ -28,6 +28,9 @@ app.add_middleware(
 
 # Инициализация один раз при старте
 gcs_ops = GCSOperations(bucket_name=os.getenv("GCS_BUCKET_NAME"))
+print(f"[DEBUG] GCS bucket: {os.getenv('GCS_BUCKET_NAME')}")
+print(f"[DEBUG] Kafka topic: {os.getenv('REQUEST_TOPIC', 'NOT SET')}")
+print(f"[DEBUG] Kafka bootstrap: {os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'NOT SET')}")
 
 
 @app.get("/health")
@@ -71,6 +74,7 @@ async def upload_file(
 
     try:
         storage_source = user.get("storage_source")
+        owner = user.get("email")
         if storage_source == "drive":
             if not user.get("token"):
                 raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google access token required for Drive upload")
@@ -83,7 +87,7 @@ async def upload_file(
                 mime_type=file.content_type,
             )
         elif storage_source == "gcs":
-            result = gcs_ops.upload_file(
+            result = await gcs_ops.upload_file(
                 source_path=temp_path,
                 owner=owner,
                 dest_name=file.filename,

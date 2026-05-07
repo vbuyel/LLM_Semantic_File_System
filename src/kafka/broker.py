@@ -1,3 +1,9 @@
+"""
+Command to rebuild container:
+cd src/kafka
+docker-compose up -d
+"""
+
 import os
 from kafka.admin import KafkaAdminClient, NewTopic
 from kafka.errors import TopicAlreadyExistsError
@@ -14,20 +20,18 @@ class KafkaManager:
             bootstrap_servers=os.getenv("BROKER_HOSTS", "localhost:9092").split(",")
         )
 
+
     @staticmethod
     def _get_topics() -> list[str]:
         """Возвращает список всех существующих топиков"""
+        request_topic = os.getenv("REQUEST_TOPIC", "service.requests").split(",")
+        reply_topic = os.getenv("REPLY_TOPIC", "service.replies").split(",")
+        
         topics = []
-        topics_env = os.getenv("TOPICS", "")
-        if topics_env.strip():
-            topics.extend([topic.strip() for topic in topics_env.split(",") if topic.strip()])
-
-        request_topic = os.getenv("REQUEST_TOPIC", "service.requests")
-        reply_topic = os.getenv("REPLY_TOPIC", "service.replies")
         topics.extend([request_topic, reply_topic])
-
-        # Preserve order and remove duplicates.
+        
         return list(dict.fromkeys(topics))
+
 
     def setup_topics(self):
         """Создает все необходимые топики для работы системы"""

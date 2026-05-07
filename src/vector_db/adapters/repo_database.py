@@ -7,5 +7,5 @@ class RepositoryDataBase(ABC):
         pass
 
     @abstractmethod
-    def upload_object(self, upload: UploadObject, embedding_model) -> ObjectUploaded:
+    def upload_object(self, upload: UploadObject) -> ObjectUploaded:
         pass

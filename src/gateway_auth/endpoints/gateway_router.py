@@ -64,7 +64,7 @@ def upload_object_into_storage(request: Request, file: UploadFile = File(...)):
     if auth_provider := request.headers.get("X-Auth-Provider"):
         headers["X-Auth-Provider"] = auth_provider
     if owner := request.headers.get("X-Owner-Email"):
-        headers["X-Owner_Email"] = owner
+        headers["X-Owner-Email"] = owner
 
     files = {"file": (file.filename, file.file, file.content_type)}
 

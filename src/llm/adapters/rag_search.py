@@ -6,28 +6,22 @@ from typing import Any
 
 import asyncio
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-from sentence_transformers import SentenceTransformer
 
 from src.llm.domain.domain import RAGResponse
 
 
 class RAGSearch:
     def __init__(self):
-        self.embedding_model = SentenceTransformer(
-            os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
-        )
-        raw_broker_hosts = os.getenv("BROKER_HOSTS", "localhost:9092")
+        raw_broker_hosts = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
         self._bootstrap_servers = [host.strip() for host in raw_broker_hosts.split(",") if host.strip()]
 
         # Keep backward compatibility with older env names used in this project.
         self._request_topic = (
-            os.getenv("REQUEST_TOPIC")
-            or os.getenv("TOPIC_GET_TEXT_IDS")
+            os.getenv("REQUEST_TOPIC_RAG")
             or "service.requests"
         )
         self._reply_topic = (
-            os.getenv("REPLY_TOPIC")
-            or os.getenv("TOPICS_FOR_RAG_CONSUMER")
+            os.getenv("REPLY_TOPIC_RAG")
             or "service.replies"
         )
         self._timeout_sec = float(os.getenv("RAG_KAFKA_TIMEOUT_SEC", "20"))
@@ -52,7 +46,6 @@ class RAGSearch:
         )
 
         try:
-            # Start consumer first to avoid race where reply arrives before subscription.
             await consumer.start()
             await producer.start()
 
