@@ -158,12 +158,20 @@ class GCSOperations:
         content = blob.download_as_bytes()
         return (content, file_name, mime_type)
 
-    def delete_file(self, file_path: str) -> None:
+    async def delete_file(self, file_path: str) -> None:
         if not file_path:
             raise ValueError("file_path cannot be empty")
 
         blob = self.bucket.blob(file_path)
         if blob.exists():
             blob.delete()
+
+            message = {
+                "action": "delete",
+                "file_path": file_path,
+                "storage_type": "gcs",
+            }
+
+            await self._send_kafka_event(message)
         else:
             raise FileNotFoundError(f"File not found in bucket: {file_path}")

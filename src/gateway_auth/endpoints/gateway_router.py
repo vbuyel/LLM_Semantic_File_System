@@ -100,6 +100,8 @@ def delete_object_from_storage(request: Request, path: str = Query(...)):
         headers["X-Storage-Source"] = storage_source
     if auth_provider := request.headers.get("X-Auth-Provider"):
         headers["X-Auth-Provider"] = auth_provider
+    if owner := request.headers.get("X-Owner-Email"):
+        headers["X-Owner-Email"] = owner
 
     try:
         response = requests.delete(

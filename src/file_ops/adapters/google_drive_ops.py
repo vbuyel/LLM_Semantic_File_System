@@ -157,5 +157,36 @@ class GoogleDriveOperations:
         return buffer.getvalue(), file_name, mime_type
 
 
-    def delete_file(self, file_path: str) -> None:
-        raise NotImplementedError("Google Drive delete_file not yet implemented")
+    async def _send_kafka_delete_event(self, file_path: str, owner: Optional[str] = None):
+        correlation_id = str(uuid.uuid4())
+        payload = {
+            "action": "delete",
+            "file_path": file_path,
+            "owner": owner,
+            "storage_type": "drive",
+        }
+        event = {
+            "correlation_id": correlation_id,
+            "reply_topic": self._reply_topic,
+            "payload": payload,
+        }
+        producer = AIOKafkaProducer(
+            bootstrap_servers=self._bootstrap_servers,
+            value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+        )
+        try:
+            await producer.start()
+            await producer.send_and_wait(self._request_topic, event)
+        except Exception as e:
+            logger.warning(f"Failed to send delete event to Kafka: {e}")
+        finally:
+            await producer.stop()
+
+
+    def delete_file(self, file_path: str, owner: Optional[str] = None) -> None:
+        self.service.files().delete(fileId=file_path).execute()
+        try:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(self._send_kafka_delete_event(file_path, owner))
+        except Exception as e:
+            logger.warning(f"Failed to send Kafka event: {e}")

@@ -21,7 +21,7 @@ except ImportError:
     AIOKafkaProducer = None
 
 from src.vector_db.adapters.database import DataBase
-from src.vector_db.domain.domain import UploadObject
+from src.vector_db.domain.domain import DeleteObject, ObjectDeleted, UploadObject
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
@@ -93,13 +93,25 @@ async def process_requests():
                 
                 if action == "upload":
                     print("File is starting to upload")
-                    upload = UploadObject(
+                    object_to_upload = UploadObject(
                         owner=payload.get("owner"),
                         file_name=payload.get("file_name", ""),
                         file_path=payload.get("file_path", ""),
-                        text=payload.get("text"),
+                        text=payload.get("text", ""),
                     )
-                    result = get_db().upload_object(upload)
+                    result = get_db().upload_object(object_to_upload)
+                    reply_message = {
+                        "correlation_id": correlation_id,
+                        "data": result.model_dump(mode="json"),
+                    }
+                elif action == "delete":
+                    print("File is deleting now")
+                    object_to_delete = DeleteObject(
+                        path=payload.get("file_path", ""),
+                        storage_type=payload.get("storage_type", ""),
+                        owner=payload.get("owner")
+                    )
+                    result = get_db().delete_object(object_to_delete)
                     reply_message = {
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),

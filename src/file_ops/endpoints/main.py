@@ -143,12 +143,12 @@ async def delete_file(
     storage_source = user["storage_source"]
     try:
         if storage_source == "gcs":
-            gcs_ops.delete_file(path)
+            await gcs_ops.delete_file(path)
         elif storage_source == "drive":
             if not user.get("token"):
                 raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Access token required for Google Drive")
             drive_ops = GoogleDriveOperations(access_token=user["token"])
-            drive_ops.delete_file(path)
+            drive_ops.delete_file(path, owner=user.get("owner"))
         else:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unsupported storage source: {storage_source}")
         return {"message": f"File {path} deleted from {storage_source}"}
@@ -176,10 +176,7 @@ async def download_file(
             drive_ops = GoogleDriveOperations(access_token=user["token"])
             content, file_name, mime_type = drive_ops.download_file(path)
         else:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                f"Unsupported storage source: {storage_source}",
-            )
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unsupported storage source: {storage_source}")
 
         return StreamingResponse(
             io.BytesIO(content),
@@ -192,7 +189,4 @@ async def download_file(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
-            f"Failed to download file: {str(e)}",
-        )
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Failed to download file: {str(e)}")

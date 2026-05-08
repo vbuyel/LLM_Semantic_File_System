@@ -87,3 +87,25 @@ def kafka_upload_message():
             "owner": "test@example.com"
         }
     }
+
+
+@pytest.fixture
+def kafka_delete_message():
+    return {
+        "correlation_id": "test-correlation-id",
+        "reply_topic": "service.replies",
+        "payload": {
+            "action": "delete",
+            "file_path": "/test.txt",
+            "storage_type": "gcs",
+            "owner": "test@example.com"
+        }
+    }
+
+
+@pytest.fixture
+def mock_vector_db_delete():
+    db = MagicMock()
+    from src.vector_db.domain.domain import ObjectDeleted
+    db.delete_object = MagicMock(return_value=ObjectDeleted(name="test.txt", chunks_removed=5))
+    return db

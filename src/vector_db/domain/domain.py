@@ -29,3 +29,12 @@ class UploadObject(BaseModel):
             if chunk:
                 chunks.append(chunk)
         return chunks
+
+class ObjectDeleted(BaseModel):
+    name: str
+    chunks_removed: int = 0
+
+class DeleteObject(BaseModel):
+    path: str
+    storage_type: str
+    owner: str | None = None

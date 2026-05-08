@@ -8,13 +8,12 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 from dotenv import load_dotenv
 
-from src.vector_db.adapters.repo_database import RepositoryDataBase
-from src.vector_db.domain.domain import DocMetadata, RAGResults, ObjectUploaded, UploadObject
+from src.vector_db.domain.domain import DeleteObject, DocMetadata, ObjectDeleted, RAGResults, ObjectUploaded, UploadObject
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
 
-class DataBase(RepositoryDataBase):
+class DataBase:
     def __init__(self):
         username = os.getenv("POSTGRESQL_USERNAME")
         password = os.getenv("POSTGRESQL_PASSWORD")
@@ -128,5 +127,27 @@ class DataBase(RepositoryDataBase):
                     (object.owner, object.file_name, object.file_path, chunk, embedding),
                 )
             return ObjectUploaded(name=object.file_name, chunks_added=len(chunks))
+        finally:
+            conn.close()
+
+    def delete_object(self, object: DeleteObject) -> ObjectDeleted:
+        print("[DEBUG] Deleting object")
+        conn = self._get_connection()
+        try:
+            result = conn.execute(
+                f'''
+                WITH deleted AS (
+                    DELETE FROM {self.table}
+                    WHERE file_path = %s AND owner = %s
+                    RETURNING file_name
+                )
+                SELECT COUNT(*) as count, COALESCE(MAX(file_name), '') as file_name FROM deleted
+                ''',
+                (object.path, object.owner),
+            )
+            row = result.fetchone()
+            chunks_removed = row["count"] if row else 0
+            file_name = row["file_name"] if row and row["file_name"] else object.path.split("/")[-1]
+            return ObjectDeleted(name=file_name, chunks_removed=chunks_removed)
         finally:
             conn.close()
