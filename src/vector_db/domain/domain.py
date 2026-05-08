@@ -32,7 +32,6 @@ class UploadObject(BaseModel):
 
 class ObjectDeleted(BaseModel):
     name: str
-    chunks_removed: int = 0
 
 class DeleteObject(BaseModel):
     path: str

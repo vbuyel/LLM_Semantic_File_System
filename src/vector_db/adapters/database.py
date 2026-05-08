@@ -134,20 +134,21 @@ class DataBase:
         print("[DEBUG] Deleting object")
         conn = self._get_connection()
         try:
-            result = conn.execute(
+            if object.owner:
+                where_clause = "file_path = %s AND owner = %s"
+                params = (object.path, object.owner)
+            else:
+                where_clause = "file_path = %s"
+                params = (object.path,)
+            
+            conn.execute(
                 f'''
-                WITH deleted AS (
-                    DELETE FROM {self.table}
-                    WHERE file_path = %s AND owner = %s
-                    RETURNING file_name
-                )
-                SELECT COUNT(*) as count, COALESCE(MAX(file_name), '') as file_name FROM deleted
+                DELETE FROM {self.table}
+                WHERE {where_clause}
                 ''',
-                (object.path, object.owner),
+                params,
             )
-            row = result.fetchone()
-            chunks_removed = row["count"] if row else 0
-            file_name = row["file_name"] if row and row["file_name"] else object.path.split("/")[-1]
-            return ObjectDeleted(name=file_name, chunks_removed=chunks_removed)
+            file_name = object.path.split("/")[-1]
+            return ObjectDeleted(name=file_name)
         finally:
             conn.close()

@@ -141,9 +141,10 @@ async def delete_file(
     user=Depends(_get_current_user),
 ):
     storage_source = user["storage_source"]
+    owner = user.get("owner")
     try:
         if storage_source == "gcs":
-            await gcs_ops.delete_file(path)
+            await gcs_ops.delete_file(path, owner=owner)
         elif storage_source == "drive":
             if not user.get("token"):
                 raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Access token required for Google Drive")
