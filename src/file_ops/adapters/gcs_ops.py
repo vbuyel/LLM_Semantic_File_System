@@ -1,14 +1,12 @@
 import asyncio
-import json
 import logging
-import uuid
 from concurrent.futures import ThreadPoolExecutor
 
-from aiokafka import AIOKafkaProducer
 from google.cloud import storage
 from typing import Optional
 import os
 
+from src.file_ops.adapters.kafka import KafkaOperations
 from src.file_ops.adapters.text_extractor import extract_text_from_file
 
 logger = logging.getLogger(__name__)
@@ -21,12 +19,7 @@ class GCSOperations:
         self._client = None
         self._bucket = None
         self._executor = ThreadPoolExecutor(max_workers=2)
-
-        self._bootstrap_servers = os.getenv(
-            "KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"
-        )
-        self._request_topic = os.getenv("REQUEST_TOPICS", "service.requests").split(",")[0]
-        self._reply_topic = os.getenv("REPLY_TOPIC", "service.replies")
+        self.kafka = KafkaOperations()
 
 
     @property
@@ -44,36 +37,6 @@ class GCSOperations:
         if self._bucket is None:
             self._bucket = self.client.bucket(self.bucket_name)
         return self._bucket
-
-
-    async def _send_kafka_event(self, payload: dict):
-        correlation_id = str(uuid.uuid4())
-        command = {
-            "correlation_id": correlation_id,
-            "reply_topic": self._reply_topic,
-            "payload": payload,
-        }
-        print(f"[DEBUG] Sending to Kafka topic: {self._request_topic}")
-        producer = AIOKafkaProducer(
-            bootstrap_servers=self._bootstrap_servers,
-            value_serializer=lambda v: json.dumps(v).encode("utf-8"),
-        )
-        try:
-            await producer.start()
-
-            # Send to event db file action
-            event = {
-                "owner": None,
-                "event": payload.get("action"),
-            }
-            await producer.send(self._reply_topic, event)
-
-            # Send to vector db to do action
-            await producer.send_and_wait(self._request_topic, command)
-        except Exception as e:
-            logger.warning(f"Failed to send Kafka event: {e}")
-        finally:
-            await producer.stop()
 
 
     async def upload_file(
@@ -124,16 +87,17 @@ class GCSOperations:
             logger.warning(f"Text extraction failed for {source_path}: {e}")
             text = ""
 
-        message = {
-            "action": action,
-            "file_name": blob_name,
-            "file_path": f"gs://{self.bucket_name}/{blob_name}",
-            "text": text[:1000] if text else "",
-            "owner": owner,
-            "storage_type": "gcs",
-        }
-
-        await self._send_kafka_event(message)
+        try:
+            await self.kafka.send_to_kafka(
+                action=action,
+                file_name=blob_name,
+                file_path=f"gs://{self.bucket_name}/{blob_name}",
+                text=text[:1000] if text else "",
+                owner=owner,
+                storage_type="gcs",
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send Kafka event: {e}")
 
         return {
             "file_id": blob_name,
@@ -198,13 +162,17 @@ class GCSOperations:
         if file_existed:
             blob.delete()
 
-        message = {
-            "action": "delete",
-            "file_path": f"gs://{self.bucket_name}/{file_path}",
-            "storage_type": "gcs",
-            "owner": owner,
-        }
-        await self._send_kafka_event(message)
+        try:
+            await self.kafka.send_to_kafka(
+                action="delete",
+                file_name=file_path,
+                file_path=f"gs://{self.bucket_name}/{file_path}",
+                text="",
+                owner=owner,
+                storage_type="gcs",
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send Kafka event: {e}")
 
         if not file_existed:
             raise FileNotFoundError(f"File not found in bucket: {file_path}")
@@ -221,14 +189,17 @@ class GCSOperations:
 
         self.bucket.rename_blob(blob, new_name)
 
-        message = {
-            "action": "rename",
-            "file_path": f"gs://{self.bucket_name}/{file_path}",
-            "new_path": f"gs://{self.bucket_name}/{new_name}",
-            "storage_type": "gcs",
-            "owner": owner,
-        }
-        await self._send_kafka_event(message)
+        try:
+            await self.kafka.send_to_kafka(
+                action="rename",
+                file_name=new_name,
+                file_path=f"gs://{self.bucket_name}/{file_path}",
+                text="",
+                owner=owner,
+                storage_type="gcs",
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send Kafka event: {e}")
 
         return {
             "file_id": new_name,

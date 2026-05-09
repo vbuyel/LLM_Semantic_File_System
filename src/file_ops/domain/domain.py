@@ -35,3 +35,12 @@ class ObjectUploaded(BaseModel):
     file_name: str
     chunks_added: int = 0
     storage_type: str = "gcs"
+
+
+class SendToKafka(BaseModel):
+    action: str
+    file_name: str
+    file_path: str
+    text: str = ""
+    owner: Optional[str] = None
+    storage_type: str = "unknown"
