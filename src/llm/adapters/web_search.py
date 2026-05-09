@@ -9,6 +9,7 @@ class WebSearch:
     def __init__(self):
         self.session = DuckDuckGoSearchRun()
 
+
     def do_search(self, text: str) -> SearchResponse:
         try:
             result = self.session.invoke({"query": text})

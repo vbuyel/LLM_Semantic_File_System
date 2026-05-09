@@ -48,7 +48,7 @@ class GCSOperations:
 
     async def _send_kafka_event(self, payload: dict):
         correlation_id = str(uuid.uuid4())
-        event = {
+        command = {
             "correlation_id": correlation_id,
             "reply_topic": self._reply_topic,
             "payload": payload,
@@ -60,7 +60,16 @@ class GCSOperations:
         )
         try:
             await producer.start()
-            await producer.send_and_wait(self._request_topic, event)
+
+            # Send to event db file action
+            event = {
+                "owner": None,
+                "event": payload.get("action"),
+            }
+            await producer.send(self._reply_topic, event)
+
+            # Send to vector db to do action
+            await producer.send_and_wait(self._request_topic, command)
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")
         finally:

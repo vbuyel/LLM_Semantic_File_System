@@ -25,7 +25,7 @@ class GoogleDriveOperations:
         self._reply_topic = os.getenv("REPLY_TOPIC", "service.replies")
 
 
-    async def _send_kafka_file_event(self, action: str, file_id: str, file_name: str, text: str = "", owner: Optional[str] = None):
+    async def _send_to_kafka(self, action: str, file_id: str, file_name: str, text: str = "", owner: Optional[str] = None):
         correlation_id = str(uuid.uuid4())
         payload = {
             "action": action,
@@ -35,7 +35,7 @@ class GoogleDriveOperations:
             "owner": owner,
             "storage_type": "drive",
         }
-        event = {
+        command = {
             "correlation_id": correlation_id,
             "reply_topic": self._reply_topic,
             "payload": payload,
@@ -46,15 +46,20 @@ class GoogleDriveOperations:
         )
         try:
             await producer.start()
-            await producer.send_and_wait(self._request_topic, event)
+
+            # Send to event db file action
+            event = {
+                "owner": payload.get("owner"),
+                "event": payload.get("action"),
+            }
+            await producer.send(self._reply_topic, event)
+
+            # Send to vector db to do action
+            await producer.send_and_wait(self._request_topic, command)
         except Exception as e:
             logger.warning(f"Failed to send {action} event to Kafka: {e}")
         finally:
             await producer.stop()
-
-
-    async def _send_kafka_upload_event(self, file_id: str, file_name: str, text: str, owner: Optional[str] = None):
-        await self._send_kafka_file_event("upload", file_id, file_name, text, owner)
 
 
     async def upload_file(
@@ -86,7 +91,7 @@ class GoogleDriveOperations:
             text = ""
 
         try:
-            await self._send_kafka_upload_event(file["id"], meta["name"], text, owner)
+            await self._send_to_kafka("upload", file["id"], meta["name"], text, owner)
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")
 
@@ -129,7 +134,7 @@ class GoogleDriveOperations:
             text = ""
 
         try:
-            await self._send_kafka_file_event("update", file["id"], file["name"], text, owner)
+            await self._send_to_kafka("update", file["id"], file["name"], text, owner)
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")
 
@@ -201,16 +206,13 @@ class GoogleDriveOperations:
         return buffer.getvalue(), file_name, mime_type
 
 
-    async def _send_kafka_delete_event(self, file_path: str, owner: Optional[str] = None):
-        await self._send_kafka_file_event("delete", file_path, "", "", owner)
-
-
     async def delete_file(self, file_path: str, owner: Optional[str] = None) -> None:
         self.service.files().delete(fileId=file_path).execute()
         try:
-            await self._send_kafka_delete_event(file_path, owner)
+            await self._send_to_kafka("delete", file_path, "", "", owner)
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")
+
 
     async def rename_file(self, file_path: str, new_name: str, owner: Optional[str] = None) -> dict:
         print(f"[DEBUG] GoogleDrive rename: file_path={file_path}, new_name={new_name}")
@@ -221,7 +223,7 @@ class GoogleDriveOperations:
         ).execute()
 
         try:
-            await self._send_kafka_file_event("rename", file["id"], new_name, "", owner)
+            await self._send_to_kafka("rename", file["id"], new_name, "", owner)
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")
 
