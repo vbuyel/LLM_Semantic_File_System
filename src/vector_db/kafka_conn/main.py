@@ -21,7 +21,7 @@ except ImportError:
     AIOKafkaProducer = None
 
 from src.vector_db.adapters.database import DataBase
-from src.vector_db.domain.domain import DeleteObject, ObjectDeleted, UploadObject
+from src.vector_db.domain.domain import DeleteObject, RenameObject, UploadObject
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
@@ -135,6 +135,19 @@ async def process_requests():
                         owner=payload.get("owner")
                     )
                     result = get_db().delete_object(object_to_delete)
+                    reply_message = {
+                        "correlation_id": correlation_id,
+                        "data": result.model_dump(mode="json"),
+                    }
+                elif action == "rename":
+                    print("File is renaming now")
+                    object_to_rename = RenameObject(
+                        old_path=payload.get("file_path", ""),
+                        new_path=payload.get("new_path", ""),
+                        storage_type=payload.get("storage_type", ""),
+                        owner=payload.get("owner")
+                    )
+                    result = get_db().rename_object(object_to_rename)
                     reply_message = {
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),

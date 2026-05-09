@@ -29,7 +29,7 @@ app.add_middleware(
 # Инициализация один раз при старте
 gcs_ops = GCSOperations(bucket_name=os.getenv("GCS_BUCKET_NAME"))
 print(f"[DEBUG] GCS bucket: {os.getenv('GCS_BUCKET_NAME')}")
-print(f"[DEBUG] Kafka topic: {os.getenv('REQUEST_TOPIC', 'NOT SET')}")
+print(f"[DEBUG] Kafka topic: {os.getenv('REQUEST_TOPICS', 'NOT SET')}")
 print(f"[DEBUG] Kafka bootstrap: {os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'NOT SET')}")
 
 
@@ -203,6 +203,37 @@ async def delete_file(
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
     except Exception as e:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Failed to delete file: {str(e)}")
+
+
+@app.put("/rename")
+async def rename_file(
+    path: str = Query(..., description="Current file path or file_id"),
+    new_name: str = Query(..., description="New file name"),
+    user=Depends(_get_current_user),
+):
+    storage_source = user["storage_source"]
+    owner = user.get("owner")
+    print(f"[DEBUG] Rename request: storage={storage_source}, path={path}, new_name={new_name}")
+    try:
+        if storage_source == "gcs":
+            result = await gcs_ops.rename_file(path, new_name, owner=owner)
+        elif storage_source == "drive":
+            if not user.get("token"):
+                raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Access token required for Google Drive")
+            drive_ops = GoogleDriveOperations(access_token=user["token"])
+            result = await drive_ops.rename_file(path, new_name, owner=owner)
+        else:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unsupported storage source: {storage_source}")
+        return {"message": f"File renamed to {new_name}", **result}
+    except FileNotFoundError as e:
+        print(f"[ERROR] FileNotFoundError: {e}")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
+    except ValueError as e:
+        print(f"[ERROR] ValueError: {e}")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    except Exception as e:
+        print(f"[ERROR] Exception: {type(e).__name__}: {e}")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Failed to rename file: {str(e)}")
 
 
 @app.get("/download")

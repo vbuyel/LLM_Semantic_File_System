@@ -199,3 +199,30 @@ class GCSOperations:
 
         if not file_existed:
             raise FileNotFoundError(f"File not found in bucket: {file_path}")
+
+    async def rename_file(self, file_path: str, new_name: str, owner: Optional[str] = None) -> dict:
+        if not file_path:
+            raise ValueError("file_path cannot be empty")
+        if not new_name:
+            raise ValueError("new_name cannot be empty")
+
+        blob = self.bucket.blob(file_path)
+        if not blob.exists():
+            raise FileNotFoundError(f"File not found in bucket: {file_path}")
+
+        self.bucket.rename_blob(blob, new_name)
+
+        message = {
+            "action": "rename",
+            "file_path": f"gs://{self.bucket_name}/{file_path}",
+            "new_path": f"gs://{self.bucket_name}/{new_name}",
+            "storage_type": "gcs",
+            "owner": owner,
+        }
+        await self._send_kafka_event(message)
+
+        return {
+            "file_id": new_name,
+            "url": f"gs://{self.bucket_name}/{new_name}",
+            "storage_type": "gcs",
+        }

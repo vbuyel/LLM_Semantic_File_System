@@ -96,27 +96,49 @@ export const api = {
             if (!res.ok) throw new Error('Failed to delete file');
             return res.json();
         },
-        async updateFile(file, path) {
-            const formData = new FormData();
-            formData.append('file', file);
+        // async updateFile(file, path) {
+        //     const formData = new FormData();
+        //     formData.append('file', file);
 
+        //     const storageSource = state.get('storageSource');
+        //     const headers = { 'X-Storage-Source': storageSource };
+
+        //     if (storageSource === 'drive') {
+        //         const user = JSON.parse(localStorage.getItem('user') || '{}');
+        //         headers['X-Owner-Email'] = user.email || '';
+        //         headers['X-Auth-Provider'] = 'google';
+        //         if (user.accessToken) {
+        //             headers['Authorization'] = `Bearer ${user.accessToken}`;
+        //         }
+        //     }
+
+        //     const res = await fetch(`${GATEWAY_SERVER}/gateway/update_object?file_id=${encodeURIComponent(path)}`, {
+        //         method: 'PUT',
+        //         body: formData,
+        //         headers
+        //     });
+        //     return res.json();
+        // },
+        async renameFile(oldPath, newName) {
             const storageSource = state.get('storageSource');
-            const headers = { 'X-Storage-Source': storageSource };
+            const headers = { 
+                'X-Storage-Source': storageSource,
+                'Content-Type': 'application/json',
+            };
 
             if (storageSource === 'drive') {
                 const user = JSON.parse(localStorage.getItem('user') || '{}');
-                headers['X-Owner-Email'] = user.email || '';
                 headers['X-Auth-Provider'] = 'google';
                 if (user.accessToken) {
                     headers['Authorization'] = `Bearer ${user.accessToken}`;
                 }
             }
 
-            const res = await fetch(`${GATEWAY_SERVER}/gateway/update_object?file_id=${encodeURIComponent(path)}`, {
+            const res = await fetch(`${GATEWAY_SERVER}/gateway/rename_object?path=${encodeURIComponent(oldPath)}&new_name=${encodeURIComponent(newName)}`, {
                 method: 'PUT',
-                body: formData,
                 headers
             });
+            if (!res.ok) throw new Error('Failed to rename file');
             return res.json();
         },
         async downloadFile(path) {

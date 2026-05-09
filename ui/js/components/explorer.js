@@ -135,6 +135,22 @@ export const Explorer = {
                     }
                 };
             }
+
+            const renameBtn = item.querySelector('.rename-btn');
+            if (renameBtn) {
+                renameBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    const newName = prompt('Enter new name:', item.dataset.name);
+                    if (newName && newName !== item.dataset.name) {
+                        try {
+                            await api.files.renameFile(item.dataset.path, newName);
+                            window.app.loadInitialData();
+                        } catch (err) {
+                            alert(`Rename failed: ${err.message}`);
+                        }
+                    }
+                };
+            }
         });
 
         // Breadcrumb clicks

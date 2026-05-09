@@ -211,3 +211,22 @@ class GoogleDriveOperations:
             await self._send_kafka_delete_event(file_path, owner)
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")
+
+    async def rename_file(self, file_path: str, new_name: str, owner: Optional[str] = None) -> dict:
+        print(f"[DEBUG] GoogleDrive rename: file_path={file_path}, new_name={new_name}")
+        file = self.service.files().update(
+            fileId=file_path,
+            body={"name": new_name},
+            fields="id, name, webViewLink"
+        ).execute()
+
+        try:
+            await self._send_kafka_file_event("rename", file["id"], new_name, "", owner)
+        except Exception as e:
+            logger.warning(f"Failed to send Kafka event: {e}")
+
+        return {
+            "file_id": file["id"],
+            "url": file.get("webViewLink"),
+            "storage_type": "drive",
+        }

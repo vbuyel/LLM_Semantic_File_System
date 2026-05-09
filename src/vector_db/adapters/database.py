@@ -8,7 +8,7 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 from dotenv import load_dotenv
 
-from src.vector_db.domain.domain import DeleteObject, DocMetadata, ObjectDeleted, RAGResults, ObjectUploaded, UploadObject
+from src.vector_db.domain.domain import DeleteObject, DocMetadata, ObjectDeleted, ObjectRenamed, RAGResults, ObjectUploaded, RenameObject, UploadObject
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
@@ -150,5 +150,29 @@ class DataBase:
             )
             file_name = object.path.split("/")[-1]
             return ObjectDeleted(name=file_name)
+        finally:
+            conn.close()
+
+    def rename_object(self, object: RenameObject) -> ObjectRenamed:
+        print("[DEBUG] Renaming object")
+        conn = self._get_connection()
+        try:
+            new_file_name = object.new_path.split("/")[-1]
+            if object.owner:
+                where_clause = "file_path = %s AND owner = %s"
+                params = (object.old_path, object.owner)
+            else:
+                where_clause = "file_path = %s"
+                params = (object.old_path,)
+            
+            conn.execute(
+                f'''
+                UPDATE {self.table}
+                SET file_path = %s, file_name = %s
+                WHERE {where_clause}
+                ''',
+                (object.new_path, new_file_name, *params),
+            )
+            return ObjectRenamed(name=new_file_name)
         finally:
             conn.close()
