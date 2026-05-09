@@ -25,10 +25,10 @@ class GoogleDriveOperations:
         self._reply_topic = os.getenv("REPLY_TOPIC", "service.replies")
 
 
-    async def _send_kafka_upload_event(self, file_id: str, file_name: str, text: str, owner: Optional[str] = None):
+    async def _send_kafka_file_event(self, action: str, file_id: str, file_name: str, text: str = "", owner: Optional[str] = None):
         correlation_id = str(uuid.uuid4())
         payload = {
-            "action": "upload",
+            "action": action,
             "file_name": file_name,
             "file_path": file_id,
             "text": text,
@@ -48,12 +48,16 @@ class GoogleDriveOperations:
             await producer.start()
             await producer.send_and_wait(self._request_topic, event)
         except Exception as e:
-            logger.warning(f"Failed to send upload event to Kafka: {e}")
+            logger.warning(f"Failed to send {action} event to Kafka: {e}")
         finally:
             await producer.stop()
 
 
-    def upload_file(
+    async def _send_kafka_upload_event(self, file_id: str, file_name: str, text: str, owner: Optional[str] = None):
+        await self._send_kafka_file_event("upload", file_id, file_name, text, owner)
+
+
+    async def upload_file(
         self,
         source_path: str,
         owner: Optional[str] = None,
@@ -82,10 +86,50 @@ class GoogleDriveOperations:
             text = ""
 
         try:
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(
-                self._send_kafka_upload_event(file["id"], meta["name"], text, owner)
-            )
+            await self._send_kafka_upload_event(file["id"], meta["name"], text, owner)
+        except Exception as e:
+            logger.warning(f"Failed to send Kafka event: {e}")
+
+        return {
+            "file_id": file["id"],
+            "url": file.get("webViewLink"),
+            "storage_type": "drive",
+        }
+
+
+    async def update_file(
+        self,
+        file_id: str,
+        source_path: str,
+        owner: Optional[str] = None,
+        file_name: Optional[str] = None,
+        mime_type: Optional[str] = None,
+    ) -> dict:
+        meta = {}
+        if file_name:
+            meta["name"] = file_name
+
+        media = MediaFileUpload(
+            source_path,
+            mimetype=mime_type or "application/octet-stream",
+            resumable=True,
+        )
+        
+        file = self.service.files().update(
+            fileId=file_id,
+            body=meta,
+            media_body=media,
+            fields="id, name, webViewLink"
+        ).execute()
+
+        try:
+            text = extract_text_from_file(source_path)
+        except Exception as e:
+            logger.warning(f"Text extraction failed for {source_path}: {e}")
+            text = ""
+
+        try:
+            await self._send_kafka_file_event("update", file["id"], file["name"], text, owner)
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")
 
@@ -158,35 +202,12 @@ class GoogleDriveOperations:
 
 
     async def _send_kafka_delete_event(self, file_path: str, owner: Optional[str] = None):
-        correlation_id = str(uuid.uuid4())
-        payload = {
-            "action": "delete",
-            "file_path": file_path,
-            "owner": owner,
-            "storage_type": "drive",
-        }
-        event = {
-            "correlation_id": correlation_id,
-            "reply_topic": self._reply_topic,
-            "payload": payload,
-        }
-        producer = AIOKafkaProducer(
-            bootstrap_servers=self._bootstrap_servers,
-            value_serializer=lambda v: json.dumps(v).encode("utf-8"),
-        )
-        try:
-            await producer.start()
-            await producer.send_and_wait(self._request_topic, event)
-        except Exception as e:
-            logger.warning(f"Failed to send delete event to Kafka: {e}")
-        finally:
-            await producer.stop()
+        await self._send_kafka_file_event("delete", file_path, "", "", owner)
 
 
-    def delete_file(self, file_path: str, owner: Optional[str] = None) -> None:
+    async def delete_file(self, file_path: str, owner: Optional[str] = None) -> None:
         self.service.files().delete(fileId=file_path).execute()
         try:
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(self._send_kafka_delete_event(file_path, owner))
+            await self._send_kafka_delete_event(file_path, owner)
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")

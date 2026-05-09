@@ -80,7 +80,7 @@ async def upload_file(
                 raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google access token required for Drive upload")
             owner = user.get("email")
             drive_ops = GoogleDriveOperations(access_token=user["token"])
-            result = drive_ops.upload_file(
+            result = await drive_ops.upload_file(
                 source_path=temp_path,
                 owner=owner,
                 file_name=file.filename,
@@ -106,6 +106,52 @@ async def upload_file(
         storage_type=result["storage_type"],
         url=result.get("url"),
         message=f"File uploaded to {result['storage_type']}",
+    )
+
+
+@app.put("/update", response_model=UploadResponse)
+async def update_file(
+    file_id: str = Query(..., description="file_id for Drive, blob path for GCS"),
+    file: UploadFile = File(...),
+    user=Depends(_get_current_user),
+):
+    temp_path = f"/tmp/{file.filename}"
+    with open(temp_path, "wb") as f:
+        f.write(await file.read())
+
+    try:
+        storage_source = user.get("storage_source")
+        owner = user.get("owner")
+        if storage_source == "drive":
+            if not user.get("token"):
+                raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google access token required for Drive update")
+            drive_ops = GoogleDriveOperations(access_token=user["token"])
+            result = await drive_ops.update_file(
+                file_id=file_id,
+                source_path=temp_path,
+                owner=owner,
+                file_name=file.filename,
+                mime_type=file.content_type,
+            )
+        elif storage_source == "gcs":
+            result = await gcs_ops.update_file(
+                source_path=temp_path,
+                owner=owner,
+                dest_name=file_id,
+                mime_type=file.content_type,
+            )
+        else:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unsupported storage source: {storage_source}")
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+    return UploadResponse(
+        file_id=result["file_id"],
+        file_name=file.filename,
+        storage_type=result["storage_type"],
+        url=result.get("url"),
+        message=f"File updated in {result['storage_type']}",
     )
 
 
@@ -149,7 +195,7 @@ async def delete_file(
             if not user.get("token"):
                 raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Access token required for Google Drive")
             drive_ops = GoogleDriveOperations(access_token=user["token"])
-            drive_ops.delete_file(path, owner=user.get("owner"))
+            await drive_ops.delete_file(path, owner=user.get("owner"))
         else:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unsupported storage source: {storage_source}")
         return {"message": f"File {path} deleted from {storage_source}"}

@@ -74,6 +74,27 @@ class GCSOperations:
         dest_name: Optional[str] = None,
         mime_type: Optional[str] = None,
     ) -> dict:
+        return await self._process_file_action("upload", source_path, owner, dest_name, mime_type)
+
+
+    async def update_file(
+        self,
+        source_path: str,
+        owner: Optional[str] = None,
+        dest_name: Optional[str] = None,
+        mime_type: Optional[str] = None,
+    ) -> dict:
+        return await self._process_file_action("update", source_path, owner, dest_name, mime_type)
+
+
+    async def _process_file_action(
+        self,
+        action: str,
+        source_path: str,
+        owner: Optional[str] = None,
+        dest_name: Optional[str] = None,
+        mime_type: Optional[str] = None,
+    ) -> dict:
         if not source_path:
             raise ValueError("source_path cannot be empty")
         if not os.path.exists(source_path):
@@ -95,7 +116,7 @@ class GCSOperations:
             text = ""
 
         message = {
-            "action": "upload",
+            "action": action,
             "file_name": blob_name,
             "file_path": f"gs://{self.bucket_name}/{blob_name}",
             "text": text[:1000] if text else "",

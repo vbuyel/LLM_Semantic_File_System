@@ -104,6 +104,29 @@ async def process_requests():
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),
                     }
+                elif action == "update":
+                    print("File is updating (delete + upload)")
+                    # 1. Delete old
+                    object_to_delete = DeleteObject(
+                        path=payload.get("file_path", ""),
+                        storage_type=payload.get("storage_type", ""),
+                        owner=payload.get("owner")
+                    )
+                    get_db().delete_object(object_to_delete)
+                    
+                    # 2. Upload new
+                    object_to_upload = UploadObject(
+                        owner=payload.get("owner"),
+                        file_name=payload.get("file_name", ""),
+                        file_path=payload.get("file_path", ""),
+                        text=payload.get("text", ""),
+                    )
+                    result = get_db().upload_object(object_to_upload)
+                    
+                    reply_message = {
+                        "correlation_id": correlation_id,
+                        "data": result.model_dump(mode="json"),
+                    }
                 elif action == "delete":
                     print("File is deleting now")
                     object_to_delete = DeleteObject(
