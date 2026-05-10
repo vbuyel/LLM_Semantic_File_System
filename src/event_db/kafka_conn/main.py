@@ -1,6 +1,6 @@
 """
 Run the server:
-    python -m src.vector_db.kafka_conn.main
+    python -m src.event_db.kafka_conn.main
 """
 
 import asyncio
@@ -15,6 +15,8 @@ try:
 except ImportError:
     AIOKafkaConsumer = None
     AIOKafkaProducer = None
+
+from src.event_db.adapters.database import DataBase
 
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
