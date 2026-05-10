@@ -23,7 +23,7 @@ class Kafka:
         )
         self._event_db_topic = (
             os.getenv("EVENT_DB_TOPIC")
-            or "service.replies"
+            or "send_event"
         )
         self._timeout_sec = float(os.getenv("RAG_KAFKA_TIMEOUT_SEC", "20"))
 

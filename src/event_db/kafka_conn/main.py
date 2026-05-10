@@ -35,7 +35,7 @@ async def process_requests():
     if AIOKafkaProducer is None or AIOKafkaConsumer is None:
         raise RuntimeError("aiokafka is not installed")
 
-    topics_str = os.getenv("REQUEST_TOPICS", "service.requests")
+    topics_str = os.getenv("REQUEST_TOPICS", "send_event")
     topics_list = [t.strip() for t in topics_str.split(",") if t.strip()]
     if not topics_list:
         topics_list = ["service.requests"]
@@ -51,7 +51,6 @@ async def process_requests():
         *topics_list,
         bootstrap_servers=_bootstrap_servers,
         value_deserializer=lambda v: json.loads(v.decode("utf-8")),
-        group_id="vector-db-service",
         auto_offset_reset="latest",
     )
     
@@ -63,11 +62,9 @@ async def process_requests():
         async for msg in consumer:
             try:
                 data = msg.value
-                payload = data["payload"]
-                owner = payload.get("owner", None)
-                action = payload.get("action", None)
 
                 # Add event into Event DataBase
+                get_db().add_event(*data)
                 
                 print("Event DB operations are completed")
             except Exception as e:

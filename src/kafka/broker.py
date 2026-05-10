@@ -26,9 +26,10 @@ class KafkaManager:
         """Возвращает список всех существующих топиков"""
         request_topic = os.getenv("REQUEST_TOPIC", "service.requests").split(",")
         reply_topic = os.getenv("REPLY_TOPIC", "service.replies").split(",")
+        send_event_topic = os.getenv("SEND_EVENT_TOPIC", "send_event").split(",")
         
         topics = []
-        topics.extend([request_topic, reply_topic])
+        topics.extend([request_topic, reply_topic, send_event_topic])
         
         return list(dict.fromkeys(topics))
 

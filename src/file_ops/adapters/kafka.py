@@ -17,6 +17,7 @@ class KafkaOperations:
         self._bootstrap_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
         self._request_topic = os.getenv("REQUEST_TOPICS", "service.requests").split(",")[0]
         self._reply_topic = os.getenv("REPLY_TOPIC", "service.replies")
+        self._event_db_topic = os.getenv("EVENT_DB_TOPIC", "send_event")
         self._producer = AIOKafkaProducer(**self._get_producer_config())
 
 
@@ -36,7 +37,7 @@ class KafkaOperations:
                 "owner": owner,
                 "event": action,
             }
-            await self._producer.send(self._reply_topic, event)
+            await self._producer.send(self._event_db_topic, event)
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")
 
