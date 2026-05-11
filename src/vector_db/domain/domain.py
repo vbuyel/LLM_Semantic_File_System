@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 
 class DocMetadata(BaseModel):
@@ -46,3 +46,7 @@ class RenameObject(BaseModel):
 
 class ObjectRenamed(BaseModel):
     name: str
+
+class UploadEvent(BaseModel):
+    owner: Optional[str] = None
+    event: str

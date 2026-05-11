@@ -21,7 +21,7 @@ except ImportError:
     AIOKafkaProducer = None
 
 from src.vector_db.adapters.database import DataBase
-from src.vector_db.domain.domain import DeleteObject, RenameObject, UploadObject
+from src.vector_db.domain.domain import DeleteObject, RenameObject, UploadEvent, UploadObject
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
@@ -88,6 +88,9 @@ async def process_requests():
                 reply_topic = data["reply_topic"]
                 payload = data["payload"]
                 action = payload.get("action", "NOT FOUND")
+
+                event = {}
+                event["owner"] = payload.get("owner")
                 print(f"[DEBUG] Payload data: {payload}")
                 
                 if action == "upload":
@@ -99,11 +102,13 @@ async def process_requests():
                         text=payload.get("text", ""),
                     )
                     result = get_db().upload_object(object_to_upload)
+
                     reply_message = {
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),
                     }
-                    await producer.send(event_topic, "uploaded")
+                    event["event"] = "uploaded"
+                    await producer.send(event_topic, event)
                 elif action == "update":
                     print("File is updating (delete + upload)")
                     object_to_delete = DeleteObject(
@@ -125,7 +130,8 @@ async def process_requests():
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),
                     }
-                    await producer.send(event_topic, "updated")
+                    event["event"] = "updated"
+                    await producer.send(event_topic, event)
                 elif action == "delete":
                     print("File is deleting now")
                     object_to_delete = DeleteObject(
@@ -134,11 +140,13 @@ async def process_requests():
                         owner=payload.get("owner")
                     )
                     result = get_db().delete_object(object_to_delete)
+
                     reply_message = {
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),
                     }
-                    await producer.send(event_topic, "deleted")
+                    event["event"] = "deleted"
+                    await producer.send(event_topic, event)
                 elif action == "rename":
                     print("File is renaming now")
                     object_to_rename = RenameObject(
@@ -148,11 +156,13 @@ async def process_requests():
                         owner=payload.get("owner")
                     )
                     result = get_db().rename_object(object_to_rename)
+
                     reply_message = {
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),
                     }
-                    await producer.send(event_topic, "renamed")
+                    event["event"] = "renamed"
+                    await producer.send(event_topic, event)
                 elif action == "search":
                     embedding = get_embedding_model().encode(payload["text"]).tolist()
                     results = get_db().search_similar(embedding, limit=payload.get("limit", 3))
@@ -160,7 +170,9 @@ async def process_requests():
                         "correlation_id": correlation_id,
                         "data": results.model_dump(mode="json"),
                     }
-                    await producer.send(event_topic, "found")
+
+                    event["event"] = "found"
+                    await producer.send(event_topic, event)
                 else:
                     raise Exception(f"Action {action} is not supported in vector db")
                 
