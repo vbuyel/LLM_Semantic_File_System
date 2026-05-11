@@ -15,20 +15,20 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
 class DataBase:
     def __init__(self):
-        username = os.getenv("POSTGRESQL_USERNAME")
-        password = os.getenv("POSTGRESQL_PASSWORD")
-        host = os.getenv("POSTGRESQL_HOST")
-        port = os.getenv("POSTGRESQL_PORT") or os.getenv("POSTGREQSL_PORT")
-        db_name = os.getenv("POSTGRESQL_DB")
+        username = os.getenv("DOCS_POSTGRESQL_USERNAME")
+        password = os.getenv("DOCS_POSTGRESQL_PASSWORD")
+        host = os.getenv("DOCS_POSTGRESQL_HOST")
+        port = os.getenv("DOCS_POSTGRESQL_PORT")
+        db_name = os.getenv("DOCS_POSTGRESQL_DB")
         
         missing = [
             name
             for name, value in (
-                ("POSTGRESQL_USERNAME", username),
-                ("POSTGRESQL_PASSWORD", password),
-                ("POSTGRESQL_HOST", host),
-                ("POSTGRESQL_PORT", port),
-                ("POSTGRESQL_DB", db_name),
+                ("DOCS_POSTGRESQL_USERNAME", username),
+                ("DOCS_POSTGRESQL_PASSWORD", password),
+                ("DOCS_POSTGRESQL_HOST", host),
+                ("DOCS_POSTGRESQL_PORT", port),
+                ("DOCS_POSTGRESQL_DB", db_name),
             )
             if not value
         ]

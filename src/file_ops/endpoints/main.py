@@ -10,13 +10,26 @@ load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
 from fastapi import status, FastAPI, UploadFile, File, Depends, HTTPException, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from typing import Optional
+from contextlib import asynccontextmanager
+from typing import Optional, AsyncGenerator
 from src.file_ops.domain.domain import UploadResponse, ListFilesResponse, FileItem
 from src.file_ops.adapters.gcs_ops import GCSOperations
 from src.file_ops.adapters.google_drive_ops import GoogleDriveOperations
+from src.file_ops.adapters.kafka import KafkaOperations
 
 
-app = FastAPI()
+kafka_ops = KafkaOperations()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    await kafka_ops.start()
+    yield
+    await kafka_ops.stop()
+
+
+app = FastAPI(lifespan=lifespan)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

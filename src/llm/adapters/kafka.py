@@ -39,7 +39,7 @@ class Kafka:
             enable_auto_commit=False,
         )
 
-        self._executor = ThreadPoolExecutor(num_workers=1)
+        self._executor = ThreadPoolExecutor(max_workers=1)
 
 
     async def process(self, query_text: str, action: str, owner: Optional[str] = None):
