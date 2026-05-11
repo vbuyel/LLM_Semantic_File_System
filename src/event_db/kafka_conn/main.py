@@ -64,9 +64,16 @@ async def process_requests():
         async for msg in consumer:
             try:
                 data = msg.value
+                print(f"[DEBUG] Data: {data}")
 
                 # Add event into Event DataBase
-                get_db().add_event(*data)
+                owner = data.get("owner")
+                event_type = data.get("event")
+                
+                if not owner:
+                    print(f"[WARNING] Skipping event '{event_type}' - no owner provided")
+                else:
+                    get_db().add_event(owner=owner, event=event_type)
                 
                 print("Event DB operations are completed")
             except Exception as e:

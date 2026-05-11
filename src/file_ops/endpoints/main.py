@@ -87,7 +87,7 @@ async def upload_file(
 
     try:
         storage_source = user.get("storage_source")
-        owner = user.get("email")
+        owner = user.get("owner")
         if storage_source == "drive":
             if not user.get("token"):
                 raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google access token required for Drive upload")

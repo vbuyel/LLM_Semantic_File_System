@@ -130,6 +130,7 @@ class DataBase:
         finally:
             conn.close()
 
+
     def delete_object(self, object: DeleteObject) -> ObjectDeleted:
         print("[DEBUG] Deleting object")
         conn = self._get_connection()
@@ -152,6 +153,7 @@ class DataBase:
             return ObjectDeleted(name=file_name)
         finally:
             conn.close()
+
 
     def rename_object(self, object: RenameObject) -> ObjectRenamed:
         print("[DEBUG] Renaming object")

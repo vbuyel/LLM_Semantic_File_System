@@ -1,6 +1,7 @@
 from fastapi import status, APIRouter, Depends, File, Query, Request, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 import requests
+from uuid import uuid4
 
 from src.gateway_auth.domain.file_ops import ListOfObjects, PathToGetObjects
 from src.gateway_auth.domain.agent import ResponseToUser, UserRequest
@@ -65,9 +66,12 @@ def upload_object_into_storage(request: Request, file: UploadFile = File(...)):
         headers["X-Auth-Provider"] = auth_provider
     if owner := request.headers.get("X-Owner-Email"):
         headers["X-Owner-Email"] = owner
+    else:
+        headers["X-Owner-Email"] = str(uuid4())
 
     files = {"file": (file.filename, file.file, file.content_type)}
 
+    print(f"[DEBUG] Headers: {headers}")
     try:
         response = requests.post(
             url=f"{settings.FILE_OPS_SERVER}/upload",
@@ -90,45 +94,6 @@ def upload_object_into_storage(request: Request, file: UploadFile = File(...)):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal error: {str(e)}")
 
 
-# @gateway_router.put("/update_object")
-# def update_object_in_storage(request: Request, file_id: str = Query(...), file: UploadFile = File(...)):
-#     """Update an existing file in cloud storage"""
-#     headers = {}
-#     if auth := request.headers.get("Authorization"):
-#         headers["Authorization"] = auth
-#     if storage_source := request.headers.get("X-Storage-Source"):
-#         headers["X-Storage-Source"] = storage_source
-#     if auth_provider := request.headers.get("X-Auth-Provider"):
-#         headers["X-Auth-Provider"] = auth_provider
-#     if owner := request.headers.get("X-Owner-Email"):
-#         headers["X-Owner-Email"] = owner
-
-#     files = {"file": (file.filename, file.file, file.content_type)}
-#     params = {"file_id": file_id}
-
-#     try:
-#         response = requests.put(
-#             url=f"{settings.FILE_OPS_SERVER}/update",
-#             files=files,
-#             params=params,
-#             headers=headers,
-#             timeout=60,
-#         )
-#         if response.status_code != status.HTTP_200_OK:
-#             detail = response.json().get("detail", "Unknown error") if "application/json" in response.headers.get("content-type", "") else response.text
-#             raise HTTPException(status_code=response.status_code, detail=detail)
-
-#         return response.json()
-#     except requests.exceptions.ConnectionError:
-#         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="File service unavailable")
-#     except requests.exceptions.Timeout:
-#         raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="File service timeout")
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal error: {str(e)}")
-
-
 @gateway_router.delete("/delete_object")
 def delete_object_from_storage(request: Request, path: str = Query(...)):
     """Delete user's file or folder from Cloud"""
@@ -141,6 +106,8 @@ def delete_object_from_storage(request: Request, path: str = Query(...)):
         headers["X-Auth-Provider"] = auth_provider
     if owner := request.headers.get("X-Owner-Email"):
         headers["X-Owner-Email"] = owner
+    else:
+        headers["X-Owner-Email"] = str(uuid4())
 
     try:
         response = requests.delete(
@@ -176,6 +143,8 @@ def rename_object_in_storage(request: Request, path: str = Query(...), new_name:
         headers["X-Auth-Provider"] = auth_provider
     if owner := request.headers.get("X-Owner-Email"):
         headers["X-Owner-Email"] = owner
+    else:
+        headers["X-Owner-Email"] = str(uuid4())
 
     try:
         response = requests.put(
