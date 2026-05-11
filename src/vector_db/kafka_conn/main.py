@@ -59,7 +59,8 @@ async def process_requests():
     topics_list = [t.strip() for t in topics_str.split(",") if t.strip()]
 
     topics_str = os.getenv("REPLY_EVENT_TOPIC", "send_event")
-    event_topic = [t.strip() for t in topics_str.split(",") if t.strip()]
+    event_topics = [t.strip() for t in topics_str.split(",") if t.strip()]
+    event_topic = event_topics[0] if event_topics else "send_event"
 
     print(f"[DEBUG] VectorDB listening on topics: {topics_list}")
     print(f"[DEBUG] VectorDB send events in topics: {event_topic}")
