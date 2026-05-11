@@ -27,43 +27,44 @@ class KafkaOperations:
             "value_serializer": lambda v: json.dumps(v).encode("utf-8"),
         }
 
-    async def _send_event(
-        self,
-        action: str,
-        owner: Optional[str] = None,
-    ) -> None:
+    async def send_start_event(self, action: str, owner: Optional[str] = None) -> None:
+        """Шаг 1: Отправить начальное событие в event_db."""
         try:
+            await self._producer.start()
             event = {
                 "owner": owner,
                 "event": action,
             }
             await self._producer.send(self._event_db_topic, event)
         except Exception as e:
-            logger.warning(f"Failed to send Kafka event: {e}")
+            logger.warning(f"Failed to send Kafka start event: {e}")
+        finally:
+            await self._producer.stop()
 
 
-    async def _send_command(
+    async def send_command(
         self,
-        payload: dict,
+        data: SendToKafka,
         correlation_id: Optional[str] = None,
     ) -> None:
+        """Шаг 2: Отправить команду в vector_db для обработки."""
+        correlation_id = correlation_id or str(uuid.uuid4())
         try:
+            await self._producer.start()
             command = {
-                "correlation_id": correlation_id or str(uuid.uuid4()),
+                "correlation_id": correlation_id,
                 "reply_topic": self._reply_topic,
-                "payload": payload,
+                "payload": {
+                    "action": data.action,
+                    "file_name": data.file_name,
+                    "file_path": data.file_path,
+                    "text": data.text,
+                    "owner": data.owner,
+                    "storage_type": data.storage_type,
+                },
             }
             await self._producer.send_and_wait(self._request_topic, command)
         except Exception as e:
             logger.warning(f"Failed to send Kafka command: {e}")
-
-
-    async def send_to_kafka(self, data: SendToKafka) -> None:
-        correlation_id = str(uuid.uuid4())
-
-        try:
-            await self._producer.start()
-            await self._send_event(data.action, data.owner)
-            await self._send_command(*data, correlation_id)
         finally:
             await self._producer.stop()

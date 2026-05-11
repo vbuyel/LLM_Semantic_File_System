@@ -8,6 +8,7 @@ import os
 
 from src.file_ops.adapters.kafka import KafkaOperations
 from src.file_ops.adapters.text_extractor import extract_text_from_file
+from src.file_ops.domain.domain import SendToKafka
 
 logger = logging.getLogger(__name__)
 
@@ -88,13 +89,16 @@ class GCSOperations:
             text = ""
 
         try:
-            await self.kafka.send_to_kafka(
-                action=action,
-                file_name=blob_name,
-                file_path=f"gs://{self.bucket_name}/{blob_name}",
-                text=text[:1000] if text else "",
-                owner=owner,
-                storage_type="gcs",
+            await self.kafka.send_start_event(action=action, owner=owner)
+            await self.kafka.send_command(
+                SendToKafka(
+                    action=action,
+                    file_name=blob_name,
+                    file_path=f"gs://{self.bucket_name}/{blob_name}",
+                    text=text[:1000] if text else "",
+                    owner=owner,
+                    storage_type="gcs",
+                )
             )
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")
@@ -163,13 +167,16 @@ class GCSOperations:
             blob.delete()
 
         try:
-            await self.kafka.send_to_kafka(
-                action="delete",
-                file_name=file_path,
-                file_path=f"gs://{self.bucket_name}/{file_path}",
-                text="",
-                owner=owner,
-                storage_type="gcs",
+            await self.kafka.send_start_event(action="deleting", owner=owner)
+            await self.kafka.send_command(
+                SendToKafka(
+                    action="delete",
+                    file_name=file_path,
+                    file_path=f"gs://{self.bucket_name}/{file_path}",
+                    text="",
+                    owner=owner,
+                    storage_type="gcs",
+                )
             )
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")
@@ -190,13 +197,16 @@ class GCSOperations:
         self.bucket.rename_blob(blob, new_name)
 
         try:
-            await self.kafka.send_to_kafka(
-                action="rename",
-                file_name=new_name,
-                file_path=f"gs://{self.bucket_name}/{file_path}",
-                text="",
-                owner=owner,
-                storage_type="gcs",
+            await self.kafka.send_start_event(action="renaming", owner=owner)
+            await self.kafka.send_command(
+                SendToKafka(
+                    action="rename",
+                    file_name=new_name,
+                    file_path=f"gs://{self.bucket_name}/{file_path}",
+                    text="",
+                    owner=owner,
+                    storage_type="gcs",
+                )
             )
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")

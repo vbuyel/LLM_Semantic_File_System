@@ -8,6 +8,7 @@ import logging
 
 from src.file_ops.adapters.kafka import KafkaOperations
 from src.file_ops.adapters.text_extractor import extract_text_from_file
+from src.file_ops.domain.domain import SendToKafka
 
 logger = logging.getLogger(__name__)
 
@@ -49,13 +50,16 @@ class GoogleDriveOperations:
             text = ""
 
         try:
-            await self.kafka.send_to_kafka(
-                action="upload",
-                file_name=meta["name"],
-                file_path=file["id"],
-                text=text,
-                owner=owner,
-                storage_type="drive",
+            await self.kafka.send_start_event(action="uploading", owner=owner)
+            await self.kafka.send_command(
+                SendToKafka(
+                    action="upload",
+                    file_name=meta["name"],
+                    file_path=file["id"],
+                    text=text,
+                    owner=owner,
+                    storage_type="drive",
+                )
             )
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")
@@ -99,13 +103,16 @@ class GoogleDriveOperations:
             text = ""
 
         try:
-            await self.kafka.send_to_kafka(
-                action="update",
-                file_name=file["name"],
-                file_path=file["id"],
-                text=text,
-                owner=owner,
-                storage_type="drive",
+            await self.kafka.send_start_event(action="updating", owner=owner)
+            await self.kafka.send_command(
+                SendToKafka(
+                    action="update",
+                    file_name=file["name"],
+                    file_path=file["id"],
+                    text=text,
+                    owner=owner,
+                    storage_type="drive",
+                )
             )
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")
@@ -181,13 +188,16 @@ class GoogleDriveOperations:
     async def delete_file(self, file_path: str, owner: Optional[str] = None) -> None:
         self.service.files().delete(fileId=file_path).execute()
         try:
-            await self.kafka.send_to_kafka(
-                action="delete",
-                file_name="",
-                file_path=file_path,
-                text="",
-                owner=owner,
-                storage_type="drive",
+            await self.kafka.send_start_event(action="deleting", owner=owner)
+            await self.kafka.send_command(
+                SendToKafka(
+                    action="delete",
+                    file_name="",
+                    file_path=file_path,
+                    text="",
+                    owner=owner,
+                    storage_type="drive",
+                )
             )
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")
@@ -202,13 +212,16 @@ class GoogleDriveOperations:
         ).execute()
 
         try:
-            await self.kafka.send_to_kafka(
-                action="rename",
-                file_name=new_name,
-                file_path=file["id"],
-                text="",
-                owner=owner,
-                storage_type="drive",
+            await self.kafka.send_start_event(action="renaming", owner=owner)
+            await self.kafka.send_command(
+                SendToKafka(
+                    action="rename",
+                    file_name=new_name,
+                    file_path=file["id"],
+                    text="",
+                    owner=owner,
+                    storage_type="drive",
+                )
             )
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")
