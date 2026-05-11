@@ -57,10 +57,12 @@ async def process_requests():
 
     topics_str = os.getenv("REQUEST_TOPICS", "service.requests")
     topics_list = [t.strip() for t in topics_str.split(",") if t.strip()]
-    if not topics_list:
-        topics_list = ["service.requests"]
+
+    topics_str = os.getenv("REPLY_EVENT_TOPIC", "send_event")
+    event_topic = [t.strip() for t in topics_str.split(",") if t.strip()]
 
     print(f"[DEBUG] VectorDB listening on topics: {topics_list}")
+    print(f"[DEBUG] VectorDB send events in topics: {event_topic}")
     print(f"[DEBUG] Bootstrap servers: {_bootstrap_servers}")
 
     producer = AIOKafkaProducer(
@@ -71,7 +73,6 @@ async def process_requests():
         *topics_list,
         bootstrap_servers=_bootstrap_servers,
         value_deserializer=lambda v: json.loads(v.decode("utf-8")),
-        group_id="vector-db-service",
         auto_offset_reset="latest",
     )
     
@@ -102,6 +103,7 @@ async def process_requests():
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),
                     }
+                    await producer.send(event_topic, "uploaded")
                 elif action == "update":
                     print("File is updating (delete + upload)")
                     object_to_delete = DeleteObject(
@@ -123,6 +125,7 @@ async def process_requests():
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),
                     }
+                    await producer.send(event_topic, "updated")
                 elif action == "delete":
                     print("File is deleting now")
                     object_to_delete = DeleteObject(
@@ -135,6 +138,7 @@ async def process_requests():
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),
                     }
+                    await producer.send(event_topic, "deleted")
                 elif action == "rename":
                     print("File is renaming now")
                     object_to_rename = RenameObject(
@@ -148,6 +152,7 @@ async def process_requests():
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),
                     }
+                    await producer.send(event_topic, "renamed")
                 elif action == "search":
                     embedding = get_embedding_model().encode(payload["text"]).tolist()
                     results = get_db().search_similar(embedding, limit=payload.get("limit", 3))
@@ -155,6 +160,7 @@ async def process_requests():
                         "correlation_id": correlation_id,
                         "data": results.model_dump(mode="json"),
                     }
+                    await producer.send(event_topic, "found")
                 else:
                     raise Exception(f"Action {action} is not supported in vector db")
                 

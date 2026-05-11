@@ -12,7 +12,7 @@ class RAGSearch:
 
     def do_search(self, query_text: str, owner: Optional[str] = None) -> RAGResponse:
         try:
-            data = self._kafka_sender.process(query_text, "searching in files", owner)
+            data = self._kafka_sender.process(query_text, "searching", owner)
             if isinstance(data, str):
                 return RAGResponse(text=data)
             return RAGResponse(text=json.dumps(data, ensure_ascii=False, default=str))
