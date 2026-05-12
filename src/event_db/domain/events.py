@@ -6,7 +6,3 @@ class EventItem(BaseModel):
     owner: str
     event: str
     created_at: str
-
-class EventResponse(BaseModel):
-    event: EventItem
-

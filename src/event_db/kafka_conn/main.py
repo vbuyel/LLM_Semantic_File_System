@@ -1,20 +1,18 @@
 """
 Run the server:
-    python -m src.event_db.kafka_conn.main
+    uvicorn src.event_db.kafka_conn.main:app --port 8003
 """
 
 import asyncio
+from contextlib import asynccontextmanager
 import json
 import os
+from typing import Optional
 from pathlib import Path
-
 from dotenv import load_dotenv
-
-try:
-    from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-except ImportError:
-    AIOKafkaConsumer = None
-    AIOKafkaProducer = None
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.event_db.adapters.database import DataBase
 
@@ -22,7 +20,10 @@ from src.event_db.adapters.database import DataBase
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
 _bootstrap_servers = os.getenv("BROKER_HOSTS", "localhost:9092").split(",")
-_db = None
+_db: Optional[DataBase] = None
+
+_gateway_ws: Optional[WebSocket] = None
+_kafka_task: asyncio.Task[None] | None = None
 
 
 def get_db():
@@ -32,11 +33,59 @@ def get_db():
     return _db
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global _kafka_task
+    _kafka_task = asyncio.create_task(process_requests())
+    try:
+        yield
+    finally:
+        if _kafka_task:
+            _kafka_task.cancel()
+            try:
+                await _kafka_task
+            except asyncio.CancelledError:
+                pass
+
+
+app = FastAPI(lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/events/user/{owner}")
+def get_user_events(owner: str, limit: int = Query(100), offset: int = Query(0)):
+    """REST endpoint for fetching user events."""
+    db = get_db()
+    events = db.get_events_by_owner(owner, limit=limit, offset=offset)
+    return {"events": events}
+
+
+@app.websocket("/ws/gateway")
+async def gateway_ws(websocket: WebSocket):
+    """WebSocket endpoint for gateway connection."""
+    global _gateway_ws
+    await websocket.accept()
+    _gateway_ws = websocket
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        _gateway_ws = None
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "service": "event_db"}
+
+
 async def process_requests():
     """Listen for Kafka requests, search DB, send replies."""
-    if AIOKafkaProducer is None or AIOKafkaConsumer is None:
-        raise RuntimeError("aiokafka is not installed")
-
     topics_str = os.getenv("REQUEST_TOPICS", "send_event")
     topics_list = [t.strip() for t in topics_str.split(",") if t.strip()]
     if not topics_list:
@@ -66,14 +115,22 @@ async def process_requests():
                 data = msg.value
                 print(f"[DEBUG] Data: {data}")
 
-                # Add event into Event DataBase
                 owner = data.get("owner")
                 event_type = data.get("event")
                 
                 if not owner:
                     print(f"[WARNING] Skipping event '{event_type}' - no owner provided")
                 else:
-                    get_db().add_event(owner=owner, event=event_type)
+                    event = get_db().add_event(owner=owner, event=event_type)
+                    
+                    if _gateway_ws:
+                        try:
+                            await _gateway_ws.send_json({
+                                "type": "events",
+                                "data": event
+                            })
+                        except Exception as e:
+                            print(f"[ERROR] Failed to push event: {e}")
                 
                 print("Event DB operations are completed")
             except Exception as e:
@@ -81,7 +138,3 @@ async def process_requests():
     finally:
         await producer.stop()
         await consumer.stop()
-
-
-if __name__ == "__main__":
-    asyncio.run(process_requests())

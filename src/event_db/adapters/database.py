@@ -1,16 +1,21 @@
-from typing import Generator
 import os
 from pathlib import Path
-from datetime import datetime
+from typing import Any
 
 import psycopg
-from psycopg.rows import dict_row
+from psycopg import sql
 from dotenv import load_dotenv
+
+from src.event_db.domain.events import EventItem
+
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
 
 class DataBase:
+    url: str
+    table: str
+
     def __init__(self):
         username = os.getenv("EVENT_POSTGRESQL_USERNAME")
         password = os.getenv("EVENT_POSTGRESQL_PASSWORD")
@@ -40,58 +45,74 @@ class DataBase:
 
 
     def _get_connection(self):
-        conn = psycopg.connect(self.url, autocommit=True, row_factory=dict_row)
+        conn = psycopg.connect(self.url, autocommit=True)
         return conn
 
 
     def _setup_database(self):
         conn = self._get_connection()
         try:
-            conn.execute(f'''
-                CREATE TABLE IF NOT EXISTS {self.table} (
+            conn.execute(sql.SQL('''
+                CREATE TABLE IF NOT EXISTS {} (
                     id bigserial PRIMARY KEY,
                     owner TEXT NOT NULL,
                     event TEXT NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            ''')
+            ''').format(sql.Identifier(self.table)))
         except Exception as e:
             print(f"Warning creating table: {e}")
         finally:
             conn.close()
 
 
-    def add_event(self, owner: str, event: str) -> None:
-        """Add an event to the database."""
+    def add_event(self, owner: str, event: str) -> EventItem:
         print(f"[DEBUG] Adding event: owner={owner}, event={event}")
         conn = self._get_connection()
         try:
-            conn.execute(
-                f'''
-                INSERT INTO {self.table} (owner, event)
+            with conn.execute(
+                sql.SQL('''
+                INSERT INTO {} (owner, event)
                 VALUES (%s, %s)
-                ''',
+                RETURNING id, owner, event, created_at
+                ''').format(sql.Identifier(self.table)),
                 (owner, event),
-            )
-            print("[DEBUG] Event added successfully")
+            ) as cur:
+                row: tuple[int, str, str, Any] | None = cur.fetchone()
+                print("[DEBUG] Event added successfully")
+                assert row is not None
+                return EventItem(
+                    id=row[0],
+                    owner=row[1],
+                    event=row[2],
+                    created_at=str(row[3])
+                )
         finally:
             conn.close()
 
 
-    def get_event_by_owner(self, owner: str) -> list[dict]:
-        """Get events for a specific owner."""
+    def get_events_by_owner(self, owner: str, limit: int = 100, offset: int = 0) -> list[EventItem]:
         conn = self._get_connection()
         try:
             with conn.execute(
-                f'''
+                sql.SQL('''
                 SELECT id, owner, event, created_at
-                FROM {self.table}
+                FROM {}
                 WHERE owner = %s
                 ORDER BY created_at DESC
-                LIMIT 1
-                ''',
-                (owner),
+                LIMIT %s OFFSET %s
+                ''').format(sql.Identifier(self.table)),
+                (owner, limit, offset),
             ) as cur:
-                return [dict(row) for row in cur.fetchall()]
+                rows = cur.fetchall()
+                return [
+                    EventItem(
+                        id=r[0],
+                        owner=r[1],
+                        event=r[2],
+                        created_at=str(r[3])
+                    )
+                    for r in rows
+                ]
         finally:
             conn.close()

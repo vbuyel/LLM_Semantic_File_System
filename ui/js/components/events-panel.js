@@ -16,7 +16,11 @@ export const EventsPanel = {
         this._ws = api.events.connect(owner, (msg) => {
             if (msg.type === 'events' && msg.data) {
                 const current = state.get('events') || [];
-                state.set('events', [...msg.data, ...current].slice(0, 100));
+                const newEvent = msg.data;
+                const exists = current.some(e => e.id === newEvent.id);
+                if (!exists) {
+                    state.set('events', [newEvent, ...current].slice(0, 100));
+                }
             }
         });
     },

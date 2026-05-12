@@ -5,6 +5,7 @@ pydantic>=2.5.0
 httpx>=0.26.0
 python-multipart>=0.0.6
 sse-starlette>=1.8.0
+websockets>=12.0
 
 # Kafka
 aiokafka>=0.10.0

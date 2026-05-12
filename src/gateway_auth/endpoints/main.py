@@ -4,20 +4,20 @@ Run the server:
 """
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.gateway_auth.endpoints.gateway_router import gateway_router
 from src.gateway_auth.endpoints.oauth_router import oauth_router
-from src.gateway_auth.endpoints.events_router import router as events_router
-from src.gateway_auth.adapters.events_ws import manager, start_events_polling, stop_events_polling
+from src.gateway_auth.endpoints.events_router import event_router
+from src.gateway_auth.adapters.events_ws import start_eventdb_relay, stop_eventdb_relay
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    start_events_polling()
+    start_eventdb_relay()
     yield
-    stop_events_polling()
+    stop_eventdb_relay()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -32,17 +32,7 @@ app.add_middleware(
 
 app.include_router(gateway_router)
 app.include_router(oauth_router)
-app.include_router(events_router)
-
-
-@app.websocket("/ws/events/{owner}")
-async def websocket_events(websocket, owner: str):
-    await manager.connect(owner, websocket)
-    try:
-        while True:
-            data = await websocket.receive_text()
-    except WebSocketDisconnect:
-        manager.disconnect(owner, websocket)
+app.include_router(event_router)
 
 
 @app.get("/health")

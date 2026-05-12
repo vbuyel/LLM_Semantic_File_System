@@ -157,13 +157,13 @@ export const api = {
     events: {
         async getUserEvents(owner, limit = 100, offset = 0) {
             const res = await fetch(
-                `${GATEWAY_SERVER}/events/user/${encodeURIComponent(owner)}`
+                `${GATEWAY_SERVER}/events/user/${encodeURIComponent(owner)}?limit=${limit}&offset=${offset}`
             );
             if (!res.ok) throw new Error('Failed to fetch events');
             return res.json();
         },
         connect(owner, onMessage) {
-            const ws = new WebSocket(`${WS_SERVER}/ws/events?owner=${encodeURIComponent(owner)}`);
+            const ws = new WebSocket(`${WS_SERVER}/ws/events/${encodeURIComponent(owner)}`);
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 onMessage(data);
