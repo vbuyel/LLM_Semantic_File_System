@@ -1,3 +1,4 @@
+from typing import Generator
 import os
 from pathlib import Path
 from datetime import datetime
@@ -73,5 +74,53 @@ class DataBase:
                 (owner, event),
             )
             print("[DEBUG] Event added successfully")
+        finally:
+            conn.close()
+
+    def get_unread_events(self, owner: str, last_id: int = 0, timeout: float = 30.0) -> Generator[dict, None, None]:
+        import time
+        poll_interval = 0.5
+        elapsed = 0.0
+        
+        while elapsed < timeout:
+            conn = self._get_connection()
+            try:
+                conn.execute(
+                    f'''SELECT id, event, created_at FROM {self.table} 
+                        WHERE owner = %s AND id > %s 
+                        ORDER BY id ASC LIMIT 100''',
+                    (owner, last_id)
+                )
+                rows = conn.fetchall()
+                
+                for row in rows:
+                    last_id = row['id']
+                    yield {
+                        'id': row['id'],
+                        'event': row['event'],
+                        'created_at': row['created_at'].isoformat() if row['created_at'] else None
+                    }
+            finally:
+                conn.close()
+            
+            if not rows:
+                time.sleep(poll_interval)
+                elapsed += poll_interval
+
+    def get_events_by_owner(self, owner: str, limit: int = 100, offset: int = 0) -> list[dict]:
+        """Get events for a specific owner."""
+        conn = self._get_connection()
+        try:
+            with conn.execute(
+                f'''
+                SELECT id, owner, event, created_at
+                FROM {self.table}
+                WHERE owner = %s
+                ORDER BY created_at DESC
+                LIMIT %s OFFSET %s
+                ''',
+                (owner, limit, offset),
+            ) as cur:
+                return [dict(row) for row in cur.fetchall()]
         finally:
             conn.close()

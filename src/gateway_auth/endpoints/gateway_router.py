@@ -1,11 +1,21 @@
 from fastapi import status, APIRouter, Depends, File, Query, Request, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 import requests
+import json
 from uuid import uuid4
 
 from src.gateway_auth.domain.file_ops import ListOfObjects, PathToGetObjects
 from src.gateway_auth.domain.agent import ResponseToUser, UserRequest
 from src.gateway_auth.domain.settings import settings
+from src.event_db.adapters.database import DataBase
+
+_db_instance = None
+
+def get_event_db():
+    global _db_instance
+    if _db_instance is None:
+        _db_instance = DataBase()
+    return _db_instance
 
 
 gateway_router = APIRouter(prefix="/gateway")
@@ -64,10 +74,10 @@ def upload_object_into_storage(request: Request, file: UploadFile = File(...)):
         headers["X-Storage-Source"] = storage_source
     if auth_provider := request.headers.get("X-Auth-Provider"):
         headers["X-Auth-Provider"] = auth_provider
-    if owner := request.headers.get("X-Owner-Email"):
-        headers["X-Owner-Email"] = owner
+    if owner := request.headers.get("X-Owner"):
+        headers["X-Owner"] = owner
     else:
-        headers["X-Owner-Email"] = str(uuid4())
+        headers["X-Owner"] = str(uuid4())
 
     files = {"file": (file.filename, file.file, file.content_type)}
 
@@ -104,10 +114,10 @@ def delete_object_from_storage(request: Request, path: str = Query(...)):
         headers["X-Storage-Source"] = storage_source
     if auth_provider := request.headers.get("X-Auth-Provider"):
         headers["X-Auth-Provider"] = auth_provider
-    if owner := request.headers.get("X-Owner-Email"):
-        headers["X-Owner-Email"] = owner
+    if owner := request.headers.get("X-Owner"):
+        headers["X-Owner"] = owner
     else:
-        headers["X-Owner-Email"] = str(uuid4())
+        headers["X-Owner"] = str(uuid4())
 
     try:
         response = requests.delete(
@@ -141,10 +151,10 @@ def rename_object_in_storage(request: Request, path: str = Query(...), new_name:
         headers["X-Storage-Source"] = storage_source
     if auth_provider := request.headers.get("X-Auth-Provider"):
         headers["X-Auth-Provider"] = auth_provider
-    if owner := request.headers.get("X-Owner-Email"):
-        headers["X-Owner-Email"] = owner
+    if owner := request.headers.get("X-Owner"):
+        headers["X-Owner"] = owner
     else:
-        headers["X-Owner-Email"] = str(uuid4())
+        headers["X-Owner"] = str(uuid4())
 
     try:
         response = requests.put(
@@ -212,3 +222,22 @@ def download_object_from_storage(request: Request, path: str = Query(...)):
         raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Download failed: {str(e)}")
+
+
+@gateway_router.get("/events/stream")
+async def events_stream(user_id: str = Query(...), last_event_id: int = Query(default=0)):
+    db = get_event_db()
+    
+    async def event_generator():
+        try:
+            for event in db.get_unread_events(owner=user_id, last_id=last_event_id, timeout=30.0):
+                yield {
+                    "event": "message",
+                    "data": json.dumps(event)
+                }
+                last_event_id = event['id']
+        except GeneratorExit:
+            pass
+    
+    from sse_starlette.sse import EventSourceResponse
+    return EventSourceResponse(event_generator())

@@ -1,6 +1,7 @@
 import { state } from './state.js';
 
 const GATEWAY_SERVER = 'http://localhost:8000';
+const WS_SERVER = 'ws://localhost:8000';
 
 export const api = {
     auth: {
@@ -72,7 +73,7 @@ export const api = {
 
             if (storageSource === 'drive') {
                 const user = JSON.parse(localStorage.getItem('user') || '{}');
-                headers['X-Owner-Email'] = user.email || '';
+                headers['X-Owner'] = user.email || '';
                 headers['X-Auth-Provider'] = 'google';
                 if (user.accessToken) {
                     headers['Authorization'] = `Bearer ${user.accessToken}`;
@@ -96,29 +97,6 @@ export const api = {
             if (!res.ok) throw new Error('Failed to delete file');
             return res.json();
         },
-        // async updateFile(file, path) {
-        //     const formData = new FormData();
-        //     formData.append('file', file);
-
-        //     const storageSource = state.get('storageSource');
-        //     const headers = { 'X-Storage-Source': storageSource };
-
-        //     if (storageSource === 'drive') {
-        //         const user = JSON.parse(localStorage.getItem('user') || '{}');
-        //         headers['X-Owner-Email'] = user.email || '';
-        //         headers['X-Auth-Provider'] = 'google';
-        //         if (user.accessToken) {
-        //             headers['Authorization'] = `Bearer ${user.accessToken}`;
-        //         }
-        //     }
-
-        //     const res = await fetch(`${GATEWAY_SERVER}/gateway/update_object?file_id=${encodeURIComponent(path)}`, {
-        //         method: 'PUT',
-        //         body: formData,
-        //         headers
-        //     });
-        //     return res.json();
-        // },
         async renameFile(oldPath, newName) {
             const storageSource = state.get('storageSource');
             const headers = { 
@@ -141,7 +119,7 @@ export const api = {
             if (!res.ok) throw new Error('Failed to rename file');
             return res.json();
         },
-        async downloadFile(path) {
+async downloadFile(path) {
             const storageSource = state.get('storageSource');
             const headers = { 'X-Storage-Source': storageSource };
 
@@ -160,12 +138,10 @@ export const api = {
 
             if (!res.ok) throw new Error('Download failed');
 
-            // Extract filename from Content-Disposition header
             const disposition = res.headers.get('Content-Disposition') || '';
             const match = disposition.match(/filename="?([^"]+)"?/);
             const filename = match ? match[1] : path.split('/').pop();
 
-            // Trigger browser save dialog
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -179,6 +155,24 @@ export const api = {
             return filename;
         }
     },
+    events: {
+        async getUserEvents(owner, limit = 100, offset = 0) {
+            const res = await fetch(
+                `${GATEWAY_SERVER}/events/user/${encodeURIComponent(owner)}?limit=${limit}&offset=${offset}`
+            );
+            if (!res.ok) throw new Error('Failed to fetch events');
+            return res.json();
+        },
+        connect(owner, onMessage) {
+            const ws = new WebSocket(`${WS_SERVER}/ws/events/${encodeURIComponent(owner)}`);
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                onMessage(data);
+            };
+            ws.onerror = (err) => console.error('[WS] Error:', err);
+            return ws;
+        }
+    },
     ai: {
         async search(text) {
             const response = await fetch(`${GATEWAY_SERVER}/gateway/ai_agent`, {
@@ -187,6 +181,28 @@ export const api = {
                 body: JSON.stringify({ text }),
             });
             return await response.json();
+        },
+        subscribeToEvents(userId, callback) {
+            const lastEventId = 0;
+            const url = `${GATEWAY_SERVER}/gateway/events/stream?user_id=${encodeURIComponent(userId)}&last_event_id=${lastEventId}`;
+            
+            const eventSource = new EventSource(url);
+            
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    callback(data);
+                } catch (err) {
+                    console.error('Event parse error:', err);
+                }
+            };
+            
+            eventSource.onerror = (err) => {
+                console.error('SSE error:', err);
+                eventSource.close();
+            };
+            
+            return eventSource;
         }
     }
 };
