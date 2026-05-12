@@ -67,9 +67,10 @@ class DataBase:
 
 
     def add_event(self, owner: str, event: str) -> EventItem:
-        print(f"[DEBUG] Adding event: owner={owner}, event={event}")
+        print(f"[DEBUG] Database: add_event called with owner='{owner}', event='{event}'")
         conn = self._get_connection()
         try:
+            print(f"[DEBUG] Database: Executing INSERT for owner='{owner}', event='{event}'")
             with conn.execute(
                 sql.SQL('''
                 INSERT INTO {} (owner, event)
@@ -79,19 +80,22 @@ class DataBase:
                 (owner, event),
             ) as cur:
                 row: tuple[int, str, str, Any] | None = cur.fetchone()
-                print("[DEBUG] Event added successfully")
+                print(f"[DEBUG] Database: Insert returned row: {row}")
                 assert row is not None
-                return EventItem(
+                event_item = EventItem(
                     id=row[0],
                     owner=row[1],
                     event=row[2],
                     created_at=str(row[3])
                 )
+                print(f"[DEBUG] Database: Event created with id={event_item.id}")
+                return event_item
         finally:
             conn.close()
 
 
     def get_events_by_owner(self, owner: str, limit: int = 100, offset: int = 0) -> list[EventItem]:
+        print(f"[DEBUG] Database: get_events_by_owner called for owner='{owner}', limit={limit}, offset={offset}")
         conn = self._get_connection()
         try:
             with conn.execute(
@@ -105,6 +109,7 @@ class DataBase:
                 (owner, limit, offset),
             ) as cur:
                 rows = cur.fetchall()
+                print(f"[DEBUG] Database: Found {len(rows)} events for owner='{owner}'")
                 return [
                     EventItem(
                         id=r[0],

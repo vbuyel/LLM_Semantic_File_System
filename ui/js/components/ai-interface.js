@@ -116,7 +116,7 @@ export const AIInterface = {
         const lastEvent = events[0];
         
         if (lastEvent && lastEvent.event) {
-            return lastEvent.event;
+            return api.events.getDisplayText(lastEvent.event);
         }
         
         return 'Agent is researching your files...';

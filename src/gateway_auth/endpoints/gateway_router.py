@@ -31,6 +31,10 @@ def get_objects_from_storage(request: Request, query: PathToGetObjects = Depends
         headers["X-Storage-Source"] = storage_source
     if auth_provider := request.headers.get("X-Auth-Provider"):
         headers["X-Auth-Provider"] = auth_provider
+    if owner := request.headers.get("X-Owner"):
+        headers["X-Owner"] = owner
+    else:
+        headers["X-Owner"] = str(uuid4())
 
     try:
         response = requests.get(
@@ -64,14 +68,19 @@ def upload_object_into_storage(request: Request, file: UploadFile = File(...)):
         headers["X-Storage-Source"] = storage_source
     if auth_provider := request.headers.get("X-Auth-Provider"):
         headers["X-Auth-Provider"] = auth_provider
-    if owner := request.headers.get("X-Owner"):
-        headers["X-Owner"] = owner
+    
+    # Check for X-Owner header from UI, otherwise generate UUID
+    incoming_owner = request.headers.get("X-Owner")
+    if incoming_owner:
+        headers["X-Owner"] = incoming_owner
+        print(f"[DEBUG] Gateway: Using X-Owner from UI: '{incoming_owner}'")
     else:
         headers["X-Owner"] = str(uuid4())
+        print(f"[DEBUG] Gateway: No X-Owner from UI, generating UUID: '{headers['X-Owner']}'")
 
     files = {"file": (file.filename, file.file, file.content_type)}
 
-    print(f"[DEBUG] Headers: {headers}")
+    print(f"[DEBUG] Gateway: Sending headers to file_ops: {headers}")
     try:
         response = requests.post(
             url=f"{settings.FILE_OPS_SERVER}/upload",
@@ -79,6 +88,7 @@ def upload_object_into_storage(request: Request, file: UploadFile = File(...)):
             headers=headers,
             timeout=60,
         )
+        print(f"[DEBUG] Gateway: file_ops response status: {response.status_code}")
         if response.status_code != status.HTTP_200_OK:
             detail = response.json().get("detail", "Unknown error") if "application/json" in response.headers.get("content-type", "") else response.text
             raise HTTPException(status_code=response.status_code, detail=detail)
@@ -178,6 +188,10 @@ def download_object_from_storage(request: Request, path: str = Query(...)):
         headers["X-Storage-Source"] = storage_source
     if auth_provider := request.headers.get("X-Auth-Provider"):
         headers["X-Auth-Provider"] = auth_provider
+    if owner := request.headers.get("X-Owner"):
+        headers["X-Owner"] = owner
+    else:
+        headers["X-Owner"] = str(uuid4())
 
     try:
         response = requests.get(

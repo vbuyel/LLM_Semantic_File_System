@@ -411,6 +411,45 @@ kbd {
 
 @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
 
+/* Status Bar */
+.status-bar {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: var(--space-sm) var(--space-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 280px;
+}
+
+.status-bar__content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.status-bar__spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.status-bar__text {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+
 /* Explorer */
 .explorer__toolbar {
     display: flex;

@@ -89,6 +89,11 @@ async def process_requests():
                 reply_topic = data["reply_topic"]
                 payload = data["payload"]
                 action = payload.get("action", "NOT FOUND")
+                
+                if action == "uploading":
+                    action = "upload"
+                elif action == "updating":
+                    action = "update"
 
                 event = {}
                 event["owner"] = payload.get("owner")

@@ -52,7 +52,7 @@ def health_check():
 
 
 async def _get_current_user(
-    x_owner_email: Optional[str] = Header(None, alias="X-Owner-Email"),
+    x_owner: Optional[str] = Header(None, alias="X-Owner"),
     x_auth_provider: Optional[str] = Header(None, alias="X-Auth-Provider"),
     x_storage_source: Optional[str] = Header(None, alias="X-Storage-Source"),
     authorization: Optional[str] = Header(None),
@@ -62,10 +62,11 @@ async def _get_current_user(
     В реальности сюда подключишь JWT декодинг или проверку сессии.
     Возвращает: provider = "google" | "local", storage_source = "gcs" | "drive"
     """
-    email = x_owner_email or None
+    email = x_owner or None
     provider = x_auth_provider or "local"
     storage_source = x_storage_source or "gcs"
     token = authorization.replace("Bearer ", "") if authorization else None
+    print(f"[DEBUG] file_ops _get_current_user: owner='{email}', provider='{provider}', storage_source='{storage_source}'")
     return {
         "owner": email,
         "provider": provider,

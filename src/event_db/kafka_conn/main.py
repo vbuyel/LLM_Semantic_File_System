@@ -107,34 +107,42 @@ async def process_requests():
     
     await producer.start()
     await consumer.start()
-    print("Server is running")
+    print("[DEBUG] EventDB Server is running")
     
     try:
         async for msg in consumer:
             try:
                 data = msg.value
-                print(f"[DEBUG] Data: {data}")
+                print(f"[DEBUG] EventDB received Kafka message: {data}")
 
                 owner = data.get("owner")
                 event_type = data.get("event")
                 
+                print(f"[DEBUG] EventDB extracted owner='{owner}', event='{event_type}'")
+                
                 if not owner:
-                    print(f"[WARNING] Skipping event '{event_type}' - no owner provided")
+                    print(f"[WARNING] EventDB: Skipping event '{event_type}' - no owner provided")
                 else:
+                    print(f"[DEBUG] EventDB: Adding event to database for owner='{owner}', event='{event_type}'")
                     event = get_db().add_event(owner=owner, event=event_type)
+                    print(f"[DEBUG] EventDB: Event added successfully, id={event.id}")
                     
                     if _gateway_ws:
+                        print(f"[DEBUG] EventDB: Pushing event to gateway WebSocket")
                         try:
                             await _gateway_ws.send_json({
                                 "type": "events",
-                                "data": event
+                                "data": event.model_dump()
                             })
+                            print(f"[DEBUG] EventDB: Event pushed to gateway")
                         except Exception as e:
-                            print(f"[ERROR] Failed to push event: {e}")
+                            print(f"[ERROR] EventDB: Failed to push event to gateway: {e}")
+                    else:
+                        print(f"[DEBUG] EventDB: No gateway WebSocket connected, skipping push")
                 
-                print("Event DB operations are completed")
+                print("[DEBUG] EventDB: Event processing completed")
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"[ERROR] EventDB: Error processing message: {e}")
     finally:
         await producer.stop()
         await consumer.stop()

@@ -155,6 +155,29 @@ export const api = {
         }
     },
     events: {
+        EVENT_DISPLAY_MAP: {
+            "uploading": "Uploading file to cloud storage...",
+            "updating": "Updating file in cloud storage...",
+            "deleting": "Deleting file from cloud storage...",
+            "renaming": "Renaming file in cloud storage...",
+            "upload": "Uploading file to cloud storage...",
+            "update": "Updating file in cloud storage...",
+            "delete": "Deleting file from cloud storage...",
+            "rename": "Renaming file in cloud storage...",
+            "search": "Searching your files...",
+            "rag": "Analyzing your documents...",
+            "agent": "AI is researching your files...",
+            "ai_search": "AI is searching through your files...",
+            "found": "Search complete",
+            "uploaded": "File uploaded successfully",
+            "updated": "File updated successfully",
+            "deleted": "File deleted successfully",
+            "renamed": "File renamed successfully",
+        },
+        getDisplayText(rawEvent) {
+            if (!rawEvent) return "Processing...";
+            return this.EVENT_DISPLAY_MAP[rawEvent] || rawEvent.charAt(0).toUpperCase() + rawEvent.slice(1);
+        },
         async getUserEvents(owner, limit = 100, offset = 0) {
             const res = await fetch(
                 `${GATEWAY_SERVER}/events/user/${encodeURIComponent(owner)}?limit=${limit}&offset=${offset}`
