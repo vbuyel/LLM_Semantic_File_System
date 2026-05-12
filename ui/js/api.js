@@ -25,7 +25,6 @@ export const api = {
             localStorage.setItem('user', JSON.stringify(user));
             return user;
         },
-
         async loginAsGuest() {
             const user = { id: 'guest', name: 'Guest', isGuest: true };
             localStorage.setItem('user', JSON.stringify(user));
@@ -119,7 +118,7 @@ export const api = {
             if (!res.ok) throw new Error('Failed to rename file');
             return res.json();
         },
-async downloadFile(path) {
+        async downloadFile(path) {
             const storageSource = state.get('storageSource');
             const headers = { 'X-Storage-Source': storageSource };
 
@@ -158,13 +157,13 @@ async downloadFile(path) {
     events: {
         async getUserEvents(owner, limit = 100, offset = 0) {
             const res = await fetch(
-                `${GATEWAY_SERVER}/events/user/${encodeURIComponent(owner)}?limit=${limit}&offset=${offset}`
+                `${GATEWAY_SERVER}/events/user/${encodeURIComponent(owner)}`
             );
             if (!res.ok) throw new Error('Failed to fetch events');
             return res.json();
         },
         connect(owner, onMessage) {
-            const ws = new WebSocket(`${WS_SERVER}/ws/events/${encodeURIComponent(owner)}`);
+            const ws = new WebSocket(`${WS_SERVER}/ws/events?owner=${encodeURIComponent(owner)}`);
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 onMessage(data);
@@ -181,28 +180,6 @@ async downloadFile(path) {
                 body: JSON.stringify({ text }),
             });
             return await response.json();
-        },
-        subscribeToEvents(userId, callback) {
-            const lastEventId = 0;
-            const url = `${GATEWAY_SERVER}/gateway/events/stream?user_id=${encodeURIComponent(userId)}&last_event_id=${lastEventId}`;
-            
-            const eventSource = new EventSource(url);
-            
-            eventSource.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    callback(data);
-                } catch (err) {
-                    console.error('Event parse error:', err);
-                }
-            };
-            
-            eventSource.onerror = (err) => {
-                console.error('SSE error:', err);
-                eventSource.close();
-            };
-            
-            return eventSource;
         }
     }
 };
