@@ -3,11 +3,12 @@ from fastapi import APIRouter, WebSocketDisconnect, Query, HTTPException, status
 import httpx
 
 from src.gateway_auth.adapters.events_ws import manager
+from src.gateway_auth.domain.settings import settings
 
 
 event_router = APIRouter(prefix="/events")
 
-EVENT_DB_URL = os.getenv("EVENT_DB_URL", "http://localhost:8003")
+EVENT_DB_URL = os.getenv("EVENT_DB_URL", settings.EVENT_DB_URL)
 
 
 @event_router.get("/user/{owner}")

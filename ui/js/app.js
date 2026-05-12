@@ -16,6 +16,7 @@ class App {
         const savedUser = api.auth.getUser();
         if (savedUser) {
             state.set('user', savedUser);
+            AIInterface.init(savedUser.email);
         }
 
         const queryParams = new URLSearchParams(window.location.search);
@@ -26,6 +27,7 @@ class App {
             try {
                 const user = await api.auth.loginWithGoogle(code, oauthState);
                 state.set('user', user);
+                AIInterface.init(user.email);
             } catch (err) {
                 console.error('[App] OAuth callback error:', err);
             }

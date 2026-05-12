@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     ]
     AGENT_SERVER: str
     FILE_OPS_SERVER: str
+    EVENT_DB_URL: str = "http://localhost:8003"
+    EVENT_DB_WS_URL: str = "ws://localhost:8003/ws/gateway"
 
     model_config = SettingsConfigDict(env_file="src/gateway_auth/.env")
 

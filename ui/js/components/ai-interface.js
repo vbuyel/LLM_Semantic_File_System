@@ -2,6 +2,23 @@ import { state } from '../state.js';
 import { api } from '../api.js';
 
 export const AIInterface = {
+    _ws: null,
+
+    init(userEmail) {
+        if (!userEmail || this._ws) return;
+
+        this._ws = api.events.connect(userEmail, (msg) => {
+            if (msg.type === 'events' && msg.data) {
+                const current = state.get('events') || [];
+                const newEvent = msg.data;
+                const exists = current.some(e => e.id === newEvent.id);
+                if (!exists) {
+                    state.set('events', [newEvent, ...current].slice(0, 100));
+                }
+            }
+        });
+    },
+
     render() {
         const isSearching = state.get('isSearching');
         const searchResult = state.get('searchResult');
@@ -20,7 +37,7 @@ export const AIInterface = {
                 ${isSearching ? `
                     <div class="ai-thinking">
                         <div class="thinking-dots"><span></span><span></span><span></span></div>
-                        <span>Agent is researching your files...</span>
+                        <span>${this.getLastEventText()}</span>
                     </div>
                 ` : ''}
                 ${searchResult ? this.renderSearchResults(searchResult) : ''}
@@ -84,16 +101,24 @@ export const AIInterface = {
             };
         }
 
-        // Search item click (navigate to path)
         const searchItems = document.querySelectorAll('.search-item');
         searchItems.forEach(item => {
             item.onclick = () => {
                 const path = item.dataset.path;
-                // For now, just reset search and let user find it, 
-                // but ideally we'd navigate to the folder
                 state.set('searchResult', null);
                 state.set('searchQuery', '');
             };
         });
+    },
+
+    getLastEventText() {
+        const events = state.get('events') || [];
+        const lastEvent = events[0];
+        
+        if (lastEvent && lastEvent.event) {
+            return lastEvent.event;
+        }
+        
+        return 'Agent is researching your files...';
     }
 };
