@@ -1,3 +1,5 @@
+import asyncio
+import inspect
 import json
 import os
 from pathlib import Path
@@ -63,6 +65,7 @@ class AgentResearcher:
             },
         ]
 
+
     @staticmethod
     def _should_force_rag(text: str) -> bool:
         lowered = text.lower()
@@ -77,6 +80,7 @@ class AgentResearcher:
             "document",
         )
         return any(hint in lowered for hint in rag_hints)
+
 
     @staticmethod
     def _assistant_message_payload(message):
@@ -95,7 +99,8 @@ class AgentResearcher:
             ]
         return payload
 
-    def get_response(self, request: SearchRequest) -> SearchResponse:
+
+    async def get_response(self, request: SearchRequest) -> SearchResponse:
         messages = [
             {
                 "role": "system",
@@ -147,7 +152,10 @@ class AgentResearcher:
                         text="Tool call missing required argument: text"
                     )
 
-                tool_result = callable_func(tool_text)
+                if inspect.iscoroutinefunction(callable_func):
+                    tool_result = await callable_func(tool_text)
+                else:
+                    tool_result = await asyncio.to_thread(callable_func, tool_text)
                 messages.append(
                     {
                         "role": "tool",
@@ -169,4 +177,7 @@ class AgentResearcher:
             except Exception as e:
                 return SearchResponse(text=f"{e}")
 
-        return SearchResponse(text=response.choices[0].message.content)
+        content = response.choices[0].message.content
+        if content is None:
+            content = "Please try again"
+        return SearchResponse(text=content)

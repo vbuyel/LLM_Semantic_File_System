@@ -30,5 +30,5 @@ def health_check():
 
 @app.post("/get_response")
 async def get_response_from_ai_agent(request: SearchRequest) -> SearchResponse:
-    response = agent_researcher.get_response(request)
+    response = await agent_researcher.get_response(request)
     return response

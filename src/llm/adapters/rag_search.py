@@ -9,10 +9,9 @@ class RAGSearch:
     def __init__(self):
         self._kafka_sender = Kafka()
 
-
-    def do_search(self, query_text: str, owner: Optional[str] = None) -> RAGResponse:
+    async def do_search(self, query_text: str, owner: Optional[str] = None) -> RAGResponse:
         try:
-            data = self._kafka_sender.process(query_text, "searching", owner)
+            data = await self._kafka_sender.process(query_text, "searching", owner)
             if isinstance(data, str):
                 return RAGResponse(text=data)
             return RAGResponse(text=json.dumps(data, ensure_ascii=False, default=str))
