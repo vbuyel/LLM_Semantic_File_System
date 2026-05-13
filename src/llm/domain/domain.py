@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 
 class RAGRequest(BaseModel):
@@ -9,6 +10,7 @@ class RAGResponse(BaseModel):
 
 class SearchRequest(BaseModel):
     text: str
+    owner: Optional[str] = None
 
 class SearchResponse(BaseModel):
     text: str

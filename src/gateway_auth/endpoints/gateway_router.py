@@ -12,11 +12,18 @@ gateway_router = APIRouter(prefix="/gateway")
 
 
 @gateway_router.post("/ai_agent")
-def call_ai_agent(request: UserRequest) -> ResponseToUser:
+def call_ai_agent(request: Request, user_request: UserRequest) -> ResponseToUser:
     """Calling AI Agent to get reponse from files or web search"""
+    payload = user_request.model_dump()
+    owner = request.headers.get("X-Owner")
+    if owner:
+        payload["owner"] = owner
+    elif not payload.get("owner"):
+        payload["owner"] = str(uuid4())
+
     response = requests.post(
         url=f"{settings.AGENT_SERVER}/get_response",
-        json=request.model_dump(),
+        json=payload,
     )
     return ResponseToUser(text=response.json().get("text", response.text))
 

@@ -17,8 +17,10 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 class AgentResearcher:
     def __init__(self):
         self.client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=os.getenv("OPENROUTER_API_KEY"),
+            # base_url="https://openrouter.ai/api/v1",
+            # api_key=os.getenv("OPENROUTER_API_KEY"),
+            base_url="http://localhost:11434/v1",
+            api_key="ollama",
         )
         self.model = os.getenv("MODEL")
 
@@ -50,7 +52,7 @@ class AgentResearcher:
                 "type": "function",
                 "function": {
                     "name": "call_rag",
-                    "description": "Find information in user files (Retrieval Augmented Generation)",
+                    "description": "Search and retrieve actual content from the user's personal files. Returns file names, paths, and text content. Use this to answer questions about what's inside the user's documents.",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -105,9 +107,14 @@ class AgentResearcher:
             {
                 "role": "system",
                 "content": (
-                    "You are a research assistant. "
-                    "When the user asks to use RAG or search local files/documents, "
-                    "you must call call_rag before answering."
+                    "You are a research assistant with access to the user's personal files and the web.\n\n"
+                    "When you call call_rag, you will receive the actual content of the user's files "
+                    "(file names, paths, and text chunks). "
+                    "Read that content carefully and answer the user's question based on it.\n"
+                    "If the file content answers the user's question, provide that information directly "
+                    "in your response (summarize, translate, or quote as appropriate).\n"
+                    "Do NOT just list file names or say 'Found relevant files' — actually answer "
+                    "the question using the content you received."
                 ),
             },
             {"role": "user", "content": request.text},
@@ -152,10 +159,11 @@ class AgentResearcher:
                         text="Tool call missing required argument: text"
                     )
 
+                tool_owner = request.owner
                 if inspect.iscoroutinefunction(callable_func):
-                    tool_result = await callable_func(tool_text)
+                    tool_result = await callable_func(tool_text, tool_owner)
                 else:
-                    tool_result = await asyncio.to_thread(callable_func, tool_text)
+                    tool_result = await asyncio.to_thread(callable_func, tool_text, tool_owner)
                 messages.append(
                     {
                         "role": "tool",

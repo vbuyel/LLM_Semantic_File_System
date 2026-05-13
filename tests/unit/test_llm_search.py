@@ -2,7 +2,7 @@
 Unit tests for src.llm.adapters.web_search and src.llm.adapters.rag_search.
 """
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from src.llm.domain.domain import SearchResponse, RAGResponse
 
 pytestmark = pytest.mark.unit
@@ -34,7 +34,8 @@ class TestWebSearch:
 
 
 class TestRAGSearch:
-    def test_do_search_success(self):
+    @pytest.mark.asyncio
+    async def test_do_search_success(self):
         with patch("src.llm.adapters.rag_search.Kafka") as MockKafka:
             mock_kafka = MagicMock()
             mock_kafka.process.return_value = {"data": [{"text": "result"}]}
@@ -42,10 +43,11 @@ class TestRAGSearch:
 
             from src.llm.adapters.rag_search import RAGSearch
             rs = RAGSearch()
-            result = rs.do_search("test query")
+            result = await rs.do_search("test query")
             assert isinstance(result, RAGResponse)
 
-    def test_do_search_failure(self):
+    @pytest.mark.asyncio
+    async def test_do_search_failure(self):
         with patch("src.llm.adapters.rag_search.Kafka") as MockKafka:
             mock_kafka = MagicMock()
             mock_kafka.process.side_effect = Exception("Kafka down")
@@ -53,16 +55,17 @@ class TestRAGSearch:
 
             from src.llm.adapters.rag_search import RAGSearch
             rs = RAGSearch()
-            result = rs.do_search("test")
+            result = await rs.do_search("test")
             assert "unavailable" in result.text.lower()
 
-    def test_do_search_string_response(self):
+    @pytest.mark.asyncio
+    async def test_do_search_string_response(self):
         with patch("src.llm.adapters.rag_search.Kafka") as MockKafka:
-            mock_kafka = MagicMock()
+            mock_kafka = AsyncMock()
             mock_kafka.process.return_value = "plain string result"
             MockKafka.return_value = mock_kafka
 
             from src.llm.adapters.rag_search import RAGSearch
             rs = RAGSearch()
-            result = rs.do_search("query")
+            result = await rs.do_search("query")
             assert result.text == "plain string result"

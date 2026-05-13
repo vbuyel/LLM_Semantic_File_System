@@ -2,7 +2,7 @@
 Integration tests for the LLM service FastAPI endpoints.
 """
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 
 pytestmark = pytest.mark.integration
@@ -33,7 +33,7 @@ class TestGetResponse:
     def test_get_response_success(self, client):
         with patch("src.llm.endpoints.main.agent_researcher") as mock_agent:
             from src.llm.domain.domain import SearchResponse
-            mock_agent.get_response.return_value = SearchResponse(text="AI answer")
+            mock_agent.get_response = AsyncMock(return_value=SearchResponse(text="AI answer"))
             resp = client.post("/get_response", json={"text": "test query"})
             assert resp.status_code == 200
             assert resp.json()["text"] == "AI answer"

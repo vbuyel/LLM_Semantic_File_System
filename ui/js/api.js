@@ -197,9 +197,15 @@ export const api = {
     },
     ai: {
         async search(text) {
+            const headers = { 'Content-Type': 'application/json' };
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            if (user.email) {
+                headers['X-Owner'] = user.email;
+            }
+
             const response = await fetch(`${GATEWAY_SERVER}/gateway/ai_agent`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({ text }),
             });
             return await response.json();

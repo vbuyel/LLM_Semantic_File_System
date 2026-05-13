@@ -41,7 +41,8 @@ class TestShouldForceRag:
 
 
 class TestGetResponse:
-    def test_simple_response_no_tools(self, agent):
+    @pytest.mark.asyncio
+    async def test_simple_response_no_tools(self, agent):
         a, mock_client, _, _ = agent
         mock_message = MagicMock()
         mock_message.content = "Here is your answer"
@@ -52,17 +53,19 @@ class TestGetResponse:
         mock_response.choices = [mock_choice]
         mock_client.chat.completions.create.return_value = mock_response
 
-        result = a.get_response(SearchRequest(text="hello"))
+        result = await a.get_response(SearchRequest(text="hello"))
         assert isinstance(result, SearchResponse)
         assert result.text == "Here is your answer"
 
-    def test_api_error_returns_error(self, agent):
+    @pytest.mark.asyncio
+    async def test_api_error_returns_error(self, agent):
         a, mock_client, _, _ = agent
         mock_client.chat.completions.create.side_effect = Exception("API down")
-        result = a.get_response(SearchRequest(text="test"))
+        result = await a.get_response(SearchRequest(text="test"))
         assert "Error" in result.text
 
-    def test_tool_call_invokes_function(self, agent):
+    @pytest.mark.asyncio
+    async def test_tool_call_invokes_function(self, agent):
         a, mock_client, mock_rag, _ = agent
         # First response: tool call
         mock_tool_call = MagicMock()
@@ -85,11 +88,12 @@ class TestGetResponse:
         mock_client.chat.completions.create.side_effect = [resp1, resp2]
         mock_rag.do_search.return_value = MagicMock(text="rag results")
 
-        result = a.get_response(SearchRequest(text="use rag"))
+        result = await a.get_response(SearchRequest(text="use rag"))
         assert result.text == "Found results"
-        mock_rag.do_search.assert_called_once_with("search query")
+        mock_rag.do_search.assert_called_once_with("search query", None)
 
-    def test_unknown_function_returns_error(self, agent):
+    @pytest.mark.asyncio
+    async def test_unknown_function_returns_error(self, agent):
         a, mock_client, _, _ = agent
         mock_tool_call = MagicMock()
         mock_tool_call.id = "call_999"
@@ -102,5 +106,5 @@ class TestGetResponse:
         resp.choices = [MagicMock(message=msg)]
         mock_client.chat.completions.create.return_value = resp
 
-        result = a.get_response(SearchRequest(text="test"))
+        result = await a.get_response(SearchRequest(text="test"))
         assert "Unknown function" in result.text
