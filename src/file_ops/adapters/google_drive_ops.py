@@ -3,14 +3,23 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 from typing import Optional
 import io
+import os
+import tempfile
 import asyncio
 import logging
+from pathlib import Path
 
 from src.file_ops.adapters.kafka import KafkaOperations
 from src.file_ops.adapters.text_extractor import extract_text_from_file
 from src.file_ops.domain.domain import SendToKafka
 
 logger = logging.getLogger(__name__)
+
+MIME_TO_EXT = {
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+}
 
 
 class GoogleDriveOperations:
@@ -55,7 +64,7 @@ class GoogleDriveOperations:
                     action="upload",
                     file_name=meta["name"],
                     file_path=file["id"],
-                    text=text,
+                    text=text[:1000] if text else "",
                     owner=owner,
                     storage_type="drive",
                 )
@@ -107,7 +116,7 @@ class GoogleDriveOperations:
                     action="update",
                     file_name=file["name"],
                     file_path=file["id"],
-                    text=text,
+                    text=text[:1000] if text else "",
                     owner=owner,
                     storage_type="drive",
                 )
@@ -134,25 +143,36 @@ class GoogleDriveOperations:
             q=query
         ).execute()
 
+        await self.kafka.send_event(event="Vectorising your cloud files...", owner=owner)
+
         items = results.get('files', [])
         file_items = []
         for item in items:
             is_dir = item.get('mimeType') == 'application/vnd.google-apps.folder'
             size = item.get('size')
 
-            try:
-                text = extract_text_from_file(item.get('id'))
-            except Exception as e:
-                logger.warning(f"Text extraction failed for {item.get('id')}: {e}")
-                text = ""
+            # Download Drive file to temp location for text extraction
+            text = ""
+            if not is_dir:
+                try:
+                    content, file_name, mime_type = self.download_file(item.get('id'))
+                    ext = Path(file_name).suffix if '.' in file_name else MIME_TO_EXT.get(mime_type, '')
+                    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+                        tmp.write(content)
+                        tmp_path = tmp.name
+                    try:
+                        text = extract_text_from_file(tmp_path)
+                    finally:
+                        os.unlink(tmp_path)
+                except Exception as e:
+                    logger.warning(f"Text extraction failed for {item.get('id')}: {e}")
 
-            await self.kafka.send_start_event(event="Vectorising your cloud files...", owner=owner)
             await self.kafka.send_command(
                 SendToKafka(
                     action="upload",
                     file_name=item.get('name'),
                     file_path=item.get('id'),
-                    text=text,
+                    text=text[:1000] if text else "",
                     owner=owner,
                     storage_type="drive",
                 )
@@ -166,7 +186,7 @@ class GoogleDriveOperations:
                 "modified": item.get('modifiedTime')
             })
         
-        await self.kafka.send_start_event(event="Done! Files are prepared to analyze", owner=owner)
+        await self.kafka.send_event(event="Done! Files are prepared to analyze", owner=owner)
         return file_items
 
 

@@ -21,7 +21,7 @@ class UploadObject(BaseModel):
     file_path: str
     text: str | None = None
 
-    def divide_into_chunks(self, text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]:
+    def divide_into_chunks(self, text: str, chunk_size: int = 150, overlap: int = 20) -> List[str]:
         words = text.split()
         chunks = []
         for i in range(0, len(words), chunk_size - overlap):

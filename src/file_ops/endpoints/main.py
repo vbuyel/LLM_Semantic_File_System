@@ -182,7 +182,7 @@ async def list_files(
             if not user.get("token"):
                 raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Access token required for Google Drive")
             drive_ops = GoogleDriveOperations(access_token=user["token"])
-            files = drive_ops.list_files(path)
+            files = await drive_ops.list_files(owner=user.get("owner"), directory_path=path)
         else:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unsupported storage source: {storage_source}")
         file_items = [FileItem(**f) for f in files] if files else []

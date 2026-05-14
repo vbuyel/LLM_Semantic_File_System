@@ -1,15 +1,11 @@
 import os
 import json
 import uuid
-import logging
 from typing import Optional
 
 from aiokafka import AIOKafkaProducer
 
 from src.file_ops.domain.domain import SendToKafka
-
-
-logger = logging.getLogger(__name__)
 
 
 class KafkaOperations:
@@ -38,12 +34,26 @@ class KafkaOperations:
         return {
             "bootstrap_servers": self._bootstrap_servers,
             "value_serializer": lambda v: json.dumps(v).encode("utf-8"),
+            "max_request_size": 50 * 1024 * 1024,  # 50 MB
         }
 
 
     async def start(self) -> None:
         """Start the producer. Call once at app startup."""
         await self._producer.start()
+        try:
+            from aiokafka.admin import AIOKafkaAdminClient, NewTopic
+            admin = AIOKafkaAdminClient(bootstrap_servers=self._bootstrap_servers)
+            await admin.start()
+            existing = await admin.list_topics()
+            if self._event_db_topic not in existing:
+                print(f"[DEBUG] Kafka: Creating topic '{self._event_db_topic}'")
+                await admin.create_topics([NewTopic(self._event_db_topic, num_partitions=1, replication_factor=1)])
+            await admin.close()
+        except ImportError:
+            print("[DEBUG] Kafka: aiokafka.admin not available, relying on auto-create")
+        except Exception as e:
+            print(f"[DEBUG] Kafka: Topic setup skipped ({e})")
 
 
     async def stop(self) -> None:
@@ -51,16 +61,17 @@ class KafkaOperations:
         await self._producer.stop()
 
 
-    async def send_start_event(self, event: str, owner: Optional[str] = None) -> None:
+    async def send_event(self, event: str, owner: Optional[str] = None) -> None:
         """Шаг 1: Отправить начальное событие в event_db."""
         try:
-            event = {
+            msg = {
                 "owner": owner,
                 "event": event,
             }
-            await self._producer.send(self._event_db_topic, event)
+            print(f"[DEBUG] Kafka: sending event to topic='{self._event_db_topic}': {msg}")
+            await self._producer.send_and_wait(self._event_db_topic, msg)
         except Exception as e:
-            logger.warning(f"Failed to send Kafka start event: {e}")
+            print(f"[ERROR] Failed to send Kafka event (topic={self._event_db_topic}): {e}")
 
 
     async def send_command(
@@ -84,4 +95,4 @@ class KafkaOperations:
             }
             await self._producer.send_and_wait(self._request_topic, command)
         except Exception as e:
-            logger.warning(f"Failed to send Kafka command: {e}")
+            print(f"[ERROR] Failed to send Kafka command (topic={self._request_topic}): {e}")

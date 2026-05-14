@@ -114,9 +114,20 @@ class DataBase:
             raise ValueError("No text provided to upload")
 
         text = text.replace("\x00", "")
-        chunks = object.divide_into_chunks(text, chunk_size=500, overlap=50)
+        chunks = object.divide_into_chunks(text)
         conn = self._get_connection()
         try:
+            if object.owner:
+                conn.execute(
+                    f"DELETE FROM {self.table} WHERE file_path = %s AND owner = %s",
+                    (object.file_path, object.owner),
+                )
+            else:
+                conn.execute(
+                    f"DELETE FROM {self.table} WHERE file_path = %s",
+                    (object.file_path,),
+                )
+
             for chunk in chunks:
                 embedding = self._convert_to_embedding(chunk)
                 conn.execute(

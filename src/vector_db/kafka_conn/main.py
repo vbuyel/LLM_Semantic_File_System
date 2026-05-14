@@ -161,7 +161,6 @@ async def process_requests():
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),
                     }
-                    await producer.send(event_topic, {"owner": payload.get("owner"), "event": "renamed"})
                 elif action == "search":
                     embedding = get_embedding_model().encode(payload["text"]).tolist()
                     results = get_db().search_similar(embedding, limit=payload.get("limit", 3))
