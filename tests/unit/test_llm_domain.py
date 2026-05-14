@@ -29,8 +29,9 @@ class TestRAGResponse:
 
 class TestSearchRequest:
     def test_create(self):
-        r = SearchRequest(text="find documents about AI")
+        r = SearchRequest(text="find documents about AI", owner="test-owner")
         assert "AI" in r.text
+        assert r.owner == "test-owner"
 
 
 class TestSearchResponse:

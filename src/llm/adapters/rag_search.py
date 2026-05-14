@@ -7,11 +7,22 @@ from src.llm.adapters.kafka import Kafka
 
 class RAGSearch:
     def __init__(self):
-        self._kafka_sender = Kafka()
+        self._kafka = Kafka()
+        self._started = False
+        self.command = "search"
+        self.event = "Found info in files"
 
-    async def do_search(self, query_text: str, owner: Optional[str] = None) -> RAGResponse:
+
+    async def _ensure_started(self):
+        if not self._started:
+            await self._kafka._ensure_connections()
+            self._started = True
+
+
+    async def do_search(self, query: str, owner: str) -> RAGResponse:
+        await self._ensure_started()
         try:
-            data = await self._kafka_sender.process(query_text, "searching", owner)
+            data = await self._kafka.send_command(self.command, query)
             if isinstance(data, str):
                 return RAGResponse(text=data)
 
@@ -29,7 +40,8 @@ class RAGSearch:
                     f"Path: {file_path}\n"
                     f"Content:\n{text_chunk}\n"
                 )
-
+            
+            await self._kafka.send_event(self.event, owner)
             return RAGResponse(text="\n\n".join(parts))
         except Exception as exc:
             return RAGResponse(text=f"RAG unavailable: {exc}")

@@ -24,12 +24,14 @@ class KafkaManager:
     @staticmethod
     def _get_topics() -> list[str]:
         """Возвращает список всех существующих топиков"""
-        request_topic = os.getenv("REQUEST_TOPIC", "service.requests").split(",")
-        reply_topic = os.getenv("REPLY_TOPIC", "service.replies").split(",")
-        send_event_topic = os.getenv("SEND_EVENT_TOPIC", "send_event").split(",")
+        request_topics = os.getenv("REQUEST_TOPIC", "service.requests").split(",")
+        reply_topics = os.getenv("REPLY_TOPIC", "service.replies").split(",")
+        send_event_topics = os.getenv("SEND_EVENT_TOPIC", "send_event").split(",")
         
         topics = []
-        topics.extend([request_topic, reply_topic, send_event_topic])
+        topics.extend(request_topics)
+        topics.extend(reply_topics)
+        topics.extend(send_event_topics)
         
         return list(dict.fromkeys(topics))
 

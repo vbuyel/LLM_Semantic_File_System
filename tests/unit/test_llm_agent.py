@@ -53,7 +53,7 @@ class TestGetResponse:
         mock_response.choices = [mock_choice]
         mock_client.chat.completions.create.return_value = mock_response
 
-        result = await a.get_response(SearchRequest(text="hello"))
+        result = await a.get_response(SearchRequest(text="hello", owner="test-owner"))
         assert isinstance(result, SearchResponse)
         assert result.text == "Here is your answer"
 
@@ -61,7 +61,7 @@ class TestGetResponse:
     async def test_api_error_returns_error(self, agent):
         a, mock_client, _, _ = agent
         mock_client.chat.completions.create.side_effect = Exception("API down")
-        result = await a.get_response(SearchRequest(text="test"))
+        result = await a.get_response(SearchRequest(text="test", owner="test-owner"))
         assert "Error" in result.text
 
     @pytest.mark.asyncio
@@ -88,9 +88,9 @@ class TestGetResponse:
         mock_client.chat.completions.create.side_effect = [resp1, resp2]
         mock_rag.do_search.return_value = MagicMock(text="rag results")
 
-        result = await a.get_response(SearchRequest(text="use rag"))
+        result = await a.get_response(SearchRequest(text="use rag", owner="test-owner"))
         assert result.text == "Found results"
-        mock_rag.do_search.assert_called_once_with("search query", None)
+        mock_rag.do_search.assert_called_once_with("search query", "test-owner")
 
     @pytest.mark.asyncio
     async def test_unknown_function_returns_error(self, agent):
@@ -106,5 +106,5 @@ class TestGetResponse:
         resp.choices = [MagicMock(message=msg)]
         mock_client.chat.completions.create.return_value = resp
 
-        result = await a.get_response(SearchRequest(text="test"))
+        result = await a.get_response(SearchRequest(text="test", owner="test-owner"))
         assert "Unknown function" in result.text

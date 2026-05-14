@@ -10,7 +10,7 @@ class RAGResponse(BaseModel):
 
 class SearchRequest(BaseModel):
     text: str
-    owner: Optional[str] = None
+    owner: str
 
 class SearchResponse(BaseModel):
     text: str
