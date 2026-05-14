@@ -1,6 +1,3 @@
-import json
-from typing import Optional
-
 from src.llm.domain.domain import RAGResponse
 from src.llm.adapters.kafka import Kafka
 
@@ -10,7 +7,6 @@ class RAGSearch:
         self._kafka = Kafka()
         self._started = False
         self.command = "search"
-        self.event = "Found info in files"
 
 
     async def _ensure_started(self):
