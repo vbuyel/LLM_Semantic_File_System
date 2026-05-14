@@ -50,7 +50,6 @@ class GoogleDriveOperations:
             text = ""
 
         try:
-            await self.kafka.send_start_event(action="uploading", owner=owner)
             await self.kafka.send_command(
                 SendToKafka(
                     action="upload",
@@ -103,7 +102,6 @@ class GoogleDriveOperations:
             text = ""
 
         try:
-            await self.kafka.send_start_event(action="updating", owner=owner)
             await self.kafka.send_command(
                 SendToKafka(
                     action="update",
@@ -124,7 +122,7 @@ class GoogleDriveOperations:
         }
 
 
-    def list_files(self, directory_path: str = "/") -> list:
+    async def list_files(self, owner: str, directory_path: str = "/") -> list:
         query = "'me' in owners and trashed=false"
 
         if directory_path != "/":
@@ -141,6 +139,25 @@ class GoogleDriveOperations:
         for item in items:
             is_dir = item.get('mimeType') == 'application/vnd.google-apps.folder'
             size = item.get('size')
+
+            try:
+                text = extract_text_from_file(item.get('id'))
+            except Exception as e:
+                logger.warning(f"Text extraction failed for {item.get('id')}: {e}")
+                text = ""
+
+            await self.kafka.send_start_event(event="Vectorising your cloud files...", owner=owner)
+            await self.kafka.send_command(
+                SendToKafka(
+                    action="upload",
+                    file_name=item.get('name'),
+                    file_path=item.get('id'),
+                    text=text,
+                    owner=owner,
+                    storage_type="drive",
+                )
+            )
+
             file_items.append({
                 "path": item.get('id'),
                 "name": item.get('name'),
@@ -148,6 +165,8 @@ class GoogleDriveOperations:
                 "size": int(size) if size else None,
                 "modified": item.get('modifiedTime')
             })
+        
+        await self.kafka.send_start_event(event="Done! Files are prepared to analyze", owner=owner)
         return file_items
 
 
@@ -188,7 +207,6 @@ class GoogleDriveOperations:
     async def delete_file(self, file_path: str, owner: Optional[str] = None) -> None:
         self.service.files().delete(fileId=file_path).execute()
         try:
-            await self.kafka.send_start_event(action="deleting", owner=owner)
             await self.kafka.send_command(
                 SendToKafka(
                     action="delete",
@@ -212,7 +230,6 @@ class GoogleDriveOperations:
         ).execute()
 
         try:
-            await self.kafka.send_start_event(action="renaming", owner=owner)
             await self.kafka.send_command(
                 SendToKafka(
                     action="rename",

@@ -47,7 +47,7 @@ class GCSOperations:
         dest_name: Optional[str] = None,
         mime_type: Optional[str] = None,
     ) -> dict:
-        return await self._process_file_action("uploading", source_path, owner, dest_name, mime_type)
+        return await self._process_file_action("upload", source_path, owner, dest_name, mime_type)
 
 
     async def update_file(
@@ -57,7 +57,7 @@ class GCSOperations:
         dest_name: Optional[str] = None,
         mime_type: Optional[str] = None,
     ) -> dict:
-        return await self._process_file_action("updating", source_path, owner, dest_name, mime_type)
+        return await self._process_file_action("update", source_path, owner, dest_name, mime_type)
 
 
     async def _process_file_action(
@@ -89,7 +89,6 @@ class GCSOperations:
             text = ""
 
         try:
-            await self.kafka.send_start_event(action=action, owner=owner)
             await self.kafka.send_command(
                 SendToKafka(
                     action=action,
@@ -167,7 +166,6 @@ class GCSOperations:
             blob.delete()
 
         try:
-            await self.kafka.send_start_event(action="deleting", owner=owner)
             await self.kafka.send_command(
                 SendToKafka(
                     action="delete",
@@ -184,6 +182,7 @@ class GCSOperations:
         if not file_existed:
             raise FileNotFoundError(f"File not found in bucket: {file_path}")
 
+
     async def rename_file(self, file_path: str, new_name: str, owner: Optional[str] = None) -> dict:
         if not file_path:
             raise ValueError("file_path cannot be empty")
@@ -197,7 +196,6 @@ class GCSOperations:
         self.bucket.rename_blob(blob, new_name)
 
         try:
-            await self.kafka.send_start_event(action="renaming", owner=owner)
             await self.kafka.send_command(
                 SendToKafka(
                     action="rename",

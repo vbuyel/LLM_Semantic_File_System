@@ -16,10 +16,12 @@ class KafkaOperations:
     _instance = None
     _initialized = False
 
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
+
 
     def __init__(self):
         if self._initialized:
@@ -31,30 +33,35 @@ class KafkaOperations:
         self._producer = AIOKafkaProducer(**self._get_producer_config())
         KafkaOperations._initialized = True
 
+
     def _get_producer_config(self) -> dict:
         return {
             "bootstrap_servers": self._bootstrap_servers,
             "value_serializer": lambda v: json.dumps(v).encode("utf-8"),
         }
 
+
     async def start(self) -> None:
         """Start the producer. Call once at app startup."""
         await self._producer.start()
+
 
     async def stop(self) -> None:
         """Stop the producer. Call once at app shutdown."""
         await self._producer.stop()
 
-    async def send_start_event(self, action: str, owner: Optional[str] = None) -> None:
+
+    async def send_start_event(self, event: str, owner: Optional[str] = None) -> None:
         """Шаг 1: Отправить начальное событие в event_db."""
         try:
             event = {
                 "owner": owner,
-                "event": action,
+                "event": event,
             }
             await self._producer.send(self._event_db_topic, event)
         except Exception as e:
             logger.warning(f"Failed to send Kafka start event: {e}")
+
 
     async def send_command(
         self,
@@ -66,7 +73,6 @@ class KafkaOperations:
         try:
             command = {
                 "correlation_id": correlation_id,
-                "reply_topic": self._reply_topic,
                 "payload": {
                     "action": data.action,
                     "file_name": data.file_name,
