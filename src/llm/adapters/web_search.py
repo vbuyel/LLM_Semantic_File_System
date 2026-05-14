@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from langchain_community.tools import DuckDuckGoSearchRun
@@ -27,7 +28,7 @@ class WebSearch:
         await self._ensure_started()
         try:
             await self._kafka.send_event(self.event, owner)
-            result = self.session.invoke({"query": query})
+            result = await asyncio.to_thread(self.session.invoke, {"query": query})
             return SearchResponse(text=result)
         except Exception as e:
             logger.warning(f"Web search failed: {e}")
