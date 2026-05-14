@@ -52,3 +52,10 @@ class KafkaManager:
             logger.error(f"Failed to setup topics: {e}")
         finally:
             self.admin.close()
+
+
+if __name__ == "__main__":
+    from dotenv import load_dotenv
+    load_dotenv()
+    manager = KafkaManager()
+    manager.setup_topics()

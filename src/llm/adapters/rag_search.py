@@ -22,7 +22,7 @@ class RAGSearch:
     async def do_search(self, query: str, owner: str) -> RAGResponse:
         await self._ensure_started()
         try:
-            data = await self._kafka.send_command(self.command, query)
+            data = await self._kafka.send_command(self.command, query, owner)
             if isinstance(data, str):
                 return RAGResponse(text=data)
 
@@ -41,7 +41,6 @@ class RAGSearch:
                     f"Content:\n{text_chunk}\n"
                 )
             
-            await self._kafka.send_event(self.event, owner)
             return RAGResponse(text="\n\n".join(parts))
         except Exception as exc:
             return RAGResponse(text=f"RAG unavailable: {exc}")

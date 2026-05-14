@@ -21,7 +21,7 @@ except ImportError:
     AIOKafkaProducer = None
 
 from src.vector_db.adapters.database import DataBase
-from src.vector_db.domain.domain import DeleteObject, RenameObject, UploadEvent, UploadObject
+from src.vector_db.domain.domain import DeleteObject, RenameObject, UploadObject
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
@@ -58,12 +58,12 @@ async def process_requests():
     topics_str = os.getenv("REQUEST_TOPICS", "service.requests")
     topics_list = [t.strip() for t in topics_str.split(",") if t.strip()]
 
-    topics_str = os.getenv("REPLY_EVENT_TOPIC", "send_event")
-    event_topics = [t.strip() for t in topics_str.split(",") if t.strip()]
+    event_topic_str = os.getenv("REPLY_EVENT_TOPIC", "send_event")
+    event_topics = [t.strip() for t in event_topic_str.split(",") if t.strip()]
     event_topic = event_topics[0] if event_topics else "send_event"
 
     print(f"[DEBUG] VectorDB listening on topics: {topics_list}")
-    print(f"[DEBUG] VectorDB send events in topics: {event_topic}")
+    print(f"[DEBUG] VectorDB sending events to: {event_topic}")
     print(f"[DEBUG] Bootstrap servers: {_bootstrap_servers}")
 
     producer = AIOKafkaProducer(
@@ -85,9 +85,11 @@ async def process_requests():
         async for msg in consumer:
             try:
                 data = msg.value
-                correlation_id = data["correlation_id"]
-                reply_topic = data["reply_topic"]
-                payload = data["payload"]
+                if data is None:
+                    continue
+                correlation_id = data.get("correlation_id")
+                reply_topic = data.get("reply_topic")  # file_ops does not include this
+                payload = data.get("payload", {})
                 action = payload.get("action", "NOT FOUND")
                 
                 if action == "uploading":
@@ -95,8 +97,6 @@ async def process_requests():
                 elif action == "updating":
                     action = "update"
 
-                event = {}
-                event["owner"] = payload.get("owner")
                 print(f"[DEBUG] Payload data: {payload}")
                 
                 if action == "upload":
@@ -113,8 +113,6 @@ async def process_requests():
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),
                     }
-                    event["event"] = "uploaded"
-                    await producer.send(event_topic, event)
                 elif action == "update":
                     print("File is updating (delete + upload)")
                     object_to_delete = DeleteObject(
@@ -136,8 +134,6 @@ async def process_requests():
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),
                     }
-                    event["event"] = "updated"
-                    await producer.send(event_topic, event)
                 elif action == "delete":
                     print("File is deleting now")
                     object_to_delete = DeleteObject(
@@ -151,8 +147,6 @@ async def process_requests():
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),
                     }
-                    event["event"] = "deleted"
-                    await producer.send(event_topic, event)
                 elif action == "rename":
                     print("File is renaming now")
                     object_to_rename = RenameObject(
@@ -167,8 +161,7 @@ async def process_requests():
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),
                     }
-                    event["event"] = "renamed"
-                    await producer.send(event_topic, event)
+                    await producer.send(event_topic, {"owner": payload.get("owner"), "event": "renamed"})
                 elif action == "search":
                     embedding = get_embedding_model().encode(payload["text"]).tolist()
                     results = get_db().search_similar(embedding, limit=payload.get("limit", 3))
@@ -176,14 +169,13 @@ async def process_requests():
                         "correlation_id": correlation_id,
                         "data": results.model_dump(mode="json"),
                     }
-
-                    event["event"] = "found"
-                    await producer.send(event_topic, event)
+                    await producer.send(event_topic, {"owner": payload.get("owner"), "event": "Found info in files"})
                 else:
                     raise Exception(f"Action {action} is not supported in vector db")
                 
                 print("Vector DB operations are completed")
-                await producer.send_and_wait(reply_topic, reply_message)
+                if reply_topic:
+                    await producer.send_and_wait(reply_topic, reply_message)
             except Exception as e:
                 print(f"Error: {e}")
     finally:

@@ -76,7 +76,7 @@ class Kafka:
         await Kafka._producer.send(self._event_db_topic, payload)
 
 
-    async def send_command(self, command: str, query_text: str):
+    async def send_command(self, command: str, query_text: str, owner: str):
         correlation_id = str(uuid.uuid4())
 
         command = {
@@ -86,6 +86,7 @@ class Kafka:
                 "action": command,
                 "text": query_text,
                 "limit": 3,
+                "owner": owner,
             },
         }
 
