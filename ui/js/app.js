@@ -5,6 +5,7 @@ import { Sidebar } from './components/sidebar.js';
 import { Explorer } from './components/explorer.js';
 import { AIInterface } from './components/ai-interface.js';
 import { StatusBar } from './components/status-bar.js';
+import { AIThinking } from './components/ai-thinking.js';
 
 class App {
     constructor() {
@@ -16,8 +17,7 @@ class App {
         const savedUser = api.auth.getUser();
         if (savedUser) {
             state.set('user', savedUser);
-            AIInterface.init(savedUser.email);
-            StatusBar.init(savedUser.email);
+            this._startServices(savedUser.email);
         }
 
         const queryParams = new URLSearchParams(window.location.search);
@@ -28,8 +28,7 @@ class App {
             try {
                 const user = await api.auth.loginWithGoogle(code, oauthState);
                 state.set('user', user);
-                AIInterface.init(user.email);
-                StatusBar.init(user.email);
+                this._startServices(user.email);
             } catch (err) {
                 console.error('[App] OAuth callback error:', err);
             }
@@ -46,6 +45,15 @@ class App {
 
         state.subscribe(() => this.render());
         this.render();
+    }
+
+    _startServices(email) {
+        AIThinking.init(email);
+        AIThinking.subscribe((event) => {
+            const span = document.querySelector('.ai-thinking > span');
+            if (span) span.textContent = AIThinking.getLastEventText();
+            StatusBar.showEvent(event);
+        });
     }
 
     async loadInitialData() {
@@ -86,7 +94,6 @@ class App {
         `;
 
         lucide.createIcons();
-
         this.attachEvents();
     }
 

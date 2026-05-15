@@ -154,25 +154,6 @@ export const api = {
         }
     },
     events: {
-        EVENT_DISPLAY_MAP: {
-            "uploading": "Uploading file to cloud storage...",
-            "updating": "Updating file in cloud storage...",
-            "deleting": "Deleting file from cloud storage...",
-            "renaming": "Renaming file in cloud storage...",
-            "upload": "Uploading file to cloud storage...",
-            "update": "Updating file in cloud storage...",
-            "delete": "Deleting file from cloud storage...",
-            "rename": "Renaming file in cloud storage...",
-            "search": "Searching your files...",
-            "rag": "Analyzing your documents...",
-            "agent": "AI is researching your files...",
-            "ai_search": "AI is searching through your files...",
-            "found": "Search complete",
-            "uploaded": "File uploaded successfully",
-            "updated": "File updated successfully",
-            "deleted": "File deleted successfully",
-            "renamed": "File renamed successfully",
-        },
         getDisplayText(rawEvent) {
             if (!rawEvent) return "Processing...";
             return this.EVENT_DISPLAY_MAP[rawEvent] || rawEvent.charAt(0).toUpperCase() + rawEvent.slice(1);
@@ -185,12 +166,30 @@ export const api = {
             return res.json();
         },
         connect(owner, onMessage) {
-            const ws = new WebSocket(`${WS_SERVER}/ws/events/${encodeURIComponent(owner)}`);
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                onMessage(data);
-            };
-            ws.onerror = (err) => console.error('[WS] Error:', err);
+            let ws;
+
+            function _connect() {
+                ws = new WebSocket(`${WS_SERVER}/events/ws/${encodeURIComponent(owner)}`);
+
+                ws.onmessage = (event) => {
+                    try {
+                        onMessage(JSON.parse(event.data));
+                    } catch (e) {
+                        console.error('[WS] Parse error:', e);
+                    }
+                };
+
+                ws.onerror = (err) => console.error('[WS] Error:', err);
+
+                ws.onopen = () => console.log('[WS] Connected:', owner);
+
+                ws.onclose = () => {
+                    console.log('[WS] Disconnected, reconnecting in 3s...');
+                    setTimeout(_connect, 3000);
+                };
+            }
+
+            _connect();
             return ws;
         }
     },

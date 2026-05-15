@@ -1,24 +1,8 @@
 import { state } from '../state.js';
 import { api } from '../api.js';
+import { AIThinking } from './ai-thinking.js';
 
 export const AIInterface = {
-    _ws: null,
-
-    init(userEmail) {
-        if (!userEmail || this._ws) return;
-
-        this._ws = api.events.connect(userEmail, (msg) => {
-            if (msg.type === 'events' && msg.data) {
-                const current = state.get('events') || [];
-                const newEvent = msg.data;
-                const exists = current.some(e => e.id === newEvent.id);
-                if (!exists) {
-                    state.set('events', [newEvent, ...current].slice(0, 100));
-                }
-            }
-        });
-    },
-
     render() {
         const isSearching = state.get('isSearching');
         const searchResult = state.get('searchResult');
@@ -34,12 +18,7 @@ export const AIInterface = {
                         <kbd>Enter</kbd>
                     </div>
                 </div>
-                ${isSearching ? `
-                    <div class="ai-thinking">
-                        <div class="thinking-dots"><span></span><span></span><span></span></div>
-                        <span>${this.getLastEventText()}</span>
-                    </div>
-                ` : ''}
+                ${isSearching ? AIThinking.render() : ''}
                 ${searchResult ? this.renderSearchResults(searchResult) : ''}
             </div>
         `;
@@ -77,16 +56,21 @@ export const AIInterface = {
         if (input) {
             input.onkeydown = async (e) => {
                 if (e.key === 'Enter' && input.value.trim()) {
-                    state.set('searchQuery', input.value);
-                    state.set('isSearching', true);
-                    state.set('searchResult', null);
+                    const query = input.value.trim();
+                    state.update(data => {
+                        data.searchQuery = query;
+                        data.isSearching = true;
+                        data.searchResult = null;
+                    });
                     
                     try {
-                        const result = await api.ai.search(input.value);
-                        state.set('searchResult', result);
+                        const result = await api.ai.search(query);
+                        state.update(data => {
+                            data.searchResult = result;
+                            data.isSearching = false;
+                        });
                     } catch (error) {
                         console.error('AI Search failed:', error);
-                    } finally {
                         state.set('isSearching', false);
                     }
                 }
@@ -109,16 +93,5 @@ export const AIInterface = {
                 state.set('searchQuery', '');
             };
         });
-    },
-
-    getLastEventText() {
-        const events = state.get('events') || [];
-        const lastEvent = events[0];
-        
-        if (lastEvent && lastEvent.event) {
-            return api.events.getDisplayText(lastEvent.event);
-        }
-        
-        return 'Agent is researching your files...';
     }
 };

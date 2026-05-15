@@ -6,45 +6,27 @@ export const StatusBar = {
 
     render() {
         const currentEvent = state.get('currentEvent');
-        
-        if (!currentEvent) {
-            return '';
-        }
-
-        const displayText = api.events.getDisplayText(currentEvent.event);
-        
+        if (!currentEvent) return '';
         return `
             <div class="status-bar fade-in">
                 <div class="status-bar__content">
                     <div class="status-bar__spinner"></div>
-                    <span class="status-bar__text">${displayText}</span>
+                    <span class="status-bar__text">${api.events.getDisplayText(currentEvent.event)}</span>
                 </div>
             </div>
         `;
     },
 
-    attachEvents() {
-    },
-
     showEvent(eventData) {
+        if (state.get('isSearching')) return;
         state.set('currentEvent', eventData);
-        
-        if (this._hideTimeout) {
-            clearTimeout(this._hideTimeout);
-        }
-        
+        if (this._hideTimeout) clearTimeout(this._hideTimeout);
         this._hideTimeout = setTimeout(() => {
+            if (state.get('isSearching')) return;
             state.set('currentEvent', null);
         }, 3000);
     },
 
-    init(userEmail) {
-        if (!userEmail) return;
-        
-        api.events.connect(userEmail, (msg) => {
-            if (msg.type === 'events' && msg.data) {
-                this.showEvent(msg.data);
-            }
-        });
+    attachEvents() {
     }
 };

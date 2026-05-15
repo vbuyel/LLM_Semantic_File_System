@@ -90,7 +90,7 @@ class DataBase:
         return  np.array(embedding, dtype=np.float32)
 
 
-    def search_similar(self, embedding: list[float], limit: int = 3) -> RAGResults:
+    def search_similar(self, embedding: list[float], limit: int = 5) -> RAGResults:
         print("[DEBUG] Searching for simular text")
         conn = self._get_connection()
         try:
