@@ -62,7 +62,6 @@ export const AIInterface = {
                         data.isSearching = true;
                         data.searchResult = null;
                     });
-                    
                     try {
                         const result = await api.ai.search(query);
                         state.update(data => {

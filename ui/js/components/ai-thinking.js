@@ -25,8 +25,10 @@ export const AIThinking = {
     },
 
     getLastEventText() {
-        const last = _events[0];
-        if (last && last.event) return api.events.getDisplayText(last.event);
+        const last = _events.pop(0);
+        if (last && last.event) {
+            return api.events.getDisplayText(last.event);
+        }
         return 'Agent is researching your files...';
     },
 
