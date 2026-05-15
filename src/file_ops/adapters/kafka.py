@@ -91,6 +91,7 @@ class KafkaOperations:
                     "text": data.text,
                     "owner": data.owner,
                     "storage_type": data.storage_type,
+                    "chunk_index": data.chunk_index,
                 },
             }
             await self._producer.send_and_wait(self._request_topic, command)

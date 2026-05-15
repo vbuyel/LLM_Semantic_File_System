@@ -107,7 +107,7 @@ class DataBase:
             conn.close()
     
 
-    def upload_object(self, object: UploadObject) -> ObjectUploaded:
+    def upload_object(self, object: UploadObject, chunk_index: int = 0) -> ObjectUploaded:
         print("[DEBUG] Uploading object")
         text = object.text
         if not text:
@@ -117,16 +117,17 @@ class DataBase:
         chunks = object.divide_into_chunks(text)
         conn = self._get_connection()
         try:
-            if object.owner:
-                conn.execute(
-                    f"DELETE FROM {self.table} WHERE file_path = %s AND owner = %s",
-                    (object.file_path, object.owner),
-                )
-            else:
-                conn.execute(
-                    f"DELETE FROM {self.table} WHERE file_path = %s",
-                    (object.file_path,),
-                )
+            if chunk_index == 0:
+                if object.owner:
+                    conn.execute(
+                        f"DELETE FROM {self.table} WHERE file_path = %s AND owner = %s",
+                        (object.file_path, object.owner),
+                    )
+                else:
+                    conn.execute(
+                        f"DELETE FROM {self.table} WHERE file_path = %s",
+                        (object.file_path,),
+                    )
 
             for chunk in chunks:
                 embedding = self._convert_to_embedding(chunk)
@@ -146,21 +147,18 @@ class DataBase:
         print("[DEBUG] Deleting object")
         conn = self._get_connection()
         try:
+            path = object.path
             if object.owner:
-                where_clause = "file_path = %s AND owner = %s"
-                params = (object.path, object.owner)
+                conn.execute(
+                    f"DELETE FROM {self.table} WHERE (file_path = %s OR file_path LIKE %s) AND owner = %s",
+                    (path, f"{path}#chunk=%", object.owner),
+                )
             else:
-                where_clause = "file_path = %s"
-                params = (object.path,)
-            
-            conn.execute(
-                f'''
-                DELETE FROM {self.table}
-                WHERE {where_clause}
-                ''',
-                params,
-            )
-            file_name = object.path.split("/")[-1]
+                conn.execute(
+                    f"DELETE FROM {self.table} WHERE file_path = %s OR file_path LIKE %s",
+                    (path, f"{path}#chunk=%"),
+                )
+            file_name = path.split("/")[-1]
             return ObjectDeleted(name=file_name)
         finally:
             conn.close()

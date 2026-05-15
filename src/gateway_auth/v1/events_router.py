@@ -6,7 +6,7 @@ from src.gateway_auth.adapters.events_ws import manager
 from src.gateway_auth.domain.settings import settings
 
 
-event_router = APIRouter(prefix="/events")
+event_router = APIRouter()
 
 EVENT_DB_URL = os.getenv("EVENT_DB_URL", settings.EVENT_DB_URL)
 

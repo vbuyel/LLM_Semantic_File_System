@@ -8,7 +8,7 @@ from src.gateway_auth.adapters.oauth_google import generate_google_oauth_redirec
 from src.gateway_auth.domain.settings import settings, oauth_states
 
 
-oauth_router = APIRouter(prefix="/auth")
+oauth_router = APIRouter()
 
 
 @oauth_router.get("/google/url")

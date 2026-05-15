@@ -3,17 +3,23 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 from typing import Optional
 import io
-import os
-import tempfile
 import asyncio
 import logging
+import time
 from pathlib import Path
 
 from src.file_ops.adapters.kafka import KafkaOperations
-from src.file_ops.adapters.text_extractor import extract_text_from_file
+from src.file_ops.adapters.text_extractor import (
+    clean_text,
+    extract_text_from_bytes,
+    extract_text_from_file,
+    is_readable,
+)
 from src.file_ops.domain.domain import SendToKafka
 
 logger = logging.getLogger(__name__)
+
+MAX_CHUNK_CHARS = 150 * 1024  # 150KB per Kafka message — keeps each msg safely under broker limits
 
 MIME_TO_EXT = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
@@ -29,6 +35,81 @@ class GoogleDriveOperations:
         self._access_token = access_token
         self.kafka = KafkaOperations()
 
+
+    @staticmethod
+    def _chunk_text(text: str, max_chars: int = MAX_CHUNK_CHARS) -> list[str]:
+        """Split text at word boundaries, keeping each chunk ≤ max_chars."""
+        if len(text) <= max_chars:
+            return [text]
+        words = text.split()
+        chunks: list[str] = []
+        current: list[str] = []
+        current_len = 0
+        for word in words:
+            word_len = len(word)
+            sep = 1 if current else 0
+            if current_len + sep + word_len > max_chars and current:
+                chunks.append(" ".join(current))
+                current = [word]
+                current_len = word_len
+            else:
+                current_len += sep + word_len
+                current.append(word)
+        if current:
+            chunks.append(" ".join(current))
+        return chunks
+
+    async def _send_chunked_kafka(
+        self, action: str, file_name: str, file_path: str, text: str,
+        owner: Optional[str], storage_type: str,
+    ) -> None:
+        text = clean_text(text)
+        if not is_readable(text):
+            logger.info(f"Skipping {file_path}: no readable text after cleaning")
+            return
+
+        raw_chunks = self._chunk_text(text)
+        chunks = [c for c in raw_chunks if is_readable(c)]
+        if not chunks:
+            logger.info(f"Skipping {file_path}: no readable chunks after filtering")
+            return
+
+        for i, chunk in enumerate(chunks):
+            try:
+                await self.kafka.send_command(
+                    SendToKafka(
+                        action=action,
+                        file_name=file_name,
+                        file_path=file_path,
+                        text=chunk,
+                        owner=owner,
+                        storage_type=storage_type,
+                        chunk_index=i,
+                    )
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to send Kafka event (chunk {i+1}/{len(chunks)}): {e}"
+                )
+
+    def _download_file_with_retry(
+        self, file_id: str, mime_type: Optional[str] = None,
+        file_name: Optional[str] = None, max_retries: int = 3,
+    ) -> tuple:
+        for attempt in range(max_retries):
+            try:
+                return self.download_file(file_id, mime_type, file_name)
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    wait = 2 ** attempt
+                    logger.warning(
+                        f"Download failed for {file_id} "
+                        f"(attempt {attempt+1}/{max_retries}): {e}. "
+                        f"Retrying in {wait}s..."
+                    )
+                    time.sleep(wait)
+                else:
+                    raise
 
     async def upload_file(
         self,
@@ -58,19 +139,9 @@ class GoogleDriveOperations:
             logger.warning(f"Text extraction failed for {source_path}: {e}")
             text = ""
 
-        try:
-            await self.kafka.send_command(
-                SendToKafka(
-                    action="upload",
-                    file_name=meta["name"],
-                    file_path=file["id"],
-                    text=text[:1000] if text else "",
-                    owner=owner,
-                    storage_type="drive",
-                )
-            )
-        except Exception as e:
-            logger.warning(f"Failed to send Kafka event: {e}")
+        await self._send_chunked_kafka(
+            "upload", meta["name"], file["id"], text, owner, "drive",
+        )
 
         return {
             "file_id": file["id"],
@@ -110,19 +181,9 @@ class GoogleDriveOperations:
             logger.warning(f"Text extraction failed for {source_path}: {e}")
             text = ""
 
-        try:
-            await self.kafka.send_command(
-                SendToKafka(
-                    action="update",
-                    file_name=file["name"],
-                    file_path=file["id"],
-                    text=text[:1000] if text else "",
-                    owner=owner,
-                    storage_type="drive",
-                )
-            )
-        except Exception as e:
-            logger.warning(f"Failed to send Kafka event: {e}")
+        await self._send_chunked_kafka(
+            "upload", file["name"], file["id"], text, owner, "drive",
+        )
 
         return {
             "file_id": file["id"],
@@ -146,51 +207,47 @@ class GoogleDriveOperations:
         await self.kafka.send_event(event="Vectorising your cloud files...", owner=owner)
 
         items = results.get('files', [])
-        file_items = []
-        for item in items:
-            is_dir = item.get('mimeType') == 'application/vnd.google-apps.folder'
-            size = item.get('size')
+        # httplib2 (googleapiclient) is NOT thread-safe — segfaults with concurrent
+        # downloads. Serialise all Drive API calls through one thread at a time.
+        sem = asyncio.Semaphore(1)
 
-            # Download Drive file to temp location for text extraction
-            text = ""
-            if not is_dir:
-                try:
-                    content, file_name, mime_type = self.download_file(item.get('id'))
-                    ext = Path(file_name).suffix if '.' in file_name else MIME_TO_EXT.get(mime_type, '')
-                    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
-                        tmp.write(content)
-                        tmp_path = tmp.name
+        async def process_item(item):
+            async with sem:
+                is_dir = item.get('mimeType') == 'application/vnd.google-apps.folder'
+                text = ""
+
+                if not is_dir:
                     try:
-                        text = extract_text_from_file(tmp_path)
-                    finally:
-                        os.unlink(tmp_path)
-                except Exception as e:
-                    logger.warning(f"Text extraction failed for {item.get('id')}: {e}")
+                        content, file_name, mime_type = await asyncio.to_thread(
+                            self._download_file_with_retry,
+                            item['id'], item.get('mimeType'), item.get('name'),
+                        )
+                        ext = Path(file_name).suffix if '.' in file_name else MIME_TO_EXT.get(mime_type, '')
+                        if content:
+                            text = extract_text_from_bytes(content, ext)
+                    except Exception as e:
+                        logger.warning(f"Text extraction failed for {item.get('id')}: {e}")
 
-            await self.kafka.send_command(
-                SendToKafka(
-                    action="upload",
-                    file_name=item.get('name'),
-                    file_path=item.get('id'),
-                    text=text[:1000] if text else "",
-                    owner=owner,
-                    storage_type="drive",
+                await self._send_chunked_kafka(
+                    "upload", item.get('name'), item.get('id'), text, owner, "drive",
                 )
-            )
 
-            file_items.append({
-                "path": item.get('id'),
-                "name": item.get('name'),
-                "isDirectory": is_dir,
-                "size": int(size) if size else None,
-                "modified": item.get('modifiedTime')
-            })
-        
+                return {
+                    "path": item.get('id'),
+                    "name": item.get('name'),
+                    "isDirectory": is_dir,
+                    "size": int(item.get('size')) if item.get('size') else None,
+                    "modified": item.get('modifiedTime'),
+                }
+
+        results_list = await asyncio.gather(*[process_item(item) for item in items])
+        file_items = [r for r in results_list if r is not None]
+
         await self.kafka.send_event(event="Done! Files are prepared to analyze", owner=owner)
         return file_items
 
 
-    def download_file(self, file_id: str) -> tuple:
+    def download_file(self, file_id: str, mime_type: Optional[str] = None, file_name: Optional[str] = None) -> tuple:
         EXPORT_FORMATS = {
             "application/vnd.google-apps.document":
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -200,11 +257,12 @@ class GoogleDriveOperations:
                 "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         }
 
-        meta = self.service.files().get(
-            fileId=file_id, fields="name,mimeType"
-        ).execute()
-        mime_type = meta.get("mimeType", "application/octet-stream")
-        file_name = meta.get("name", file_id)
+        if mime_type is None or file_name is None:
+            meta = self.service.files().get(
+                fileId=file_id, fields="name,mimeType"
+            ).execute()
+            mime_type = meta.get("mimeType", "application/octet-stream")
+            file_name = meta.get("name", file_id)
 
         buffer = io.BytesIO()
         if mime_type in EXPORT_FORMATS:

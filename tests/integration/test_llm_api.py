@@ -17,7 +17,7 @@ def client():
         MockRAG.return_value = MagicMock()
         MockWeb.return_value = MagicMock()
 
-        from src.llm.endpoints.main import app
+        from src.llm.v1.main import app
         with TestClient(app) as c:
             yield c
 

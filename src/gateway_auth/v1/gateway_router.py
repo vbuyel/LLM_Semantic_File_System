@@ -8,7 +8,7 @@ from src.gateway_auth.domain.agent import ResponseToUser, UserRequest
 from src.gateway_auth.domain.settings import settings
 
 
-gateway_router = APIRouter(prefix="/gateway")
+gateway_router = APIRouter()
 
 
 @gateway_router.post("/ai_agent")
@@ -38,6 +38,8 @@ def get_objects_from_storage(request: Request, query: PathToGetObjects = Depends
         headers["X-Storage-Source"] = storage_source
     if auth_provider := request.headers.get("X-Auth-Provider"):
         headers["X-Auth-Provider"] = auth_provider
+    
+    print(f"[DEBUG] X-Owner: {request.headers.get("X-Owner")}")
     if owner := request.headers.get("X-Owner"):
         headers["X-Owner"] = owner
     else:
@@ -48,7 +50,7 @@ def get_objects_from_storage(request: Request, query: PathToGetObjects = Depends
             url=f'{settings.FILE_OPS_SERVER}/get_all',
             params=query.model_dump(),
             headers=headers,
-            timeout=30,
+            timeout=90,
         )
         if response.status_code != status.HTTP_200_OK:
             detail = response.json().get("detail", "Unknown error") if "application/json" in response.headers.get("content-type", "") else response.text

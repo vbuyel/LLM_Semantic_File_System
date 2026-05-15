@@ -30,9 +30,9 @@ app.add_middleware(
     expose_headers=["Content-Disposition", "Content-Length"],
 )
 
-app.include_router(gateway_router)
-app.include_router(oauth_router)
-app.include_router(event_router)
+app.include_router(gateway_router, prefix="/gateway")
+app.include_router(oauth_router, prefix="/auth")
+app.include_router(event_router, prefix="/events")
 
 
 @app.get("/health")

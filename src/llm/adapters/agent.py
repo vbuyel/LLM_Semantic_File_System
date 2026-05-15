@@ -17,8 +17,6 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 class AgentResearcher:
     def __init__(self):
         self.client = OpenAI(
-            # base_url="https://openrouter.ai/api/v1",
-            # api_key=os.getenv("OPENROUTER_API_KEY"),
             base_url="http://localhost:11434/v1",
             api_key="ollama",
         )
