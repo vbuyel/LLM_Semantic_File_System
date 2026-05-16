@@ -15,7 +15,8 @@ class WebSearch:
         self.session = DuckDuckGoSearchRun()
         self._kafka = Kafka()
         self._started = False
-        self.event = "Searching in web..."
+        self._start_event = "Searching in web..."
+        self._end_event = "Done! Preparing for the answering..."
 
 
     async def _ensure_started(self):
@@ -27,8 +28,9 @@ class WebSearch:
     async def do_search(self, query: str, owner: str) -> SearchResponse:
         await self._ensure_started()
         try:
-            await self._kafka.send_event(self.event, owner)
+            await self._kafka.send_event(self._start_event, owner)
             result = await asyncio.to_thread(self.session.invoke, {"query": query})
+            await self._kafka.send_event(self._end_event, owner)
             return SearchResponse(text=result)
         except Exception as e:
             logger.warning(f"Web search failed: {e}")
