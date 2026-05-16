@@ -185,9 +185,7 @@ export const api = {
         async search(text) {
             const headers = { 'Content-Type': 'application/json' };
             const user = JSON.parse(localStorage.getItem('user') || '{}');
-            if (user.email) {
-                headers['X-Owner'] = user.email;
-            }
+            headers['X-Owner'] = user.email || user.id || 'guest';
 
             const response = await fetch(`${GATEWAY_SERVER}/gateway/ai_agent`, {
                 method: 'POST',

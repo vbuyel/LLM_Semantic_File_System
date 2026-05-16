@@ -19,7 +19,7 @@ class App {
         const savedUser = api.auth.getUser();
         if (savedUser) {
             state.set('user', savedUser);
-            this._startServices(savedUser.email);
+            this._startServices(savedUser.email || savedUser.id);
         }
 
         const queryParams = new URLSearchParams(window.location.search);
@@ -30,7 +30,7 @@ class App {
             try {
                 const user = await api.auth.loginWithGoogle(code, oauthState);
                 state.set('user', user);
-                this._startServices(user.email);
+                this._startServices(user.email || user.id);
             } catch (err) {
                 console.error('[App] OAuth callback error:', err);
             }
@@ -45,20 +45,26 @@ class App {
             `;
         }
 
-        state.subscribe(() => this.render());
-        this.render();
-    }
-
-    _startServices(email) {
-        Events.init(email);
-        AIThinking.init(email);
-        FileOps.init(email);
+        state.subscribe((data) => {
+            if (data.user) {
+                this._startServices(data.user.email || data.user.id);
+            }
+        });
 
         Events.subscribe((eventData) => {
             const span = document.querySelector('.ai-thinking > span');
             if (span) span.textContent = AIThinking.getLastEventText();
             StatusBar.showEvent(eventData);
         });
+
+        state.subscribe(() => this.render());
+        this.render();
+    }
+
+    _startServices(email) {
+        Events.reconnect(email);
+        AIThinking.init(email);
+        FileOps.init(email);
     }
 
     async loadInitialData() {

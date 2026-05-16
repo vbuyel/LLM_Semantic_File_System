@@ -8,3 +8,6 @@ class UserRequest(BaseModel):
 
 class ResponseToUser(BaseModel):
     text: str
+
+class GuestRegistration(BaseModel):
+    owner_id: str

@@ -79,7 +79,7 @@ class TestSearchSimilar:
             {"id": 1, "owner": "u", "file_name": "f.txt", "file_path": "/p", "text_chunk": "hello"},
         ]
         mock_psycopg.connect.return_value = mock_conn
-        results = db.search_similar([0.0] * 384, limit=3)
+        results = db.search_similar("guest", [0.0] * 384, limit=3)
         assert results.data is not None
         assert len(results.data) == 1
 
@@ -88,7 +88,7 @@ class TestSearchSimilar:
         mock_conn = MagicMock()
         mock_conn.execute.return_value = []
         mock_psycopg.connect.return_value = mock_conn
-        results = db.search_similar([0.0] * 384)
+        results = db.search_similar("guest", [0.0] * 384)
         assert results.data == []
 
 

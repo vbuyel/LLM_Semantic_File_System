@@ -57,6 +57,7 @@ export const AIInterface = {
             input.onkeydown = async (e) => {
                 if (e.key === 'Enter' && input.value.trim()) {
                     const query = input.value.trim();
+                    AIThinking.reset();
                     state.update(data => {
                         data.searchQuery = query;
                         data.isSearching = true;

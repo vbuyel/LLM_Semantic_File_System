@@ -2,6 +2,7 @@ import asyncio
 import inspect
 import json
 import os
+import re
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -29,23 +30,23 @@ class AgentResearcher:
             "call_rag": self.rag.do_search,
         }
         self.tools = [
-            {
-                "type": "function",
-                "function": {
-                    "name": "call_web_searcher",
-                    "description": "Search the web for information based on a query",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "text": {
-                                "type": "string",
-                                "description": "The search query text",
-                            }
-                        },
-                        "required": ["text"],
-                    },
-                },
-            },
+            # {
+            #     "type": "function",
+            #     "function": {
+            #         "name": "call_web_searcher",
+            #         "description": "Search the web for information based on a query",
+            #         "parameters": {
+            #             "type": "object",
+            #             "properties": {
+            #                 "text": {
+            #                     "type": "string",
+            #                     "description": "The search query text",
+            #                 }
+            #             },
+            #             "required": ["text"],
+            #         },
+            #     },
+            # },
             {
                 "type": "function",
                 "function": {
@@ -77,9 +78,23 @@ class AgentResearcher:
             "file about",
             "find file",
             "project file",
+            "file named",
+            "file called",
             "document",
         )
-        return any(hint in lowered for hint in rag_hints)
+        russian_hints = (
+            "файл",
+            "документ",
+        )
+        if any(hint in lowered for hint in rag_hints):
+            return True
+        if any(hint in lowered for hint in russian_hints):
+            return True
+        if re.search(r'\b\w+\.(py|txt|md|pdf|docx?|xlsx?|pptx?|json|csv|yaml|yml|xml|html?|js|ts|jsx|tsx|css|sql|sh|bat|ini|cfg|conf|log)\b', lowered):
+            return True
+        if re.search(r'\b[A-Z][A-Za-z0-9]+[_\-][A-Za-z0-9]+\b', text):
+            return True
+        return False
 
 
     @staticmethod
@@ -106,13 +121,25 @@ class AgentResearcher:
                 "role": "system",
                 "content": (
                     "You are a research assistant with access to the user's personal files and the web.\n\n"
-                    "When you call call_rag, you will receive the actual content of the user's files "
+                    "## CRITICAL: How to use call_rag results\n\n"
+                    "When you call call_rag, you receive the actual text content of the user's files "
                     "(file names, paths, and text chunks). "
-                    "Read that content carefully and answer the user's question based on it.\n"
-                    "If the file content answers the user's question, provide that information directly "
-                    "in your response (summarize, translate, or quote as appropriate).\n"
-                    "Do NOT just list file names or say 'Found relevant files' — actually answer "
-                    "the question using the content you received."
+                    "You MUST read that content carefully and answer the user's question based on it.\n\n"
+                    "### Requirements:\n"
+                    "1. ALWAYS answer in the same language the user wrote in.\n"
+                    "2. Actually READ the file content and use it to answer. Do NOT just list file names.\n"
+                    "3. If the file content answers the question, provide that information directly "
+                    "(summarize, translate, find specific data, or quote as appropriate).\n"
+                    "4. NEVER say 'Found relevant files:' or 'Based on the retrieved documents:' "
+                    "or anything similar — just give the answer.\n"
+                    "5. If call_rag returned content about a different file than what was asked, "
+                    "tell the user that the requested file was not found in the index.\n"
+                    "6. Do NOT call call_web_searcher after call_rag — the file search already covers user documents.\n\n"
+                    "### Examples:\n"
+                    "BAD: 'Found some relevant files: File1.txt, File2.txt'\n"
+                    "GOOD: 'В файле содержится следующая информация: [content summary]'\n\n"
+                    "BAD: 'Based on the retrieved documents, here is what I found...'\n"
+                    "GOOD: 'According to your file, [direct answer from file content]'"
                 ),
             },
             {"role": "user", "content": request.text},

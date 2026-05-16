@@ -24,6 +24,7 @@ _db: Optional[DataBase] = None
 
 _gateway_ws: Optional[WebSocket] = None
 _kafka_task: asyncio.Task[None] | None = None
+_kafka_healthy = False
 
 
 def get_db():
@@ -33,10 +34,30 @@ def get_db():
     return _db
 
 
+async def _keep_consuming():
+    """Run consumer loop with auto-restart on unexpected crashes."""
+    global _kafka_task, _kafka_healthy
+    retry_delay = 1.0
+    while True:
+        try:
+            _kafka_task = asyncio.current_task()
+            _kafka_healthy = False
+            await process_requests()
+            return
+        except asyncio.CancelledError:
+            _kafka_healthy = False
+            return
+        except Exception as exc:
+            _kafka_healthy = False
+            print(f"[ERROR] EventDB consumer crashed: {exc}. Restarting in {retry_delay:.0f}s...")
+            await asyncio.sleep(retry_delay)
+            retry_delay = min(retry_delay * 2, 30.0)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _kafka_task
-    _kafka_task = asyncio.create_task(process_requests())
+    _kafka_task = asyncio.create_task(_keep_consuming())
     try:
         yield
     finally:
@@ -81,11 +102,12 @@ async def gateway_ws(websocket: WebSocket):
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "event_db"}
+    return {"status": "ok", "service": "event_db", "consumer_alive": _kafka_healthy}
 
 
 async def process_requests():
     """Listen for Kafka requests, search DB, send replies."""
+    global _kafka_healthy
     topics_str = os.getenv("REQUEST_TOPICS", "send_event")
     topics_list = [t.strip() for t in topics_str.split(",") if t.strip()]
     if not topics_list:
@@ -107,6 +129,7 @@ async def process_requests():
     
     await producer.start()
     await consumer.start()
+    _kafka_healthy = True
     print("[DEBUG] EventDB Server is running")
     
     try:
@@ -148,5 +171,6 @@ async def process_requests():
             except Exception as e:
                 print(f"[ERROR] EventDB: Error processing message: {e}")
     finally:
+        _kafka_healthy = False
         await producer.stop()
         await consumer.stop()

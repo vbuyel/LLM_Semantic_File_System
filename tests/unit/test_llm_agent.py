@@ -34,6 +34,17 @@ class TestShouldForceRag:
         assert AgentResearcher._should_force_rag("find in my files")
         assert AgentResearcher._should_force_rag("search my document")
 
+    def test_russian_hints(self):
+        from src.llm.adapters.agent import AgentResearcher
+        assert AgentResearcher._should_force_rag("Что в файле OOTPiSP_Lab6?")
+        assert AgentResearcher._should_force_rag("найди документ про AI")
+
+    def test_filename_patterns(self):
+        from src.llm.adapters.agent import AgentResearcher
+        assert AgentResearcher._should_force_rag("read OOTPiSP_Lab6 file")
+        assert AgentResearcher._should_force_rag("show me main.py")
+        assert AgentResearcher._should_force_rag("find README.md in my files")
+
     def test_no_rag_keyword(self):
         from src.llm.adapters.agent import AgentResearcher
         assert not AgentResearcher._should_force_rag("what is the weather today")

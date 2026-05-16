@@ -34,6 +34,7 @@ _bootstrap_servers = os.getenv("BROKER_HOSTS", "localhost:9092").split(",")
 _embedding_model = None
 _db = None
 _kafka_task: asyncio.Task[None] | None = None
+_kafka_healthy = False
 
 
 def get_embedding_model():
@@ -54,8 +55,9 @@ def get_db():
     return _db
 
 
-async def process_requests():
-    """Listen for Kafka requests, search DB, send replies."""
+async def _run_consumer_loop():
+    """Inner consumer loop — returns when stopped gracefully."""
+    global _kafka_healthy
     if AIOKafkaProducer is None or AIOKafkaConsumer is None:
         raise RuntimeError("aiokafka is not installed")
 
@@ -83,6 +85,7 @@ async def process_requests():
 
     await producer.start()
     await consumer.start()
+    _kafka_healthy = True
     print("Server is running")
 
     try:
@@ -171,12 +174,12 @@ async def process_requests():
                     }
                 elif action == "search":
                     embedding = get_embedding_model().encode(payload["text"]).tolist()
-                    results = get_db().search_similar(embedding, limit=payload.get("limit", 3))
+                    results = get_db().search_similar(payload.get("owner"), embedding, limit=payload.get("limit", 3))
                     reply_message = {
                         "correlation_id": correlation_id,
                         "data": results.model_dump(mode="json"),
                     }
-                    await producer.send(event_topic, {"owner": payload.get("owner"), "event": "Found info in files"})
+                    await producer.send(event_topic, {"owner": payload.get("owner"), "ms_type": "agent", "event": "Found info in files"})
                 else:
                     raise Exception(f"Action {action} is not supported in vector db")
 
@@ -186,14 +189,35 @@ async def process_requests():
             except Exception as e:
                 print(f"Error: {e}")
     finally:
+        _kafka_healthy = False
         await producer.stop()
         await consumer.stop()
+
+
+async def _keep_consuming():
+    """Run consumer loop with auto-restart on unexpected crashes."""
+    global _kafka_task, _kafka_healthy
+    retry_delay = 1.0
+    while True:
+        try:
+            _kafka_task = asyncio.current_task()
+            _kafka_healthy = False
+            await _run_consumer_loop()
+            return
+        except asyncio.CancelledError:
+            _kafka_healthy = False
+            return
+        except Exception as exc:
+            _kafka_healthy = False
+            print(f"[ERROR] Consumer crashed: {exc}. Restarting in {retry_delay:.0f}s...")
+            await asyncio.sleep(retry_delay)
+            retry_delay = min(retry_delay * 2, 30.0)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _kafka_task
-    _kafka_task = asyncio.create_task(process_requests())
+    _kafka_task = asyncio.create_task(_keep_consuming())
     try:
         yield
     finally:
@@ -228,4 +252,4 @@ def check_file_exists(
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "vector_db"}
+    return {"status": "ok", "service": "vector_db", "consumer_alive": _kafka_healthy}

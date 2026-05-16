@@ -4,11 +4,16 @@ import requests
 from uuid import uuid4
 
 from src.gateway_auth.domain.file_ops import ListOfObjects, PathToGetObjects
-from src.gateway_auth.domain.agent import ResponseToUser, UserRequest
+from src.gateway_auth.domain.agent import GuestRegistration, ResponseToUser, UserRequest
 from src.gateway_auth.domain.settings import settings
 
 
 gateway_router = APIRouter()
+
+
+@gateway_router.post("/register_guest")
+def register_guest() -> GuestRegistration:
+    return GuestRegistration(owner_id=str(uuid4()))
 
 
 @gateway_router.post("/ai_agent")
@@ -16,7 +21,7 @@ def call_ai_agent(request: Request, user_request: UserRequest) -> ResponseToUser
     """Calling AI Agent to get reponse from files or web search"""
     payload = user_request.model_dump()
     owner = request.headers.get("X-Owner")
-    if owner:
+    if owner and "@gmail.com" in owner:
         payload["owner"] = owner
     elif not payload.get("owner"):
         payload["owner"] = str(uuid4())
@@ -38,13 +43,12 @@ def get_objects_from_storage(request: Request, query: PathToGetObjects = Depends
         headers["X-Storage-Source"] = storage_source
     if auth_provider := request.headers.get("X-Auth-Provider"):
         headers["X-Auth-Provider"] = auth_provider
-    
-    print(f"[DEBUG] X-Owner: {request.headers.get("X-Owner")}")
-    if owner := request.headers.get("X-Owner"):
+    if owner := request.headers.get("X-Owner") and "@gmail.com" in owner:
         headers["X-Owner"] = owner
     else:
         headers["X-Owner"] = str(uuid4())
-
+    
+    print(f"[DEBUG] X-Owner: {headers.get("X-Owner")}")
     try:
         response = requests.get(
             url=f'{settings.FILE_OPS_SERVER}/get_all',
@@ -80,7 +84,7 @@ def upload_object_into_storage(request: Request, file: UploadFile = File(...)):
     
     # Check for X-Owner header from UI, otherwise generate UUID
     incoming_owner = request.headers.get("X-Owner")
-    if incoming_owner:
+    if incoming_owner and "@gmail.com" in incoming_owner:
         headers["X-Owner"] = incoming_owner
         print(f"[DEBUG] Gateway: Using X-Owner from UI: '{incoming_owner}'")
     else:
@@ -123,7 +127,7 @@ def delete_object_from_storage(request: Request, path: str = Query(...)):
         headers["X-Storage-Source"] = storage_source
     if auth_provider := request.headers.get("X-Auth-Provider"):
         headers["X-Auth-Provider"] = auth_provider
-    if owner := request.headers.get("X-Owner"):
+    if owner := request.headers.get("X-Owner") and "@gmail.com" in owner:
         headers["X-Owner"] = owner
     else:
         headers["X-Owner"] = str(uuid4())
@@ -160,7 +164,7 @@ def rename_object_in_storage(request: Request, path: str = Query(...), new_name:
         headers["X-Storage-Source"] = storage_source
     if auth_provider := request.headers.get("X-Auth-Provider"):
         headers["X-Auth-Provider"] = auth_provider
-    if owner := request.headers.get("X-Owner"):
+    if owner := request.headers.get("X-Owner") and "@gmail.com" in owner:
         headers["X-Owner"] = owner
     else:
         headers["X-Owner"] = str(uuid4())
@@ -197,7 +201,7 @@ def download_object_from_storage(request: Request, path: str = Query(...)):
         headers["X-Storage-Source"] = storage_source
     if auth_provider := request.headers.get("X-Auth-Provider"):
         headers["X-Auth-Provider"] = auth_provider
-    if owner := request.headers.get("X-Owner"):
+    if owner := request.headers.get("X-Owner") and "@gmail.com" in owner:
         headers["X-Owner"] = owner
     else:
         headers["X-Owner"] = str(uuid4())

@@ -18,7 +18,7 @@ pgvector>=0.2.0
 # LLM / AI
 openai>=1.10.0
 sentence-transformers>=2.2.0
-langchain-community>=0.0.20
+exa-py>=2.13.0
 python-dotenv>=1.0.0
 requests>=2.31.0
 ddgs

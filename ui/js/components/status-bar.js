@@ -7,7 +7,7 @@ const COMPLETION_CODES = new Set(['uploaded', 'updated', 'deleted', 'renamed', '
 
 function _isCompletion(event) {
     if (COMPLETION_CODES.has(event)) return true;
-    return /^(Done!|Found|Complete|Error)/.test(event);
+    return /^(Done|Found|Complete|Error)/.test(event);
 }
 
 export const StatusBar = {

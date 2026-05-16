@@ -105,17 +105,18 @@ class DataBase:
         return  np.array(embedding, dtype=np.float32)
 
 
-    def search_similar(self, embedding: list[float], limit: int = 5) -> RAGResults:
+    def search_similar(self, owner: str, embedding: list[float], limit: int = 5) -> RAGResults:
         print("[DEBUG] Searching for simular text")
         conn = self._get_connection()
         try:
             result = conn.execute(f'''
                 SELECT id, owner, file_name, file_path, text_chunk
                 FROM {self.table}
+                WHERE owner = %s
                 ORDER BY embedding <=> %s ASC
                 LIMIT %s
                 ''',
-                (np.array(embedding, dtype=np.float32), limit),
+                (owner, np.array(embedding, dtype=np.float32), limit),
             )
             return RAGResults(data=[DocMetadata(**row) for row in result])
         finally:
