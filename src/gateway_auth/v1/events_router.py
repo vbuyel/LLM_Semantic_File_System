@@ -10,9 +10,9 @@ EVENT_DB_WS = os.getenv("EVENT_DB_WS_URL", settings.EVENT_DB_WS_URL)
 _clients: dict[str, list[WebSocket]] = {}
 
 @event_router.get("/user/{owner}")
-async def get_user_events(owner: str, limit: int = Query(100), offset: int = Query(0)):
+async def get_user_events(owner: str, ms_type: str = Query(...), limit: int = Query(100), offset: int = Query(0)):
     async with httpx.AsyncClient() as c:
-        r = await c.get(f"{EVENT_DB_URL}/events/user/{owner}", params={"limit": limit, "offset": offset})
+        r = await c.get(f"{EVENT_DB_URL}/events/user/{owner}", params={"ms_type": ms_type, "limit": limit, "offset": offset})
         return r.json()
 
 @event_router.websocket("/ws/{owner}")
@@ -22,7 +22,7 @@ async def ws_handler(ws: WebSocket, owner: str):
 
     try:
         async with httpx.AsyncClient() as c:
-            r = await c.get(f"{EVENT_DB_URL}/events/user/{owner}", params={"limit": 1})
+            r = await c.get(f"{EVENT_DB_URL}/events/user/{owner}", params={"ms_type": "file_ops", "limit": 1})
             ev = r.json().get("events", [])
             if ev:
                 await ws.send_json({"type": "events", "data": ev[0]})
@@ -42,8 +42,9 @@ async def relay_events():
                 print("[relay] Connected to event_db")
                 async for raw in edb:
                     msg = json.loads(raw)
-                    if msg.get("type") == "events" and msg.get("data"):
-                        owner = msg["data"].get("owner")
+                    data = msg.get("data", {})
+                    if msg.get("type") == "events" and data:
+                        owner = data.get("owner")
                         for ws in _clients.get(owner, []):
                             try:
                                 await ws.send_json(msg)

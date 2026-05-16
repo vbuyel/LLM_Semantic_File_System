@@ -59,10 +59,10 @@ app.add_middleware(
 
 
 @app.get("/events/user/{owner}")
-def get_user_events(owner: str, limit: int = Query(100), offset: int = Query(0)):
+def get_user_events(owner: str, ms_type: str = Query(...), limit: int = Query(100), offset: int = Query(0)):
     """REST endpoint for fetching user events."""
     db = get_db()
-    events = db.get_events_by_owner(owner, limit=limit, offset=offset)
+    events = db.get_events_by_owner(owner, ms_type, limit=limit, offset=offset)
     return {"events": events}
 
 
@@ -116,23 +116,27 @@ async def process_requests():
                 print(f"[DEBUG] EventDB received Kafka message: {data}")
 
                 owner = data.get("owner")
-                event_type = data.get("event")
+                ms_type = data.get("ms_type")
+                event = data.get("event")
                 
-                print(f"[DEBUG] EventDB extracted owner='{owner}', event='{event_type}'")
+                print(f"[DEBUG] EventDB extracted owner='{owner}', ms_type='{ms_type}', event='{event}'")
                 
                 if not owner:
-                    print(f"[WARNING] EventDB: Skipping event '{event_type}' - no owner provided")
+                    print(f"[WARNING] EventDB: Skipping event '{event}' - no owner provided")
                 else:
-                    print(f"[DEBUG] EventDB: Adding event to database for owner='{owner}', event='{event_type}'")
-                    event = get_db().add_event(owner=owner, event=event_type)
-                    print(f"[DEBUG] EventDB: Event added successfully, id={event.id}")
+                    print(f"[DEBUG] EventDB: Adding event to database for owner='{owner}', ms_type='{ms_type}', event='{event}'")
+                    ev = get_db().add_event(owner=owner, ms_type=ms_type, event=event)
+                    print(f"[DEBUG] EventDB: Event added successfully")
                     
                     if _gateway_ws:
                         print(f"[DEBUG] EventDB: Pushing event to gateway WebSocket")
                         try:
                             await _gateway_ws.send_json({
                                 "type": "events",
-                                "data": event.model_dump()
+                                "data": {
+                                    **ev.model_dump(),
+                                    "owner": owner,
+                                }
                             })
                             print(f"[DEBUG] EventDB: Event pushed to gateway")
                         except Exception as e:

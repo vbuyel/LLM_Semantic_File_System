@@ -62,14 +62,14 @@ class KafkaOperations:
 
 
     async def send_event(self, event: str, owner: Optional[str] = None) -> None:
-        """Шаг 1: Отправить начальное событие в event_db."""
         try:
             msg = {
                 "owner": owner,
+                "ms_type": "file_ops",
                 "event": event,
             }
             print(f"[DEBUG] Kafka: sending event to topic='{self._event_db_topic}': {msg}")
-            await self._producer.send_and_wait(self._event_db_topic, msg)
+            await self._producer.send(self._event_db_topic, msg)
         except Exception as e:
             print(f"[ERROR] Failed to send Kafka event (topic={self._event_db_topic}): {e}")
 
@@ -79,7 +79,6 @@ class KafkaOperations:
         data: SendToKafka,
         correlation_id: Optional[str] = None,
     ) -> None:
-        """Шаг 2: Отправить команду в vector_db для обработки."""
         correlation_id = correlation_id or str(uuid.uuid4())
         try:
             command = {
@@ -92,8 +91,9 @@ class KafkaOperations:
                     "owner": data.owner,
                     "storage_type": data.storage_type,
                     "chunk_index": data.chunk_index,
+                    "file_size": data.file_size,
                 },
             }
-            await self._producer.send_and_wait(self._request_topic, command)
+            await self._producer.send(self._request_topic, command)
         except Exception as e:
             print(f"[ERROR] Failed to send Kafka command (topic={self._request_topic}): {e}")

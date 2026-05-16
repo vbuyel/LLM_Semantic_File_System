@@ -97,6 +97,7 @@ class GCSOperations:
                     text=text[:1000] if text else "",
                     owner=owner,
                     storage_type="gcs",
+                    file_size=os.path.getsize(source_path),
                 )
             )
         except Exception as e:

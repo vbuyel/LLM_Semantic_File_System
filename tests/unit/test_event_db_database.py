@@ -1,7 +1,3 @@
-"""
-Unit tests for src.event_db.adapters.database (DataBase class).
-We mock psycopg to avoid real DB connections.
-"""
 import pytest
 from unittest.mock import patch, MagicMock
 from src.event_db.domain.events import EventItem
@@ -12,7 +8,6 @@ pytestmark = pytest.mark.unit
 
 @pytest.fixture
 def mock_env(monkeypatch):
-    """Set the required environment variables."""
     monkeypatch.setenv("EVENT_POSTGRESQL_USERNAME", "test_user")
     monkeypatch.setenv("EVENT_POSTGRESQL_PASSWORD", "test_pass")
     monkeypatch.setenv("EVENT_POSTGRESQL_HOST", "localhost")
@@ -22,11 +17,9 @@ def mock_env(monkeypatch):
 
 @pytest.fixture
 def db_and_mock(mock_env):
-    """Create a DataBase instance with psycopg permanently mocked."""
     patcher = patch("src.event_db.adapters.database.psycopg")
     mock_psycopg = patcher.start()
 
-    # Default connection mock for _setup_database
     mock_conn = MagicMock()
     mock_psycopg.connect.return_value = mock_conn
 
@@ -69,28 +62,28 @@ class TestAddEvent:
         db, mock_psycopg = db_and_mock
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
-        mock_cursor.fetchone.return_value = (1, "user@test.com", "uploaded", "2026-01-01")
+        mock_cursor.fetchone.return_value = ("file_ops", "uploaded")
         mock_cursor.__enter__ = lambda self: self
         mock_cursor.__exit__ = MagicMock(return_value=False)
         mock_conn.execute.return_value = mock_cursor
         mock_psycopg.connect.return_value = mock_conn
 
-        result = db.add_event("user@test.com", "uploaded")
+        result = db.add_event("user@test.com", "file_ops", "uploaded")
         assert isinstance(result, EventItem)
-        assert result.owner == "user@test.com"
+        assert result.ms_type == "file_ops"
         assert result.event == "uploaded"
 
     def test_add_event_calls_insert(self, db_and_mock):
         db, mock_psycopg = db_and_mock
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
-        mock_cursor.fetchone.return_value = (1, "owner", "evt", "ts")
+        mock_cursor.fetchone.return_value = ("file_ops", "evt")
         mock_cursor.__enter__ = lambda self: self
         mock_cursor.__exit__ = MagicMock(return_value=False)
         mock_conn.execute.return_value = mock_cursor
         mock_psycopg.connect.return_value = mock_conn
 
-        db.add_event("owner", "evt")
+        db.add_event("owner", "file_ops", "evt")
         mock_conn.execute.assert_called_once()
 
 
@@ -100,17 +93,19 @@ class TestGetEventsByOwner:
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
         mock_cursor.fetchall.return_value = [
-            (1, "owner1", "uploaded", "2026-01-01"),
-            (2, "owner1", "deleted", "2026-01-02"),
+            ("file_ops", "uploaded"),
+            ("file_ops", "deleted"),
         ]
         mock_cursor.__enter__ = lambda self: self
         mock_cursor.__exit__ = MagicMock(return_value=False)
         mock_conn.execute.return_value = mock_cursor
         mock_psycopg.connect.return_value = mock_conn
 
-        results = db.get_events_by_owner("owner1", limit=10, offset=0)
+        results = db.get_events_by_owner("owner1", "file_ops", limit=10, offset=0)
         assert len(results) == 2
         assert all(isinstance(r, EventItem) for r in results)
+        assert results[0].ms_type == "file_ops"
+        assert results[0].event == "uploaded"
 
     def test_get_events_empty_owner(self, db_and_mock):
         db, mock_psycopg = db_and_mock
@@ -122,7 +117,7 @@ class TestGetEventsByOwner:
         mock_conn.execute.return_value = mock_cursor
         mock_psycopg.connect.return_value = mock_conn
 
-        results = db.get_events_by_owner("nobody")
+        results = db.get_events_by_owner("nobody", "file_ops")
         assert results == []
 
     def test_connection_closed_after_query(self, db_and_mock):
@@ -135,5 +130,5 @@ class TestGetEventsByOwner:
         mock_conn.execute.return_value = mock_cursor
         mock_psycopg.connect.return_value = mock_conn
 
-        db.get_events_by_owner("test")
+        db.get_events_by_owner("test", "file_ops")
         mock_conn.close.assert_called_once()

@@ -1,6 +1,15 @@
 import { state } from '../state.js';
 import { api } from '../api.js';
 
+// Completion events auto-dismiss after this many ms.
+// Progress events persist until replaced by the next event.
+const COMPLETION_CODES = new Set(['uploaded', 'updated', 'deleted', 'renamed', 'found']);
+
+function _isCompletion(event) {
+    if (COMPLETION_CODES.has(event)) return true;
+    return /^(Done!|Found|Complete|Error)/.test(event);
+}
+
 export const StatusBar = {
     _hideTimeout: null,
 
@@ -20,11 +29,15 @@ export const StatusBar = {
     showEvent(eventData) {
         if (state.get('isSearching')) return;
         state.set('currentEvent', eventData);
+
         if (this._hideTimeout) clearTimeout(this._hideTimeout);
-        this._hideTimeout = setTimeout(() => {
-            if (state.get('isSearching')) return;
-            state.set('currentEvent', null);
-        }, 3000);
+
+        if (_isCompletion(eventData.event)) {
+            this._hideTimeout = setTimeout(() => {
+                if (state.get('isSearching')) return;
+                state.set('currentEvent', null);
+            }, 2000);
+        }
     },
 
     attachEvents() {

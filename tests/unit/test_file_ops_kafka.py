@@ -63,10 +63,10 @@ class TestKafkaOperations:
     async def test_send_command(self, kafka_ops):
         data = SendToKafka(action="upload", file_name="f.pdf", file_path="/tmp/f.pdf", text="c", owner="u", storage_type="gcs")
         await kafka_ops.send_command(data)
-        kafka_ops._producer.send_and_wait.assert_awaited_once()
+        kafka_ops._producer.send.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_send_command_exception_handled(self, kafka_ops):
-        kafka_ops._producer.send_and_wait.side_effect = Exception("fail")
+        kafka_ops._producer.send.side_effect = Exception("fail")
         data = SendToKafka(action="upload", file_name="f", file_path="/p")
         await kafka_ops.send_command(data)  # should not raise

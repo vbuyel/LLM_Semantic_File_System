@@ -71,6 +71,7 @@ class Kafka:
     async def send_event(self, event: str, owner: str):
         payload = {
             "owner": owner,
+            "ms_type": "agent",
             "event": event,
         }
         await Kafka._producer.send(self._event_db_topic, payload)

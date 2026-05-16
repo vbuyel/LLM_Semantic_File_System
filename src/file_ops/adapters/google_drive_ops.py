@@ -3,10 +3,12 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 from typing import Optional
 import io
+import os
 import asyncio
 import logging
 import time
 from pathlib import Path
+import requests
 
 from src.file_ops.adapters.kafka import KafkaOperations
 from src.file_ops.adapters.text_extractor import (
@@ -34,6 +36,7 @@ class GoogleDriveOperations:
         self.service = build("drive", "v3", credentials=creds)
         self._access_token = access_token
         self.kafka = KafkaOperations()
+        self._vector_db_url = os.getenv("VECTOR_DB_URL", "http://localhost:8004")
 
 
     @staticmethod
@@ -61,7 +64,7 @@ class GoogleDriveOperations:
 
     async def _send_chunked_kafka(
         self, action: str, file_name: str, file_path: str, text: str,
-        owner: Optional[str], storage_type: str,
+        owner: Optional[str], storage_type: str, file_size: int = 0,
     ) -> None:
         text = clean_text(text)
         if not is_readable(text):
@@ -85,6 +88,7 @@ class GoogleDriveOperations:
                         owner=owner,
                         storage_type=storage_type,
                         chunk_index=i,
+                        file_size=file_size,
                     )
                 )
             except Exception as e:
@@ -141,6 +145,7 @@ class GoogleDriveOperations:
 
         await self._send_chunked_kafka(
             "upload", meta["name"], file["id"], text, owner, "drive",
+            file_size=os.path.getsize(source_path),
         )
 
         return {
@@ -183,6 +188,7 @@ class GoogleDriveOperations:
 
         await self._send_chunked_kafka(
             "upload", file["name"], file["id"], text, owner, "drive",
+            file_size=os.path.getsize(source_path),
         )
 
         return {
@@ -190,6 +196,79 @@ class GoogleDriveOperations:
             "url": file.get("webViewLink"),
             "storage_type": "drive",
         }
+
+
+    async def _is_already_indexed(self, file_path: str, file_name: str, file_size: int) -> bool:
+        """Check vector DB before downloading — skip if already indexed."""
+        try:
+            resp = await asyncio.to_thread(
+                requests.get,
+                f"{self._vector_db_url}/check-file-exists",
+                params={
+                    "file_path": file_path,
+                    "file_name": file_name,
+                    "file_size": file_size,
+                },
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                return resp.json().get("exists", False)
+        except requests.ConnectionError:
+            logger.warning("Vector DB unreachable — proceeding without skip check")
+        except Exception as e:
+            logger.warning(f"Vector DB check failed: {e}")
+        return False
+
+
+    async def _background_vectorise(self, items: list, owner: str) -> None:
+        """Download files, extract text, send to Kafka — all in background.
+
+        httplib2 (googleapiclient) is NOT thread-safe — segfaults with concurrent
+        downloads. Serialise all Drive API calls through one thread at a time.
+        """
+        try:
+            await self.kafka.send_event(event="Vectorising your cloud files...", owner=owner)
+        except Exception as e:
+            logger.warning(f"Failed to send vectorise start event: {e}")
+
+        sem = asyncio.Semaphore(1)
+
+        async def process_item(item):
+            async with sem:
+                is_dir = item.get('mimeType') == 'application/vnd.google-apps.folder'
+                file_id = item.get('id')
+                file_name = item.get('name', '')
+                file_size = int(item.get('size', 0) or 0)
+
+                if not is_dir and await self._is_already_indexed(file_id, file_name, file_size):
+                    logger.info(f"Skipping {file_name} ({file_id}): already indexed")
+                    return
+
+                text = ""
+
+                if not is_dir:
+                    try:
+                        content, downloaded_name, mime_type = await asyncio.to_thread(
+                            self._download_file_with_retry,
+                            file_id, item.get('mimeType'), file_name,
+                        )
+                        ext = Path(downloaded_name).suffix if '.' in downloaded_name else MIME_TO_EXT.get(mime_type, '')
+                        if content:
+                            text = extract_text_from_bytes(content, ext)
+                    except Exception as e:
+                        logger.warning(f"Text extraction failed for {file_id}: {e}")
+
+                await self._send_chunked_kafka(
+                    "upload", file_name, file_id, text, owner, "drive",
+                    file_size=file_size,
+                )
+
+        await asyncio.gather(*[process_item(item) for item in items])
+
+        try:
+            await self.kafka.send_event(event="Done! Files are prepared to analyze", owner=owner)
+        except Exception as e:
+            logger.warning(f"Failed to send vectorise done event: {e}")
 
 
     async def list_files(self, owner: str, directory_path: str = "/") -> list:
@@ -204,47 +283,18 @@ class GoogleDriveOperations:
             q=query
         ).execute()
 
-        await self.kafka.send_event(event="Vectorising your cloud files...", owner=owner)
-
         items = results.get('files', [])
-        # httplib2 (googleapiclient) is NOT thread-safe — segfaults with concurrent
-        # downloads. Serialise all Drive API calls through one thread at a time.
-        sem = asyncio.Semaphore(1)
 
-        async def process_item(item):
-            async with sem:
-                is_dir = item.get('mimeType') == 'application/vnd.google-apps.folder'
-                text = ""
+        if items:
+            asyncio.create_task(self._background_vectorise(items, owner))
 
-                if not is_dir:
-                    try:
-                        content, file_name, mime_type = await asyncio.to_thread(
-                            self._download_file_with_retry,
-                            item['id'], item.get('mimeType'), item.get('name'),
-                        )
-                        ext = Path(file_name).suffix if '.' in file_name else MIME_TO_EXT.get(mime_type, '')
-                        if content:
-                            text = extract_text_from_bytes(content, ext)
-                    except Exception as e:
-                        logger.warning(f"Text extraction failed for {item.get('id')}: {e}")
-
-                await self._send_chunked_kafka(
-                    "upload", item.get('name'), item.get('id'), text, owner, "drive",
-                )
-
-                return {
-                    "path": item.get('id'),
-                    "name": item.get('name'),
-                    "isDirectory": is_dir,
-                    "size": int(item.get('size')) if item.get('size') else None,
-                    "modified": item.get('modifiedTime'),
-                }
-
-        results_list = await asyncio.gather(*[process_item(item) for item in items])
-        file_items = [r for r in results_list if r is not None]
-
-        await self.kafka.send_event(event="Done! Files are prepared to analyze", owner=owner)
-        return file_items
+        return [{
+            "path": item.get('id'),
+            "name": item.get('name'),
+            "isDirectory": item.get('mimeType') == 'application/vnd.google-apps.folder',
+            "size": int(item.get('size')) if item.get('size') else None,
+            "modified": item.get('modifiedTime'),
+        } for item in items]
 
 
     def download_file(self, file_id: str, mime_type: Optional[str] = None, file_name: Optional[str] = None) -> tuple:

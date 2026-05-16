@@ -1,6 +1,6 @@
 import { state } from '../state.js';
 import { api } from '../api.js';
-import { AIThinking } from './ai-thinking.js';
+import { AIThinking } from './events/ai-thinking.js';
 
 export const AIInterface = {
     render() {

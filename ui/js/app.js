@@ -5,7 +5,9 @@ import { Sidebar } from './components/sidebar.js';
 import { Explorer } from './components/explorer.js';
 import { AIInterface } from './components/ai-interface.js';
 import { StatusBar } from './components/status-bar.js';
-import { AIThinking } from './components/ai-thinking.js';
+import { AIThinking } from './components/events/ai-thinking.js';
+import { Events } from './components/events/base.js';
+import { FileOps } from './components/events/files-ops.js';
 
 class App {
     constructor() {
@@ -48,11 +50,14 @@ class App {
     }
 
     _startServices(email) {
+        Events.init(email);
         AIThinking.init(email);
-        AIThinking.subscribe((event) => {
+        FileOps.init(email);
+
+        Events.subscribe((eventData) => {
             const span = document.querySelector('.ai-thinking > span');
             if (span) span.textContent = AIThinking.getLastEventText();
-            StatusBar.showEvent(event);
+            StatusBar.showEvent(eventData);
         });
     }
 

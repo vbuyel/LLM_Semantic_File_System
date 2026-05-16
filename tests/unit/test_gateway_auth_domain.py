@@ -1,9 +1,6 @@
-"""
-Unit tests for gateway_auth domain models.
-"""
 import pytest
 from src.gateway_auth.domain.agent import UserRequest, ResponseToUser
-from src.gateway_auth.domain.events import EventItem, EventResponse, get_event_display_text, EVENT_DISPLAY_TEXT
+from src.gateway_auth.domain.events import EventItem, get_event_display_text
 from src.gateway_auth.domain.file_ops import PathToGetObjects, FileItem, ListOfObjects
 
 pytestmark = pytest.mark.unit
@@ -27,13 +24,17 @@ class TestResponseToUser:
 
 class TestGatewayEventItem:
     def test_create(self):
-        e = EventItem(id=1, owner="o", event="e", created_at="t")
-        assert e.id == 1
+        e = EventItem(ms_type="file_ops", event="uploaded")
+        assert e.ms_type == "file_ops"
+        assert e.event == "uploaded"
 
-    def test_event_response(self):
-        e = EventItem(id=1, owner="o", event="e", created_at="t")
-        r = EventResponse(event=e)
-        assert r.event.owner == "o"
+    def test_missing_ms_type_raises(self):
+        with pytest.raises(Exception):
+            EventItem(event="uploaded")
+
+    def test_missing_event_raises(self):
+        with pytest.raises(Exception):
+            EventItem(ms_type="file_ops")
 
 
 class TestPathToGetObjects:

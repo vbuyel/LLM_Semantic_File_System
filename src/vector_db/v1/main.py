@@ -1,14 +1,17 @@
 """
 Run the server:
-    python -m src.vector_db.kafka_conn.main
+    uvicorn src.vector_db.v1.main:app --port 8004
 """
 
 import asyncio
 import json
 import os
 from pathlib import Path
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
+from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
 try:
     from sentence_transformers import SentenceTransformer
 except ImportError:
@@ -30,6 +33,7 @@ _bootstrap_servers = os.getenv("BROKER_HOSTS", "localhost:9092").split(",")
 
 _embedding_model = None
 _db = None
+_kafka_task: asyncio.Task[None] | None = None
 
 
 def get_embedding_model():
@@ -76,11 +80,11 @@ async def process_requests():
         value_deserializer=lambda v: json.loads(v.decode("utf-8")),
         auto_offset_reset="latest",
     )
-    
+
     await producer.start()
     await consumer.start()
     print("Server is running")
-    
+
     try:
         async for msg in consumer:
             try:
@@ -91,14 +95,12 @@ async def process_requests():
                 reply_topic = data.get("reply_topic")  # file_ops does not include this
                 payload = data.get("payload", {})
                 action = payload.get("action", "NOT FOUND")
-                
+
                 if action == "uploading":
                     action = "upload"
                 elif action == "updating":
                     action = "update"
 
-                print(f"[DEBUG] Payload data: {payload}")
-                
                 if action == "upload":
                     print("File is starting to upload")
                     chunk_index = payload.get("chunk_index", 0)
@@ -107,6 +109,7 @@ async def process_requests():
                         file_name=payload.get("file_name", ""),
                         file_path=payload.get("file_path", ""),
                         text=payload.get("text", ""),
+                        file_size=payload.get("file_size", 0),
                     )
                     result = get_db().upload_object(object_to_upload, chunk_index=chunk_index)
 
@@ -131,6 +134,7 @@ async def process_requests():
                         file_name=payload.get("file_name", ""),
                         file_path=payload.get("file_path", ""),
                         text=payload.get("text", ""),
+                        file_size=payload.get("file_size", 0),
                     )
                     result = get_db().upload_object(object_to_upload, chunk_index=chunk_index)
 
@@ -175,7 +179,7 @@ async def process_requests():
                     await producer.send(event_topic, {"owner": payload.get("owner"), "event": "Found info in files"})
                 else:
                     raise Exception(f"Action {action} is not supported in vector db")
-                
+
                 print("Vector DB operations are completed")
                 if reply_topic:
                     await producer.send_and_wait(reply_topic, reply_message)
@@ -186,5 +190,42 @@ async def process_requests():
         await consumer.stop()
 
 
-if __name__ == "__main__":
-    asyncio.run(process_requests())
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global _kafka_task
+    _kafka_task = asyncio.create_task(process_requests())
+    try:
+        yield
+    finally:
+        if _kafka_task:
+            _kafka_task.cancel()
+            try:
+                await _kafka_task
+            except asyncio.CancelledError:
+                pass
+
+
+app = FastAPI(lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/check-file-exists")
+def check_file_exists(
+    file_path: str = Query(...),
+    file_name: str = Query(...),
+    file_size: int = Query(...),
+):
+    """Check whether a file is already indexed in vector DB."""
+    exists = get_db()._file_exists(file_path, file_name, file_size)
+    return {"exists": exists}
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "service": "vector_db"}

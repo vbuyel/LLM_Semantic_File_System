@@ -45,3 +45,4 @@ class SendToKafka(BaseModel):
     owner: Optional[str] = None
     storage_type: str = "unknown"
     chunk_index: int = 0
+    file_size: int = 0

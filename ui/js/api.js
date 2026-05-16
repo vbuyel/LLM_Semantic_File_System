@@ -3,6 +3,18 @@ import { state } from './state.js';
 const GATEWAY_SERVER = 'http://localhost:8000';
 const WS_SERVER = 'ws://localhost:8000';
 
+function _getDriveHeaders() {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const headers = {
+        'X-Auth-Provider': 'google',
+        'X-Owner': user.email || '',
+    };
+    if (user.accessToken) {
+        headers['Authorization'] = `Bearer ${user.accessToken}`;
+    }
+    return headers;
+}
+
 export const api = {
     auth: {
         async loginWithGoogle(code, state) {
@@ -47,12 +59,7 @@ export const api = {
             const storageSource = state.get('storageSource');
             const headers = { 'X-Storage-Source': storageSource };
 
-            if (storageSource === 'drive') {
-                const user = JSON.parse(localStorage.getItem('user') || '{}');
-                headers['X-Auth-Provider'] = 'google';
-                headers['X-Owner'] = user.email;
-                headers['Authorization'] = `Bearer ${user.accessToken}`;
-            }
+            if (storageSource === 'drive') Object.assign(headers, _getDriveHeaders());
 
             const res = await fetch(`${GATEWAY_SERVER}/gateway/get_objects?path=${encodeURIComponent(path)}`, {
                 method: 'GET',
@@ -69,14 +76,7 @@ export const api = {
             const storageSource = state.get('storageSource');
             const headers = { 'X-Storage-Source': storageSource };
 
-            if (storageSource === 'drive') {
-                const user = JSON.parse(localStorage.getItem('user') || '{}');
-                headers['X-Owner'] = user.email || '';
-                headers['X-Auth-Provider'] = 'google';
-                if (user.accessToken) {
-                    headers['Authorization'] = `Bearer ${user.accessToken}`;
-                }
-            }
+            if (storageSource === 'drive') Object.assign(headers, _getDriveHeaders());
 
             const res = await fetch(`${GATEWAY_SERVER}/gateway/upload_object`, {
                 method: 'POST',
@@ -102,13 +102,7 @@ export const api = {
                 'Content-Type': 'application/json',
             };
 
-            if (storageSource === 'drive') {
-                const user = JSON.parse(localStorage.getItem('user') || '{}');
-                headers['X-Auth-Provider'] = 'google';
-                if (user.accessToken) {
-                    headers['Authorization'] = `Bearer ${user.accessToken}`;
-                }
-            }
+            if (storageSource === 'drive') Object.assign(headers, _getDriveHeaders());
 
             const res = await fetch(`${GATEWAY_SERVER}/gateway/rename_object?path=${encodeURIComponent(oldPath)}&new_name=${encodeURIComponent(newName)}`, {
                 method: 'PUT',
@@ -121,13 +115,7 @@ export const api = {
             const storageSource = state.get('storageSource');
             const headers = { 'X-Storage-Source': storageSource };
 
-            if (storageSource === 'drive') {
-                headers['X-Auth-Provider'] = 'google';
-                const user = JSON.parse(localStorage.getItem('user') || '{}');
-                if (user.accessToken) {
-                    headers['Authorization'] = `Bearer ${user.accessToken}`;
-                }
-            }
+            if (storageSource === 'drive') Object.assign(headers, _getDriveHeaders());
 
             const res = await fetch(
                 `${GATEWAY_SERVER}/gateway/download_object?path=${encodeURIComponent(path)}`,
@@ -178,9 +166,9 @@ export const api = {
             const map = this.EVENT_DISPLAY_MAP || {};
             return map[rawEvent] || rawEvent.charAt(0).toUpperCase() + rawEvent.slice(1);
         },
-        async getUserEvents(owner, limit = 100, offset = 0) {
+        async getUserEvents(owner, ms_type, limit = 100, offset = 0) {
             const res = await fetch(
-                `${GATEWAY_SERVER}/events/user/${encodeURIComponent(owner)}?limit=${limit}&offset=${offset}`
+                `${GATEWAY_SERVER}/events/user/${encodeURIComponent(owner)}?ms_type=${ms_type}&limit=${limit}&offset=${offset}`
             );
             if (!res.ok) throw new Error('Failed to fetch events');
             return res.json();

@@ -2,7 +2,5 @@ from pydantic import BaseModel
 
 
 class EventItem(BaseModel):
-    id: int
-    owner: str
+    ms_type: str
     event: str
-    created_at: str

@@ -71,6 +71,9 @@ class DataBase:
                     embedding vector({self.vector_dim})
                 )
             ''')
+            conn.execute(f'''
+                ALTER TABLE {self.table} ADD COLUMN IF NOT EXISTS file_size BIGINT DEFAULT 0
+            ''')
         except Exception as e:
             print(f"Warning creating table: {e}")
         
@@ -83,6 +86,18 @@ class DataBase:
             print(f"Warning creating index: {e}")
         
         conn.close()
+
+
+    def _file_exists(self, file_path: str, file_name: str, file_size: int) -> bool:
+        conn = self._get_connection()
+        try:
+            result = conn.execute(
+                f"SELECT 1 FROM {self.table} WHERE file_path = %s AND file_name = %s AND file_size = %s LIMIT 1",
+                (file_path, file_name, file_size),
+            )
+            return result.fetchone() is not None
+        finally:
+            conn.close()
 
 
     def _convert_to_embedding(self, chunk: str) -> np.array:
@@ -113,6 +128,10 @@ class DataBase:
         if not text:
             raise ValueError("No text provided to upload")
 
+        if object.file_size and self._file_exists(object.file_path, object.file_name, object.file_size):
+            print(f"[DEBUG] Skipping {object.file_path}: already indexed (size={object.file_size})")
+            return ObjectUploaded(name=object.file_name, chunks_added=0)
+
         text = text.replace("\x00", "")
         chunks = object.divide_into_chunks(text)
         conn = self._get_connection()
@@ -133,10 +152,10 @@ class DataBase:
                 embedding = self._convert_to_embedding(chunk)
                 conn.execute(
                     f'''
-                    INSERT INTO {self.table} (owner, file_name, file_path, text_chunk, embedding)
-                    VALUES (%s, %s, %s, %s, %s)
+                    INSERT INTO {self.table} (owner, file_name, file_path, text_chunk, embedding, file_size)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                     ''',
-                    (object.owner, object.file_name, object.file_path, chunk, embedding),
+                    (object.owner, object.file_name, object.file_path, chunk, embedding, object.file_size),
                 )
             return ObjectUploaded(name=object.file_name, chunks_added=len(chunks))
         finally:
