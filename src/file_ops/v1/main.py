@@ -107,6 +107,7 @@ async def upload_file(
                 source_path=temp_path,
                 dest_name=file.filename,
                 mime_type=file.content_type,
+                owner=user.get("owner"),
             )
         else:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unsupported storage source: {storage_source}")
@@ -153,6 +154,7 @@ async def update_file(
                 source_path=temp_path,
                 dest_name=file_id,
                 mime_type=file.content_type,
+                owner=user.get("owner"),
             )
         else:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unsupported storage source: {storage_source}")
@@ -203,7 +205,7 @@ async def delete_file(
     storage_source = user["storage_source"]
     try:
         if storage_source == "gcs":
-            await gcs_ops.delete_file(path)
+            await gcs_ops.delete_file(path, owner=user.get("owner"))
         elif storage_source == "drive":
             if not user.get("token"):
                 raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Access token required for Google Drive")
@@ -229,7 +231,7 @@ async def rename_file(
     print(f"[DEBUG] Rename request: storage={storage_source}, path={path}, new_name={new_name}")
     try:
         if storage_source == "gcs":
-            result = await gcs_ops.rename_file(path, new_name)
+            result = await gcs_ops.rename_file(path, new_name, owner=user.get("owner"))
         elif storage_source == "drive":
             if not user.get("token"):
                 raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Access token required for Google Drive")

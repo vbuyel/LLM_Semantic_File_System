@@ -46,8 +46,9 @@ class GCSOperations:
         source_path: str,
         dest_name: Optional[str] = None,
         mime_type: Optional[str] = None,
+        owner: Optional[str] = None,
     ) -> dict:
-        return await self._process_file_action("upload", source_path, self.owner_ops, dest_name, mime_type)
+        return await self._process_file_action("upload", source_path, owner, dest_name, mime_type)
 
 
     async def update_file(
@@ -55,8 +56,9 @@ class GCSOperations:
         source_path: str,
         dest_name: Optional[str] = None,
         mime_type: Optional[str] = None,
+        owner: Optional[str] = None,
     ) -> dict:
-        return await self._process_file_action("update", source_path, self.owner_ops, dest_name, mime_type)
+        return await self._process_file_action("update", source_path, owner, dest_name, mime_type)
 
 
     async def _process_file_action(
@@ -87,12 +89,13 @@ class GCSOperations:
             logger.warning(f"Text extraction failed for {source_path}: {e}")
             text = ""
 
+        file_path = "root/"
         try:
             await self.kafka.send_command(
                 SendToKafka(
                     action=action,
                     file_name=blob_name,
-                    file_path=f"gs://{self.bucket_name}/{blob_name}",
+                    file_path=file_path,
                     text=text[:1000] if text else "",
                     owner=owner,
                     storage_type="gcs",
@@ -156,7 +159,7 @@ class GCSOperations:
         return (content, file_name, mime_type)
 
 
-    async def delete_file(self, file_path: str) -> None:
+    async def delete_file(self, file_path: str, owner: Optional[str] = None) -> None:
         if not file_path:
             raise ValueError("file_path cannot be empty")
 
@@ -165,14 +168,16 @@ class GCSOperations:
         if file_existed:
             blob.delete()
 
+        db_file_path = "root/"
+        db_file_name = file_path.split("/")[-1]
         try:
             await self.kafka.send_command(
                 SendToKafka(
                     action="delete",
-                    file_name=file_path,
-                    file_path=f"gs://{self.bucket_name}/{file_path}",
+                    file_name=db_file_name,
+                    file_path=db_file_path,
                     text="",
-                    owner=self.owner_ops,
+                    owner=owner,
                     storage_type="gcs",
                 )
             )
@@ -183,7 +188,7 @@ class GCSOperations:
             raise FileNotFoundError(f"File not found in bucket: {file_path}")
 
 
-    async def rename_file(self, file_path: str, new_name: str) -> dict:
+    async def rename_file(self, file_path: str, new_name: str, owner: Optional[str] = None) -> dict:
         if not file_path:
             raise ValueError("file_path cannot be empty")
         if not new_name:
@@ -193,16 +198,23 @@ class GCSOperations:
         if not blob.exists():
             raise FileNotFoundError(f"File not found in bucket: {file_path}")
 
-        self.bucket.rename_blob(blob, new_name)
+        old_file_name = file_path.split("/")[-1]
+        new_blob_name = new_name
+        self.bucket.rename_blob(blob, new_blob_name)
+
+        old_db_path = "root/"
+        new_db_path = "root/"
 
         try:
             await self.kafka.send_command(
                 SendToKafka(
                     action="rename",
                     file_name=new_name,
-                    file_path=f"gs://{self.bucket_name}/{file_path}",
+                    file_path=old_db_path,
+                    new_path=new_db_path,
+                    old_file_name=old_file_name,
                     text="",
-                    owner=self.owner_ops,
+                    owner=owner,
                     storage_type="gcs",
                 )
             )
@@ -211,6 +223,6 @@ class GCSOperations:
 
         return {
             "file_id": new_name,
-            "url": f"gs://{self.bucket_name}/{new_name}",
+            "url": f"gs://{self.bucket_name}/{new_blob_name}",
             "storage_type": "gcs",
         }

@@ -148,3 +148,30 @@ class DataBase:
                 ]
         finally:
             conn.close()
+
+
+    def get_events_by_owner_or_session(self, owner: str, correlation_id: str | None, ms_type: str, limit: int = 100, offset: int = 0) -> list[EventItem]:
+        print(f"[DEBUG] Database: get_events_by_owner_or_session called for owner='{owner}', correlation_id='{correlation_id}', limit={limit}, offset={offset}")
+        conn = self._get_connection()
+        try:
+            if correlation_id:
+                with conn.execute(
+                    sql.SQL('''
+                    SELECT ms_type, event
+                    FROM {}
+                    WHERE (owner = %s OR correlation_id = %s) AND ms_type = %s
+                    ORDER BY created_at DESC
+                    LIMIT %s OFFSET %s
+                    ''').format(sql.Identifier(self.table)),
+                    (owner, correlation_id, ms_type, limit, offset),
+                ) as cur:
+                    rows = cur.fetchall()
+                    print(f"[DEBUG] Database: Found {len(rows)} events for owner='{owner}' or correlation_id='{correlation_id}'")
+                    return [
+                        EventItem(ms_type=r[0], event=r[1])
+                        for r in rows
+                    ]
+            else:
+                return self.get_events_by_owner(owner, ms_type, limit, offset)
+        finally:
+            conn.close()

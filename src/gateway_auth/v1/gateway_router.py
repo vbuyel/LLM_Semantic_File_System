@@ -13,6 +13,8 @@ from src.gateway_auth.domain.settings import settings
 gateway_router = APIRouter()
 
 
+import uuid
+
 def _get_headers(request: Request, headers: Optional[dict[str]] = {}) -> dict[str]:
     if auth := request.headers.get("Authorization"):
         headers["Authorization"] = auth
@@ -20,14 +22,17 @@ def _get_headers(request: Request, headers: Optional[dict[str]] = {}) -> dict[st
         headers["X-Storage-Source"] = storage_source
     if auth_provider := request.headers.get("X-Auth-Provider"):
         headers["X-Auth-Provider"] = auth_provider
+    
     owner = request.headers.get("X-Owner")
     if owner:
         headers["X-Owner"] = owner
     else:
         headers["X-Owner"] = "guest"
+    
     correlation_id = request.headers.get("X-Correlation-ID")
-    if correlation_id:
-        headers["X-Correlation-ID"] = correlation_id
+    if not correlation_id:
+        correlation_id = str(uuid.uuid4())
+    headers["X-Correlation-ID"] = correlation_id
     return headers
 
 
@@ -44,7 +49,7 @@ def call_ai_agent(request: Request, user_request: UserRequest) -> ResponseToUser
         response = requests.post(
             url=f"{settings.AGENT_SERVER}/get_response",
             json=payload,
-            timeout=30,
+            timeout=90,
         )
         if response.status_code != status.HTTP_200_OK:
             detail = response.json().get("detail", "Unknown error") if "application/json" in response.headers.get("content-type", "") else response.text

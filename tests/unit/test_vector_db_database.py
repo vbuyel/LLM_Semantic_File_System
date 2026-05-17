@@ -140,11 +140,34 @@ class TestDeleteObject:
 
 
 class TestRenameObject:
-    def test_rename(self, db_and_mocks):
+    def test_rename_gcs_updates_path_and_name(self, db_and_mocks):
         db, mock_psycopg, _ = db_and_mocks
         mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__ = lambda self: self
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+        mock_conn.execute.return_value = mock_cursor
         mock_psycopg.connect.return_value = mock_conn
         from src.vector_db.domain.domain import RenameObject
         obj = RenameObject(old_path="/old/f.txt", new_path="/new/g.txt", storage_type="gcs", owner="u")
         result = db.rename_object(obj)
         assert result.name == "g.txt"
+        call_args = mock_conn.execute.call_args[0]
+        assert "SET file_path = %s, file_name = %s" in call_args[0]
+        assert call_args[1][0] == "/new/"
+
+    def test_rename_drive_only_updates_name(self, db_and_mocks):
+        db, mock_psycopg, _ = db_and_mocks
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__ = lambda self: self
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+        mock_conn.execute.return_value = mock_cursor
+        mock_psycopg.connect.return_value = mock_conn
+        from src.vector_db.domain.domain import RenameObject
+        obj = RenameObject(old_path="drive_file_id_123", new_path="", storage_type="drive", owner="u")
+        result = db.rename_object(obj)
+        assert result.name == ""
+        call_args = mock_conn.execute.call_args[0]
+        assert "SET file_name = %s" in call_args[0]
+        assert "SET file_path = %s" not in call_args[0]

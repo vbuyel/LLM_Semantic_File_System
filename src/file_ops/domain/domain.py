@@ -46,3 +46,5 @@ class SendToKafka(BaseModel):
     storage_type: str = "unknown"
     chunk_index: int = 0
     file_size: int = 0
+    new_path: Optional[str] = None
+    old_file_name: Optional[str] = None

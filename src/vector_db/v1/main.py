@@ -144,6 +144,7 @@ async def _run_consumer_loop():
                     print("File is deleting now")
                     object_to_delete = DeleteObject(
                         path=payload.get("file_path", ""),
+                        file_name=payload.get("file_name", ""),
                         storage_type=payload.get("storage_type", ""),
                         owner=payload.get("owner")
                     )
@@ -157,7 +158,9 @@ async def _run_consumer_loop():
                     print("File is renaming now")
                     object_to_rename = RenameObject(
                         old_path=payload.get("file_path", ""),
+                        old_file_name=payload.get("old_file_name", ""),
                         new_path=payload.get("new_path", ""),
+                        new_name=payload.get("file_name", ""),
                         storage_type=payload.get("storage_type", ""),
                         owner=payload.get("owner")
                     )

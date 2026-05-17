@@ -115,13 +115,40 @@ class GoogleDriveOperations:
                 else:
                     raise
 
+    async def _get_file_path(self, file_id: str) -> str:
+        try:
+            file_meta = self.service.files().get(
+                fileId=file_id,
+                fields="parents,name"
+            ).execute()
+            
+            path_parts = []
+            current_parents = file_meta.get("parents", [])
+            
+            while current_parents:
+                folder_id = current_parents[0]
+                folder_meta = self.service.files().get(
+                    fileId=folder_id,
+                    fields="name,parents"
+                ).execute()
+                path_parts.append(folder_meta.get("name", ""))
+                current_parents = folder_meta.get("parents", [])
+            
+            path_parts.reverse()
+            path_parts.append(file_meta.get("name", ""))
+            return "root/" + "/".join(path_parts) if path_parts else f"root/{file_id}"
+        except Exception as e:
+            logger.warning(f"Failed to get file path: {e}")
+            return f"root/{file_id}"
+
+
     async def upload_file(
         self,
         source_path: str,
         owner: Optional[str] = None,
         file_name: Optional[str] = None,
         mime_type: Optional[str] = None,
-        folder_id: Optional[str] = None
+        folder_id: Optional[str] = None,
     ) -> dict:
         meta = {"name": file_name or source_path.split("/")[-1]}
 
@@ -134,7 +161,7 @@ class GoogleDriveOperations:
             resumable=True,
         )
         file = self.service.files().create(
-            body=meta, media_body=media, fields="id,webViewLink"
+            body=meta, media_body=media, fields="id,parents,name,webViewLink"
         ).execute()
 
         try:
@@ -143,8 +170,11 @@ class GoogleDriveOperations:
             logger.warning(f"Text extraction failed for {source_path}: {e}")
             text = ""
 
+        real_path = await self._get_file_path(file["id"])
+        dir_path = "root/" + "/".join(real_path.split("/")[:-1]) + "/" if "/" in real_path else "root/"
+        
         await self._send_chunked_kafka(
-            "upload", meta["name"], file["id"], text, owner, "drive",
+            "upload", file["name"], dir_path, text, owner, "drive",
             file_size=os.path.getsize(source_path),
         )
 
@@ -333,13 +363,17 @@ class GoogleDriveOperations:
 
 
     async def delete_file(self, file_path: str, owner: Optional[str] = None) -> None:
+        real_path = await self._get_file_path(file_path)
+        dir_path = "root/" + "/".join(real_path.split("/")[:-1]) + "/" if "/" in real_path else "root/"
+        file_name = real_path.split("/")[-1]
+        
         self.service.files().delete(fileId=file_path).execute()
         try:
             await self.kafka.send_command(
                 SendToKafka(
                     action="delete",
-                    file_name="",
-                    file_path=file_path,
+                    file_name=file_name,
+                    file_path=dir_path,
                     text="",
                     owner=owner,
                     storage_type="drive",
@@ -351,18 +385,26 @@ class GoogleDriveOperations:
 
     async def rename_file(self, file_path: str, new_name: str, owner: Optional[str] = None) -> dict:
         print(f"[DEBUG] GoogleDrive rename: file_path={file_path}, new_name={new_name}")
+        old_path = await self._get_file_path(file_path)
+        old_dir = "root/" + "/".join(old_path.split("/")[:-1]) + "/" if "/" in old_path else "root/"
+        old_file_name = old_path.split("/")[-1]
+        
         file = self.service.files().update(
             fileId=file_path,
             body={"name": new_name},
             fields="id, name, webViewLink"
         ).execute()
 
+        new_dir = old_dir
+
         try:
             await self.kafka.send_command(
                 SendToKafka(
                     action="rename",
                     file_name=new_name,
-                    file_path=file["id"],
+                    file_path=old_dir,
+                    new_path=new_dir,
+                    old_file_name=old_file_name,
                     text="",
                     owner=owner,
                     storage_type="drive",

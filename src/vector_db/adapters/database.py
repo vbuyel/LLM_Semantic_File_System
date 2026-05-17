@@ -138,10 +138,20 @@ class DataBase:
         conn = self._get_connection()
         try:
             if chunk_index == 0:
-                if object.owner:
+                if object.owner and object.file_name:
+                    conn.execute(
+                        f"DELETE FROM {self.table} WHERE file_path = %s AND file_name = %s AND owner = %s",
+                        (object.file_path, object.file_name, object.owner),
+                    )
+                elif object.owner:
                     conn.execute(
                         f"DELETE FROM {self.table} WHERE file_path = %s AND owner = %s",
                         (object.file_path, object.owner),
+                    )
+                elif object.file_name:
+                    conn.execute(
+                        f"DELETE FROM {self.table} WHERE file_path = %s AND file_name = %s",
+                        (object.file_path, object.file_name),
                     )
                 else:
                     conn.execute(
@@ -167,11 +177,30 @@ class DataBase:
         conn = self._get_connection()
         try:
             path = object.path
-            cur = conn.execute(
-                f"DELETE FROM {self.table} WHERE file_path = %s AND owner = %s",
-                (path, object.owner),
-            )
-            file_name = path.split("/")[-1]
+            # Use file_name if provided, otherwise extract from path
+            file_name = object.file_name if object.file_name else path.rstrip("/").rsplit("/", 1)[-1]
+            
+            if object.owner and file_name:
+                cur = conn.execute(
+                    f"DELETE FROM {self.table} WHERE file_path = %s AND file_name = %s AND owner = %s",
+                    (path, file_name, object.owner),
+                )
+            elif object.owner:
+                cur = conn.execute(
+                    f"DELETE FROM {self.table} WHERE file_path = %s AND owner = %s",
+                    (path, object.owner),
+                )
+            elif file_name:
+                cur = conn.execute(
+                    f"DELETE FROM {self.table} WHERE file_path = %s AND file_name = %s",
+                    (path, file_name),
+                )
+            else:
+                cur = conn.execute(
+                    f"DELETE FROM {self.table} WHERE file_path = %s",
+                    (path,),
+                )
+            
             return ObjectDeleted(name=file_name, chunks_removed=cur.rowcount)
         finally:
             conn.close()
@@ -181,22 +210,47 @@ class DataBase:
         print("[DEBUG] Renaming object")
         conn = self._get_connection()
         try:
-            new_file_name = object.new_path.split("/")[-1]
-            if object.owner:
+            if object.new_path:
+                parts = object.new_path.rsplit("/", 1)
+                new_dir = parts[0] + "/" if len(parts) > 1 else ""
+                new_file_name = parts[-1] if parts[-1] else object.new_name
+            else:
+                new_dir = "root/"
+                new_file_name = object.new_name
+
+            old_file_name = object.old_file_name
+
+            if object.owner and old_file_name:
+                where_clause = "file_path = %s AND file_name = %s AND owner = %s"
+                params = (object.old_path, old_file_name, object.owner)
+            elif object.owner:
                 where_clause = "file_path = %s AND owner = %s"
                 params = (object.old_path, object.owner)
+            elif old_file_name:
+                where_clause = "file_path = %s AND file_name = %s"
+                params = (object.old_path, old_file_name)
             else:
                 where_clause = "file_path = %s"
                 params = (object.old_path,)
-            
-            conn.execute(
-                f'''
-                UPDATE {self.table}
-                SET file_path = %s, file_name = %s
-                WHERE {where_clause}
-                ''',
-                (object.new_path, new_file_name, *params),
-            )
+
+            if object.new_path:
+                conn.execute(
+                    f'''
+                    UPDATE {self.table}
+                    SET file_path = %s, file_name = %s
+                    WHERE {where_clause}
+                    ''',
+                    (new_dir, new_file_name, *params),
+                )
+            else:
+                conn.execute(
+                    f'''
+                    UPDATE {self.table}
+                    SET file_name = %s
+                    WHERE {where_clause}
+                    ''',
+                    (new_file_name, *params),
+                )
             return ObjectRenamed(name=new_file_name)
         finally:
             conn.close()
