@@ -22,6 +22,8 @@ class RAGSearch:
         await self._ensure_started()
         try:
             await self._kafka.send_event(self._start_event, owner)
+
+            owner = owner if "@gmail.com" in owner else "guest"
             data = await self._kafka.send_command(self.command, query, owner)
             if isinstance(data, str):
                 return RAGResponse(text=data)

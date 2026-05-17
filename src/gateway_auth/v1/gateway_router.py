@@ -20,7 +20,8 @@ def _get_headers(request: Request, headers: Optional[dict[str]] = {}) -> dict[st
         headers["X-Storage-Source"] = storage_source
     if auth_provider := request.headers.get("X-Auth-Provider"):
         headers["X-Auth-Provider"] = auth_provider
-    if owner := request.headers.get("X-Owner") and "@gmail.com" in owner:
+    owner = request.headers.get("X-Owner")
+    if owner and "@gmail.com" in owner:
         headers["X-Owner"] = owner
     else:
         headers["X-Owner"] = str(uuid4())
@@ -30,14 +31,35 @@ def _get_headers(request: Request, headers: Optional[dict[str]] = {}) -> dict[st
 @gateway_router.post("/ai_agent")
 def call_ai_agent(request: Request, user_request: UserRequest) -> ResponseToUser:
     """Calling AI Agent to get reponse from files or web search"""
-    payload = _get_headers(request, user_request.model_dump())
+    headers = _get_headers(request, user_request.model_dump())
+    if not ("@gmail.com" in headers.get("X-Owner")):
+        owner = "guest"
 
-    print(f"[DEBUG] Sending owner to agant: {payload.get("owner")}")
-    response = requests.post(
-        url=f"{settings.AGENT_SERVER}/get_response",
-        json=payload,
-    )
-    return ResponseToUser(text=response.json().get("text", response.text))
+    payload = {
+        "text": user_request.text,
+        "owner": owner,
+    }
+
+    print(f"[DEBUG] Sending owner to agent: {payload.get('owner')}")
+    try:
+        response = requests.post(
+            url=f"{settings.AGENT_SERVER}/get_response",
+            json=payload,
+            timeout=30,
+        )
+        if response.status_code != status.HTTP_200_OK:
+            detail = response.json().get("detail", "Unknown error") if "application/json" in response.headers.get("content-type", "") else response.text
+            raise HTTPException(status_code=response.status_code, detail=detail)
+        
+        return ResponseToUser(text=response.json().get("text", response.text))
+    except requests.exceptions.ConnectionError:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="File service unavailable")
+    except requests.exceptions.Timeout:
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="File service timeout")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal error: {str(e)}")
 
 
 @gateway_router.get("/get_objects")
