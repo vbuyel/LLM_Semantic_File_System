@@ -95,6 +95,42 @@ class DataBase:
             conn.close()
 
 
+    def cleanup_old_events(self, retention_days: int, batch_size: int = 1000) -> int:
+        """Delete events older than retention_days in batches to avoid long locks.
+
+        Returns total number of deleted rows.
+        """
+        conn = self._get_connection()
+        total_deleted = 0
+        try:
+            while True:
+                with conn.execute(
+                    sql.SQL('''
+                        DELETE FROM {}
+                        WHERE id IN (
+                            SELECT id FROM {}
+                            WHERE created_at < NOW() - INTERVAL '{} days'
+                            ORDER BY created_at ASC
+                            LIMIT %s
+                        )
+                    ''').format(
+                        sql.Identifier(self.table),
+                        sql.Identifier(self.table),
+                        sql.Literal(retention_days),
+                    ),
+                    (batch_size,),
+                ) as cur:
+                    deleted = cur.rowcount
+                    total_deleted += deleted
+                    if deleted < batch_size:
+                        break
+            if total_deleted:
+                print(f"[CLEANUP] Deleted {total_deleted} events older than {retention_days} days")
+        finally:
+            conn.close()
+        return total_deleted
+
+
     def get_events_by_owner(self, owner: str, ms_type: str, limit: int = 1, offset: int = 0) -> list[EventItem]:
         print(f"[DEBUG] Database: get_events_by_owner called for owner='{owner}', limit={limit}, offset={offset}")
         conn = self._get_connection()

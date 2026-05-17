@@ -24,6 +24,7 @@ _db: Optional[DataBase] = None
 
 _gateway_ws: Optional[WebSocket] = None
 _kafka_task: asyncio.Task[None] | None = None
+_cleanup_task: asyncio.Task[None] | None = None
 _kafka_healthy = False
 
 
@@ -54,10 +55,24 @@ async def _keep_consuming():
             retry_delay = min(retry_delay * 2, 30.0)
 
 
+async def _run_cleanup():
+    retention_days = int(os.getenv("EVENT_RETENTION_DAYS", "30"))
+    interval_seconds = int(os.getenv("EVENT_CLEANUP_INTERVAL_SECONDS", "86400"))
+
+    while True:
+        await asyncio.sleep(interval_seconds)
+        try:
+            db = get_db()
+            db.cleanup_old_events(retention_days=retention_days)
+        except Exception as exc:
+            print(f"[ERROR] EventDB cleanup failed: {exc}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _kafka_task
+    global _kafka_task, _cleanup_task
     _kafka_task = asyncio.create_task(_keep_consuming())
+    _cleanup_task = asyncio.create_task(_run_cleanup())
     try:
         yield
     finally:
@@ -65,6 +80,12 @@ async def lifespan(app: FastAPI):
             _kafka_task.cancel()
             try:
                 await _kafka_task
+            except asyncio.CancelledError:
+                pass
+        if _cleanup_task:
+            _cleanup_task.cancel()
+            try:
+                await _cleanup_task
             except asyncio.CancelledError:
                 pass
 
