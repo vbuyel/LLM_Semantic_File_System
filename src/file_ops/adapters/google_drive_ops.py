@@ -220,14 +220,14 @@ class GoogleDriveOperations:
         return False
 
 
-    async def _background_vectorise(self, items: list, owner: str) -> None:
+    async def _background_vectorise(self, items: list, owner: str, correlation_id: Optional[str] = None) -> None:
         """Download files, extract text, send to Kafka — all in background.
 
         httplib2 (googleapiclient) is NOT thread-safe — segfaults with concurrent
         downloads. Serialise all Drive API calls through one thread at a time.
         """
         try:
-            await self.kafka.send_event(event="Vectorising your cloud files...", owner=owner)
+            await self.kafka.send_event(event="Vectorising your cloud files...", owner=owner, correlation_id=correlation_id)
         except Exception as e:
             logger.warning(f"Failed to send vectorise start event: {e}")
 
@@ -266,12 +266,12 @@ class GoogleDriveOperations:
         await asyncio.gather(*[process_item(item) for item in items])
 
         try:
-            await self.kafka.send_event(event="Done! Files are prepared to analyze", owner=owner)
+            await self.kafka.send_event(event="Done! Files are prepared to analyze", owner=owner, correlation_id=correlation_id)
         except Exception as e:
             logger.warning(f"Failed to send vectorise done event: {e}")
 
 
-    async def list_files(self, owner: str, directory_path: str = "/") -> list:
+    async def list_files(self, owner: str, directory_path: str = "/", correlation_id: Optional[str] = None) -> list:
         query = "'me' in owners and trashed=false"
 
         if directory_path != "/":
@@ -286,7 +286,7 @@ class GoogleDriveOperations:
         items = results.get('files', [])
 
         if items:
-            asyncio.create_task(self._background_vectorise(items, owner))
+            asyncio.create_task(self._background_vectorise(items, owner, correlation_id))
 
         return [{
             "path": item.get('id'),

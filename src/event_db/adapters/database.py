@@ -64,30 +64,33 @@ class DataBase:
             conn.execute(sql.SQL('''
                 ALTER TABLE {} ADD COLUMN IF NOT EXISTS ms_type TEXT NOT NULL DEFAULT ''
             ''').format(sql.Identifier(self.table)))
+            conn.execute(sql.SQL('''
+                ALTER TABLE {} ADD COLUMN IF NOT EXISTS correlation_id TEXT
+            ''').format(sql.Identifier(self.table)))
         except Exception as e:
             print(f"Warning creating table: {e}")
         finally:
             conn.close()
 
 
-    def add_event(self, owner: str, ms_type: str, event: str) -> EventItem:
-        print(f"[DEBUG] Database: add_event called with owner='{owner}', event='{event}'")
+    def add_event(self, owner: str, ms_type: str, event: str, correlation_id: str | None = None) -> EventItem:
+        print(f"[DEBUG] Database: add_event called with owner='{owner}', event='{event}', correlation_id='{correlation_id}'")
         conn = self._get_connection()
         try:
             print(f"[DEBUG] Database: Executing INSERT for owner='{owner}', event='{event}'")
             with conn.execute(
                 sql.SQL('''
-                INSERT INTO {} (owner, ms_type, event)
-                VALUES (%s, %s, %s)
-                RETURNING ms_type, event
+                INSERT INTO {} (owner, ms_type, event, correlation_id)
+                VALUES (%s, %s, %s, %s)
+                RETURNING ms_type, event, correlation_id
                 ''').format(sql.Identifier(self.table)),
-                (owner, ms_type, event),
+                (owner, ms_type, event, correlation_id),
             ) as cur:
-                row: tuple[str, str] | None = cur.fetchone()
+                row: tuple[str, str, str | None] | None = cur.fetchone()
                 print(f"[DEBUG] Database: Insert returned row: {row}")
                 assert row is not None
                 print(f"[DEBUG] Database: Event created")
-                return EventItem(ms_type=row[0], event=row[1])
+                return EventItem(ms_type=row[0], event=row[1], correlation_id=row[2])
         finally:
             conn.close()
 

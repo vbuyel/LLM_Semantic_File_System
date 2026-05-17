@@ -3,6 +3,7 @@ import { api } from '../../api.js';
 let _initialized = false;
 let _currentOwner = null;
 let _ws = null;
+let _correlationId = null;
 const _listeners = [];
 
 export const Events = {
@@ -12,8 +13,13 @@ export const Events = {
         _initialized = true;
 
         _ws = api.events.connect(owner, (msg) => {
+            if (msg.type === 'init' && msg.correlation_id) {
+                _correlationId = msg.correlation_id;
+                return;
+            }
             if (msg.type !== 'events' || !msg.data) return;
             const data = msg.data;
+            if (data.correlation_id && data.correlation_id !== _correlationId) return;
             _listeners.forEach(fn => fn(data));
         });
     },
@@ -28,6 +34,10 @@ export const Events = {
         }
         _initialized = false;
         this.init(owner);
+    },
+
+    getCorrelationId() {
+        return _correlationId;
     },
 
     subscribe(fn) {

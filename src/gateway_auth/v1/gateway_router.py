@@ -21,23 +21,22 @@ def _get_headers(request: Request, headers: Optional[dict[str]] = {}) -> dict[st
     if auth_provider := request.headers.get("X-Auth-Provider"):
         headers["X-Auth-Provider"] = auth_provider
     owner = request.headers.get("X-Owner")
-    if owner and "@gmail.com" in owner:
+    if owner:
         headers["X-Owner"] = owner
     else:
-        headers["X-Owner"] = str(uuid4())
+        headers["X-Owner"] = "guest"
+    correlation_id = request.headers.get("X-Correlation-ID")
+    if correlation_id:
+        headers["X-Correlation-ID"] = correlation_id
     return headers
 
 
 @gateway_router.post("/ai_agent")
 def call_ai_agent(request: Request, user_request: UserRequest) -> ResponseToUser:
     """Calling AI Agent to get reponse from files or web search"""
-    headers = _get_headers(request, user_request.model_dump())
-    if not ("@gmail.com" in headers.get("X-Owner")):
-        owner = "guest"
-
     payload = {
         "text": user_request.text,
-        "owner": owner,
+        "owner": "guest",
     }
 
     print(f"[DEBUG] Sending owner to agent: {payload.get('owner')}")

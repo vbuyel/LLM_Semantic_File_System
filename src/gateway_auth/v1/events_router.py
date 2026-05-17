@@ -1,4 +1,4 @@
-import os, json, asyncio
+import os, json, asyncio, uuid
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 import httpx
 import websockets
@@ -7,7 +7,8 @@ from src.gateway_auth.domain.settings import settings
 event_router = APIRouter()
 EVENT_DB_URL = os.getenv("EVENT_DB_URL", settings.EVENT_DB_URL)
 EVENT_DB_WS = os.getenv("EVENT_DB_WS_URL", settings.EVENT_DB_WS_URL)
-_clients: dict[str, list[WebSocket]] = {}
+# Each entry: {"ws": WebSocket, "correlation_id": str}
+_clients: dict[str, list[dict]] = {}
 
 @event_router.get("/user/{owner}")
 async def get_user_events(owner: str, ms_type: str = Query(...), limit: int = Query(100), offset: int = Query(0)):
@@ -18,7 +19,11 @@ async def get_user_events(owner: str, ms_type: str = Query(...), limit: int = Qu
 @event_router.websocket("/ws/{owner}")
 async def ws_handler(ws: WebSocket, owner: str):
     await ws.accept()
-    _clients.setdefault(owner, []).append(ws)
+    correlation_id = str(uuid.uuid4())
+    _clients.setdefault(owner, []).append({"ws": ws, "correlation_id": correlation_id})
+
+    # Send correlation_id to client for event filtering
+    await ws.send_json({"type": "init", "correlation_id": correlation_id})
 
     try:
         async with httpx.AsyncClient() as c:
@@ -33,7 +38,7 @@ async def ws_handler(ws: WebSocket, owner: str):
         while True:
             await ws.receive_text()
     except WebSocketDisconnect:
-        _clients[owner] = [w for w in _clients.get(owner, []) if w is not ws]
+        _clients[owner] = [c for c in _clients.get(owner, []) if c["ws"] is not ws]
 
 async def relay_events():
     while True:
@@ -45,11 +50,16 @@ async def relay_events():
                     data = msg.get("data", {})
                     if msg.get("type") == "events" and data:
                         owner = data.get("owner")
-                        for ws in _clients.get(owner, []):
-                            try:
-                                await ws.send_json(msg)
-                            except Exception:
-                                _clients[owner] = [w for w in _clients.get(owner, []) if w is not ws]
+                        event_corr_id = data.get("correlation_id")
+                        for client in _clients.get(owner, []):
+                            ws = client["ws"]
+                            client_corr_id = client["correlation_id"]
+                            # Only relay if correlation_id matches (or event has no correlation_id for backward compat)
+                            if event_corr_id is None or event_corr_id == client_corr_id:
+                                try:
+                                    await ws.send_json(msg)
+                                except Exception:
+                                    _clients[owner] = [c for c in _clients.get(owner, []) if c["ws"] is not ws]
         except Exception as e:
             print(f"[relay] Error: {e}")
             await asyncio.sleep(3)

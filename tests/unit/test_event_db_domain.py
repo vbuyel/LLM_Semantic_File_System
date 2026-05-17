@@ -14,7 +14,7 @@ class TestEventItem:
     def test_event_item_serialization(self):
         event = EventItem(ms_type="agent", event="deleted")
         data = event.model_dump()
-        assert data == {"ms_type": "agent", "event": "deleted"}
+        assert data == {"ms_type": "agent", "event": "deleted", "correlation_id": None}
 
     def test_event_item_json_roundtrip(self):
         event = EventItem(ms_type="file_ops", event="renamed")

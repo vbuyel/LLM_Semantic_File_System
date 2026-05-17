@@ -61,12 +61,13 @@ class KafkaOperations:
         await self._producer.stop()
 
 
-    async def send_event(self, event: str, owner: Optional[str] = None) -> None:
+    async def send_event(self, event: str, owner: Optional[str] = None, correlation_id: Optional[str] = None) -> None:
         try:
             msg = {
                 "owner": owner,
                 "ms_type": "file_ops",
                 "event": event,
+                "correlation_id": correlation_id,
             }
             print(f"[DEBUG] Kafka: sending event to topic='{self._event_db_topic}': {msg}")
             await self._producer.send(self._event_db_topic, msg)

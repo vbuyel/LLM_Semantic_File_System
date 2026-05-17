@@ -141,14 +141,15 @@ async def process_requests():
                 owner = data.get("owner")
                 ms_type = data.get("ms_type")
                 event = data.get("event")
+                correlation_id = data.get("correlation_id")
                 
-                print(f"[DEBUG] EventDB extracted owner='{owner}', ms_type='{ms_type}', event='{event}'")
+                print(f"[DEBUG] EventDB extracted owner='{owner}', ms_type='{ms_type}', event='{event}', correlation_id='{correlation_id}'")
                 
                 if not owner:
                     print(f"[WARNING] EventDB: Skipping event '{event}' - no owner provided")
                 else:
                     print(f"[DEBUG] EventDB: Adding event to database for owner='{owner}', ms_type='{ms_type}', event='{event}'")
-                    ev = get_db().add_event(owner=owner, ms_type=ms_type, event=event)
+                    ev = get_db().add_event(owner=owner, ms_type=ms_type, event=event, correlation_id=correlation_id)
                     print(f"[DEBUG] EventDB: Event added successfully")
                     
                     if _gateway_ws:

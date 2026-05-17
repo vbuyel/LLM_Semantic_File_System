@@ -55,6 +55,7 @@ async def _get_current_user(
     x_owner: Optional[str] = Header(None, alias="X-Owner"),
     x_auth_provider: Optional[str] = Header(None, alias="X-Auth-Provider"),
     x_storage_source: Optional[str] = Header(None, alias="X-Storage-Source"),
+    x_correlation_id: Optional[str] = Header(None, alias="X-Correlation-ID"),
     authorization: Optional[str] = Header(None),
 ):
     """
@@ -71,7 +72,8 @@ async def _get_current_user(
         "owner": email,
         "provider": provider,
         "storage_source": storage_source,
-        "token": token
+        "token": token,
+        "correlation_id": x_correlation_id,
     }
 
 
@@ -180,7 +182,7 @@ async def list_files(
             if not user.get("token"):
                 raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Access token required for Google Drive")
             drive_ops = GoogleDriveOperations(access_token=user["token"])
-            files = await drive_ops.list_files(owner=user.get("owner"), directory_path=path)
+            files = await drive_ops.list_files(owner=user.get("owner"), directory_path=path, correlation_id=user.get("correlation_id"))
         else:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unsupported storage source: {storage_source}")
         file_items = [FileItem(**f) for f in files] if files else []

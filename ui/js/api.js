@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { Events } from './components/events/base.js';
 
 const GATEWAY_SERVER = 'http://localhost:8000';
 const WS_SERVER = 'ws://localhost:8000';
@@ -11,6 +12,10 @@ function _getDriveHeaders() {
     };
     if (user.accessToken) {
         headers['Authorization'] = `Bearer ${user.accessToken}`;
+    }
+    const corrId = Events.getCorrelationId();
+    if (corrId) {
+        headers['X-Correlation-ID'] = corrId;
     }
     return headers;
 }
@@ -186,6 +191,10 @@ export const api = {
             const headers = { 'Content-Type': 'application/json' };
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             headers['X-Owner'] = user.email || user.id || 'guest';
+            const corrId = Events.getCorrelationId();
+            if (corrId) {
+                headers['X-Correlation-ID'] = corrId;
+            }
 
             const response = await fetch(`${GATEWAY_SERVER}/gateway/ai_agent`, {
                 method: 'POST',

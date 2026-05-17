@@ -62,7 +62,7 @@ class TestAddEvent:
         db, mock_psycopg = db_and_mock
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
-        mock_cursor.fetchone.return_value = ("file_ops", "uploaded")
+        mock_cursor.fetchone.return_value = ("file_ops", "uploaded", "corr-123")
         mock_cursor.__enter__ = lambda self: self
         mock_cursor.__exit__ = MagicMock(return_value=False)
         mock_conn.execute.return_value = mock_cursor
@@ -72,12 +72,13 @@ class TestAddEvent:
         assert isinstance(result, EventItem)
         assert result.ms_type == "file_ops"
         assert result.event == "uploaded"
+        assert result.correlation_id == "corr-123"
 
     def test_add_event_calls_insert(self, db_and_mock):
         db, mock_psycopg = db_and_mock
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
-        mock_cursor.fetchone.return_value = ("file_ops", "evt")
+        mock_cursor.fetchone.return_value = ("file_ops", "evt", None)
         mock_cursor.__enter__ = lambda self: self
         mock_cursor.__exit__ = MagicMock(return_value=False)
         mock_conn.execute.return_value = mock_cursor
