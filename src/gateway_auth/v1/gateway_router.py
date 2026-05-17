@@ -1,42 +1,19 @@
-from fastapi import status, APIRouter, Depends, File, Query, Request, HTTPException, UploadFile
-from fastapi.responses import StreamingResponse
 import requests
 from uuid import uuid4
+from typing import Optional
+
+from fastapi import status, APIRouter, Depends, File, Query, Request, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 
 from src.gateway_auth.domain.file_ops import ListOfObjects, PathToGetObjects
-from src.gateway_auth.domain.agent import GuestRegistration, ResponseToUser, UserRequest
+from src.gateway_auth.domain.agent import ResponseToUser, UserRequest
 from src.gateway_auth.domain.settings import settings
 
 
 gateway_router = APIRouter()
 
 
-@gateway_router.post("/register_guest")
-def register_guest() -> GuestRegistration:
-    return GuestRegistration(owner_id=str(uuid4()))
-
-
-@gateway_router.post("/ai_agent")
-def call_ai_agent(request: Request, user_request: UserRequest) -> ResponseToUser:
-    """Calling AI Agent to get reponse from files or web search"""
-    payload = user_request.model_dump()
-    owner = request.headers.get("X-Owner")
-    if owner and "@gmail.com" in owner:
-        payload["owner"] = owner
-    elif not payload.get("owner"):
-        payload["owner"] = str(uuid4())
-
-    response = requests.post(
-        url=f"{settings.AGENT_SERVER}/get_response",
-        json=payload,
-    )
-    return ResponseToUser(text=response.json().get("text", response.text))
-
-
-@gateway_router.get("/get_objects")
-def get_objects_from_storage(request: Request, query: PathToGetObjects = Depends()) -> ListOfObjects:
-    """Get list of available user's files and folders"""
-    headers = {}
+def _get_headers(request: Request, headers: Optional[dict[str]] = {}) -> dict[str]:
     if auth := request.headers.get("Authorization"):
         headers["Authorization"] = auth
     if storage_source := request.headers.get("X-Storage-Source"):
@@ -47,6 +24,26 @@ def get_objects_from_storage(request: Request, query: PathToGetObjects = Depends
         headers["X-Owner"] = owner
     else:
         headers["X-Owner"] = str(uuid4())
+    return headers
+
+
+@gateway_router.post("/ai_agent")
+def call_ai_agent(request: Request, user_request: UserRequest) -> ResponseToUser:
+    """Calling AI Agent to get reponse from files or web search"""
+    payload = _get_headers(request, user_request.model_dump())
+
+    print(f"[DEBUG] Sending owner to agant: {payload.get("owner")}")
+    response = requests.post(
+        url=f"{settings.AGENT_SERVER}/get_response",
+        json=payload,
+    )
+    return ResponseToUser(text=response.json().get("text", response.text))
+
+
+@gateway_router.get("/get_objects")
+def get_objects_from_storage(request: Request, query: PathToGetObjects = Depends()) -> ListOfObjects:
+    """Get list of available user's files and folders"""
+    headers = _get_headers(request)
     
     print(f"[DEBUG] X-Owner: {headers.get("X-Owner")}")
     try:
@@ -74,26 +71,11 @@ def get_objects_from_storage(request: Request, query: PathToGetObjects = Depends
 @gateway_router.post("/upload_object")
 def upload_object_into_storage(request: Request, file: UploadFile = File(...)):
     """Upload user's file or object into Cloud"""
-    headers = {}
-    if auth := request.headers.get("Authorization"):
-        headers["Authorization"] = auth
-    if storage_source := request.headers.get("X-Storage-Source"):
-        headers["X-Storage-Source"] = storage_source
-    if auth_provider := request.headers.get("X-Auth-Provider"):
-        headers["X-Auth-Provider"] = auth_provider
-    
-    # Check for X-Owner header from UI, otherwise generate UUID
-    incoming_owner = request.headers.get("X-Owner")
-    if incoming_owner and "@gmail.com" in incoming_owner:
-        headers["X-Owner"] = incoming_owner
-        print(f"[DEBUG] Gateway: Using X-Owner from UI: '{incoming_owner}'")
-    else:
-        headers["X-Owner"] = str(uuid4())
-        print(f"[DEBUG] Gateway: No X-Owner from UI, generating UUID: '{headers['X-Owner']}'")
+    headers = _get_headers(request)
 
     files = {"file": (file.filename, file.file, file.content_type)}
 
-    print(f"[DEBUG] Gateway: Sending headers to file_ops: {headers}")
+    print(f"[DEBUG] Sending owner to file_ops: {headers.get("owner")}")
     try:
         response = requests.post(
             url=f"{settings.FILE_OPS_SERVER}/upload",
@@ -101,7 +83,6 @@ def upload_object_into_storage(request: Request, file: UploadFile = File(...)):
             headers=headers,
             timeout=60,
         )
-        print(f"[DEBUG] Gateway: file_ops response status: {response.status_code}")
         if response.status_code != status.HTTP_200_OK:
             detail = response.json().get("detail", "Unknown error") if "application/json" in response.headers.get("content-type", "") else response.text
             raise HTTPException(status_code=response.status_code, detail=detail)
@@ -120,18 +101,9 @@ def upload_object_into_storage(request: Request, file: UploadFile = File(...)):
 @gateway_router.delete("/delete_object")
 def delete_object_from_storage(request: Request, path: str = Query(...)):
     """Delete user's file or folder from Cloud"""
-    headers = {}
-    if auth := request.headers.get("Authorization"):
-        headers["Authorization"] = auth
-    if storage_source := request.headers.get("X-Storage-Source"):
-        headers["X-Storage-Source"] = storage_source
-    if auth_provider := request.headers.get("X-Auth-Provider"):
-        headers["X-Auth-Provider"] = auth_provider
-    if owner := request.headers.get("X-Owner") and "@gmail.com" in owner:
-        headers["X-Owner"] = owner
-    else:
-        headers["X-Owner"] = str(uuid4())
+    headers = _get_headers(request)
 
+    print(f"[DEBUG] Sending owner to file_ops: {headers.get("owner")}")
     try:
         response = requests.delete(
             url=f"{settings.FILE_OPS_SERVER}/delete",
@@ -157,18 +129,9 @@ def delete_object_from_storage(request: Request, path: str = Query(...)):
 @gateway_router.put("/rename_object")
 def rename_object_in_storage(request: Request, path: str = Query(...), new_name: str = Query(...)):
     """Rename a file in cloud storage"""
-    headers = {}
-    if auth := request.headers.get("Authorization"):
-        headers["Authorization"] = auth
-    if storage_source := request.headers.get("X-Storage-Source"):
-        headers["X-Storage-Source"] = storage_source
-    if auth_provider := request.headers.get("X-Auth-Provider"):
-        headers["X-Auth-Provider"] = auth_provider
-    if owner := request.headers.get("X-Owner") and "@gmail.com" in owner:
-        headers["X-Owner"] = owner
-    else:
-        headers["X-Owner"] = str(uuid4())
+    headers = _get_headers(request)
 
+    print(f"[DEBUG] Sending owner to file_ops: {headers.get("owner")}")
     try:
         response = requests.put(
             url=f"{settings.FILE_OPS_SERVER}/rename",
@@ -194,18 +157,9 @@ def rename_object_in_storage(request: Request, path: str = Query(...), new_name:
 @gateway_router.get("/download_object")
 def download_object_from_storage(request: Request, path: str = Query(...)):
     """Download a file from cloud storage and stream it back to the client."""
-    headers = {}
-    if auth := request.headers.get("Authorization"):
-        headers["Authorization"] = auth
-    if storage_source := request.headers.get("X-Storage-Source"):
-        headers["X-Storage-Source"] = storage_source
-    if auth_provider := request.headers.get("X-Auth-Provider"):
-        headers["X-Auth-Provider"] = auth_provider
-    if owner := request.headers.get("X-Owner") and "@gmail.com" in owner:
-        headers["X-Owner"] = owner
-    else:
-        headers["X-Owner"] = str(uuid4())
+    headers = _get_headers(request)
 
+    print(f"[DEBUG] Sending owner to file_ops: {headers.get("owner")}")
     try:
         response = requests.get(
             url=f"{settings.FILE_OPS_SERVER}/download",
