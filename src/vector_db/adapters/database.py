@@ -164,22 +164,15 @@ class DataBase:
 
 
     def delete_object(self, object: DeleteObject) -> ObjectDeleted:
-        print("[DEBUG] Deleting object")
         conn = self._get_connection()
         try:
             path = object.path
-            if object.owner:
-                conn.execute(
-                    f"DELETE FROM {self.table} WHERE (file_path = %s OR file_path LIKE %s) AND owner = %s",
-                    (path, f"{path}#chunk=%", object.owner),
-                )
-            else:
-                conn.execute(
-                    f"DELETE FROM {self.table} WHERE file_path = %s OR file_path LIKE %s",
-                    (path, f"{path}#chunk=%"),
-                )
+            cur = conn.execute(
+                f"DELETE FROM {self.table} WHERE file_path = %s AND owner = %s",
+                (path, object.owner),
+            )
             file_name = path.split("/")[-1]
-            return ObjectDeleted(name=file_name)
+            return ObjectDeleted(name=file_name, chunks_removed=cur.rowcount)
         finally:
             conn.close()
 

@@ -133,3 +133,56 @@ class TestGetEventsByOwner:
 
         db.get_events_by_owner("test", "file_ops")
         mock_conn.close.assert_called_once()
+
+
+class TestCleanupOldEvents:
+    def test_cleanup_deletes_old_events(self, db_and_mock):
+        db, mock_psycopg = db_and_mock
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.rowcount = 100
+        mock_cursor.__enter__ = lambda self: self
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+        mock_conn.execute.return_value = mock_cursor
+        mock_psycopg.connect.return_value = mock_conn
+
+        result = db.cleanup_old_events(retention_days=30)
+        assert result == 100
+
+    def test_cleanup_batch_delete(self, db_and_mock):
+        db, mock_psycopg = db_and_mock
+        mock_conn = MagicMock()
+
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__ = lambda self: self
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+
+        call_count = 0
+        def execute_side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                mock_cursor.rowcount = 1000
+            else:
+                mock_cursor.rowcount = 500
+            return mock_cursor
+
+        mock_conn.execute.side_effect = execute_side_effect
+        mock_psycopg.connect.return_value = mock_conn
+
+        result = db.cleanup_old_events(retention_days=7, batch_size=1000)
+        assert result == 1500
+        assert call_count == 2
+
+    def test_cleanup_stops_when_no_more_rows(self, db_and_mock):
+        db, mock_psycopg = db_and_mock
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.rowcount = 500
+        mock_cursor.__enter__ = lambda self: self
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+        mock_conn.execute.return_value = mock_cursor
+        mock_psycopg.connect.return_value = mock_conn
+
+        result = db.cleanup_old_events(retention_days=30, batch_size=1000)
+        assert result == 500

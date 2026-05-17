@@ -96,10 +96,6 @@ class DataBase:
 
 
     def cleanup_old_events(self, retention_days: int, batch_size: int = 1000) -> int:
-        """Delete events older than retention_days in batches to avoid long locks.
-
-        Returns total number of deleted rows.
-        """
         conn = self._get_connection()
         total_deleted = 0
         try:
@@ -109,16 +105,15 @@ class DataBase:
                         DELETE FROM {}
                         WHERE id IN (
                             SELECT id FROM {}
-                            WHERE created_at < NOW() - INTERVAL '{} days'
+                            WHERE created_at < NOW() - %s * INTERVAL '1 day'
                             ORDER BY created_at ASC
                             LIMIT %s
                         )
                     ''').format(
                         sql.Identifier(self.table),
                         sql.Identifier(self.table),
-                        sql.Literal(retention_days),
                     ),
-                    (batch_size,),
+                    (retention_days, batch_size),
                 ) as cur:
                     deleted = cur.rowcount
                     total_deleted += deleted

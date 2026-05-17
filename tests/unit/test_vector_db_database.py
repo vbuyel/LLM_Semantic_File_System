@@ -115,20 +115,28 @@ class TestDeleteObject:
     def test_delete_with_owner(self, db_and_mocks):
         db, mock_psycopg, _ = db_and_mocks
         mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.rowcount = 5
+        mock_conn.execute.return_value = mock_cursor
         mock_psycopg.connect.return_value = mock_conn
         from src.vector_db.domain.domain import DeleteObject
         obj = DeleteObject(path="/p/f.txt", storage_type="gcs", owner="u")
         result = db.delete_object(obj)
         assert result.name == "f.txt"
+        assert result.chunks_removed == 5
 
     def test_delete_without_owner(self, db_and_mocks):
         db, mock_psycopg, _ = db_and_mocks
         mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.rowcount = 3
+        mock_conn.execute.return_value = mock_cursor
         mock_psycopg.connect.return_value = mock_conn
         from src.vector_db.domain.domain import DeleteObject
         obj = DeleteObject(path="/p/f.txt", storage_type="gcs")
         result = db.delete_object(obj)
         assert result.name == "f.txt"
+        assert result.chunks_removed == 3
 
 
 class TestRenameObject:
