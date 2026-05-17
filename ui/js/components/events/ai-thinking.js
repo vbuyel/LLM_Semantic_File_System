@@ -1,7 +1,7 @@
 import { createEventQueue } from './base.js';
 
 export const AIThinking = {
-    ...createEventQueue('agent', 'Agent is researching your files...'),
+    ...createEventQueue('agent', 'Processing your request...'),
 
     render() {
         return `
