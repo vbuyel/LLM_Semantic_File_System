@@ -16,7 +16,6 @@ class WebSearch:
         self._kafka = Kafka()
         self._started = False
         self._start_event = "Searching in web..."
-        # self._end_event = "Done! Preparing for the answering..."
 
 
     async def _ensure_started(self):

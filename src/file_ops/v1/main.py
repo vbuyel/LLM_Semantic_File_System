@@ -92,7 +92,7 @@ async def upload_file(
         if storage_source == "drive":
             if not user.get("token"):
                 raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google access token required for Drive upload")
-            owner = user.get("email")
+            owner = user.get("owner")
             drive_ops = GoogleDriveOperations(access_token=user["token"])
             result = await drive_ops.upload_file(
                 source_path=temp_path,
@@ -103,7 +103,6 @@ async def upload_file(
         elif storage_source == "gcs":
             result = await gcs_ops.upload_file(
                 source_path=temp_path,
-                owner=owner,
                 dest_name=file.filename,
                 mime_type=file.content_type,
             )
@@ -150,7 +149,6 @@ async def update_file(
         elif storage_source == "gcs":
             result = await gcs_ops.update_file(
                 source_path=temp_path,
-                owner=owner,
                 dest_name=file_id,
                 mime_type=file.content_type,
             )
@@ -201,10 +199,9 @@ async def delete_file(
     user=Depends(_get_current_user),
 ):
     storage_source = user["storage_source"]
-    owner = user.get("owner")
     try:
         if storage_source == "gcs":
-            await gcs_ops.delete_file(path, owner=owner)
+            await gcs_ops.delete_file(path)
         elif storage_source == "drive":
             if not user.get("token"):
                 raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Access token required for Google Drive")
@@ -230,7 +227,7 @@ async def rename_file(
     print(f"[DEBUG] Rename request: storage={storage_source}, path={path}, new_name={new_name}")
     try:
         if storage_source == "gcs":
-            result = await gcs_ops.rename_file(path, new_name, owner=owner)
+            result = await gcs_ops.rename_file(path, new_name)
         elif storage_source == "drive":
             if not user.get("token"):
                 raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Access token required for Google Drive")

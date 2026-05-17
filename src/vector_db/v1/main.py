@@ -99,11 +99,6 @@ async def _run_consumer_loop():
                 payload = data.get("payload", {})
                 action = payload.get("action", "NOT FOUND")
 
-                if action == "uploading":
-                    action = "upload"
-                elif action == "updating":
-                    action = "update"
-
                 if action == "upload":
                     print("File is starting to upload")
                     chunk_index = payload.get("chunk_index", 0)
@@ -179,7 +174,6 @@ async def _run_consumer_loop():
                         "correlation_id": correlation_id,
                         "data": results.model_dump(mode="json"),
                     }
-                    await producer.send(event_topic, {"owner": payload.get("owner"), "ms_type": "agent", "event": "Found info in files"})
                 else:
                     raise Exception(f"Action {action} is not supported in vector db")
 

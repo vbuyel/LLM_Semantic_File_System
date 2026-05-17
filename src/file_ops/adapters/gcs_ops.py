@@ -21,6 +21,7 @@ class GCSOperations:
         self._bucket = None
         self._executor = ThreadPoolExecutor(max_workers=2)
         self.kafka = KafkaOperations()
+        self.owner_ops = "guest"
 
 
     @property
@@ -43,21 +44,19 @@ class GCSOperations:
     async def upload_file(
         self,
         source_path: str,
-        owner: Optional[str] = None,
         dest_name: Optional[str] = None,
         mime_type: Optional[str] = None,
     ) -> dict:
-        return await self._process_file_action("upload", source_path, owner, dest_name, mime_type)
+        return await self._process_file_action("upload", source_path, self.owner_ops, dest_name, mime_type)
 
 
     async def update_file(
         self,
         source_path: str,
-        owner: Optional[str] = None,
         dest_name: Optional[str] = None,
         mime_type: Optional[str] = None,
     ) -> dict:
-        return await self._process_file_action("update", source_path, owner, dest_name, mime_type)
+        return await self._process_file_action("update", source_path, self.owner_ops, dest_name, mime_type)
 
 
     async def _process_file_action(
@@ -157,7 +156,7 @@ class GCSOperations:
         return (content, file_name, mime_type)
 
 
-    async def delete_file(self, file_path: str, owner: Optional[str] = None) -> None:
+    async def delete_file(self, file_path: str) -> None:
         if not file_path:
             raise ValueError("file_path cannot be empty")
 
@@ -173,7 +172,7 @@ class GCSOperations:
                     file_name=file_path,
                     file_path=f"gs://{self.bucket_name}/{file_path}",
                     text="",
-                    owner=owner,
+                    owner=self.owner_ops,
                     storage_type="gcs",
                 )
             )
@@ -184,7 +183,7 @@ class GCSOperations:
             raise FileNotFoundError(f"File not found in bucket: {file_path}")
 
 
-    async def rename_file(self, file_path: str, new_name: str, owner: Optional[str] = None) -> dict:
+    async def rename_file(self, file_path: str, new_name: str) -> dict:
         if not file_path:
             raise ValueError("file_path cannot be empty")
         if not new_name:
@@ -203,7 +202,7 @@ class GCSOperations:
                     file_name=new_name,
                     file_path=f"gs://{self.bucket_name}/{file_path}",
                     text="",
-                    owner=owner,
+                    owner=self.owner_ops,
                     storage_type="gcs",
                 )
             )

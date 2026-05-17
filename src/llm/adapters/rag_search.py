@@ -10,7 +10,6 @@ class RAGSearch:
         self._started = False
         self.command = "search"
         self._start_event = "Searching in your files..."
-        # self._end_event = "Done searching your files! Preparing the answer..."
 
 
     async def _ensure_started(self):
@@ -23,9 +22,7 @@ class RAGSearch:
         await self._ensure_started()
         try:
             await self._kafka.send_event(self._start_event, owner)
-            time.sleep(2)
-            temp_owner = owner if "@gmail.com" in owner else "guest"
-            data = await self._kafka.send_command(self.command, query, temp_owner)
+            data = await self._kafka.send_command(self.command, query, owner)
             if isinstance(data, str):
                 return RAGResponse(text=data)
 
@@ -44,7 +41,6 @@ class RAGSearch:
                     f"Content:\n{text_chunk}\n"
                 )
             
-            # await self._kafka.send_event(self._end_event, owner)
             return RAGResponse(text="\n\n".join(parts))
         except Exception as exc:
             return RAGResponse(text=f"RAG unavailable: {exc}")
