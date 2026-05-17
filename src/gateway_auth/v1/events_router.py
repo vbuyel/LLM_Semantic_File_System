@@ -10,20 +10,23 @@ EVENT_DB_WS = os.getenv("EVENT_DB_WS_URL", settings.EVENT_DB_WS_URL)
 # Each entry: {"ws": WebSocket, "correlation_id": str}
 _clients: dict[str, list[dict]] = {}
 
+
 @event_router.get("/user/{owner}")
 async def get_user_events(owner: str, ms_type: str = Query(...), limit: int = Query(100), offset: int = Query(0)):
     async with httpx.AsyncClient() as c:
         r = await c.get(f"{EVENT_DB_URL}/events/user/{owner}", params={"ms_type": ms_type, "limit": limit, "offset": offset})
         return r.json()
 
+
 @event_router.websocket("/ws/{owner}")
-async def ws_handler(ws: WebSocket, owner: str):
+async def ws_handler(ws: WebSocket, owner: str, correlation_id: str | None = Query(None)):
     await ws.accept()
-    correlation_id = str(uuid.uuid4())
-    _clients.setdefault(owner, []).append({"ws": ws, "correlation_id": correlation_id})
+    # Use correlation_id from query param if provided, otherwise generate new
+    client_corr_id = correlation_id or str(uuid.uuid4())
+    _clients.setdefault(owner, []).append({"ws": ws, "correlation_id": client_corr_id})
 
     # Send correlation_id to client for event filtering
-    await ws.send_json({"type": "init", "correlation_id": correlation_id})
+    await ws.send_json({"type": "init", "correlation_id": client_corr_id})
 
     try:
         async with httpx.AsyncClient() as c:
@@ -39,6 +42,7 @@ async def ws_handler(ws: WebSocket, owner: str):
             await ws.receive_text()
     except WebSocketDisconnect:
         _clients[owner] = [c for c in _clients.get(owner, []) if c["ws"] is not ws]
+
 
 async def relay_events():
     while True:
@@ -64,12 +68,15 @@ async def relay_events():
             print(f"[relay] Error: {e}")
             await asyncio.sleep(3)
 
+
 _task: asyncio.Task | None = None
+
 
 def start_relay():
     global _task
     if _task is None:
         _task = asyncio.create_task(relay_events())
+
 
 def stop_relay():
     global _task

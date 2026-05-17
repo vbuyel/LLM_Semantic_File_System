@@ -39,9 +39,11 @@ def _get_headers(request: Request, headers: Optional[dict[str]] = {}) -> dict[st
 @gateway_router.post("/ai_agent")
 def call_ai_agent(request: Request, user_request: UserRequest) -> ResponseToUser:
     """Calling AI Agent to get reponse from files or web search"""
+    headers = _get_headers(request)
+    owner = headers.get("X-Owner", "guest")
     payload = {
         "text": user_request.text,
-        "owner": "guest",
+        "owner": owner,
     }
 
     print(f"[DEBUG] Sending owner to agent: {payload.get('owner')}")
@@ -101,7 +103,7 @@ def upload_object_into_storage(request: Request, file: UploadFile = File(...)):
 
     files = {"file": (file.filename, file.file, file.content_type)}
 
-    print(f"[DEBUG] Sending owner to file_ops: {headers.get("owner")}")
+    print(f"[DEBUG] Sending owner to file_ops: {headers.get('X-Owner')}")
     try:
         response = requests.post(
             url=f"{settings.FILE_OPS_SERVER}/upload",
@@ -129,7 +131,7 @@ def delete_object_from_storage(request: Request, path: str = Query(...)):
     """Delete user's file or folder from Cloud"""
     headers = _get_headers(request)
 
-    print(f"[DEBUG] Sending owner to file_ops: {headers.get("owner")}")
+    print(f"[DEBUG] Sending owner to file_ops: {headers.get('X-Owner')}")
     try:
         response = requests.delete(
             url=f"{settings.FILE_OPS_SERVER}/delete",
@@ -157,7 +159,7 @@ def rename_object_in_storage(request: Request, path: str = Query(...), new_name:
     """Rename a file in cloud storage"""
     headers = _get_headers(request)
 
-    print(f"[DEBUG] Sending owner to file_ops: {headers.get("owner")}")
+    print(f"[DEBUG] Sending owner to file_ops: {headers.get('X-Owner')}")
     try:
         response = requests.put(
             url=f"{settings.FILE_OPS_SERVER}/rename",
@@ -185,7 +187,7 @@ def download_object_from_storage(request: Request, path: str = Query(...)):
     """Download a file from cloud storage and stream it back to the client."""
     headers = _get_headers(request)
 
-    print(f"[DEBUG] Sending owner to file_ops: {headers.get("owner")}")
+    print(f"[DEBUG] Sending owner to file_ops: {headers.get('X-Owner')}")
     try:
         response = requests.get(
             url=f"{settings.FILE_OPS_SERVER}/download",

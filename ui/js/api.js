@@ -160,9 +160,13 @@ export const api = {
         },
         connect(owner, onMessage) {
             let ws;
+            const corrId = Events.getCorrelationId();
 
             function _connect() {
-                ws = new WebSocket(`${WS_SERVER}/events/ws/${encodeURIComponent(owner)}`);
+                const wsUrl = corrId
+                    ? `${WS_SERVER}/events/ws/${encodeURIComponent(owner)}?correlation_id=${corrId}`
+                    : `${WS_SERVER}/events/ws/${encodeURIComponent(owner)}`;
+                ws = new WebSocket(wsUrl);
 
                 ws.onmessage = (event) => {
                     try {
