@@ -10,6 +10,7 @@
 
 <p align="center">
   <strong>An Intelligent, Event-Driven Microservices Platform with AI-Powered Semantic Search & Multi-Storage Support</strong>
+  <p>Copyright © 2026 Vladislav Buyel. All Rights Reserved.</p>
 </p>
 
 ---
