@@ -25,23 +25,28 @@ async def ws_handler(ws: WebSocket, owner: str, correlation_id: str | None = Que
     client_corr_id = correlation_id or str(uuid.uuid4())
     _clients.setdefault(owner, []).append({"ws": ws, "correlation_id": client_corr_id})
 
-    # Send correlation_id to client for event filtering
-    await ws.send_json({"type": "init", "correlation_id": client_corr_id})
-
     try:
-        async with httpx.AsyncClient() as c:
-            r = await c.get(f"{EVENT_DB_URL}/events/user/{owner}", params={"ms_type": "file_ops", "limit": 1})
-            ev = r.json().get("events", [])
-            if ev:
-                await ws.send_json({"type": "events", "data": ev[0]})
-    except Exception:
-        pass
+        # Send correlation_id to client for event filtering
+        await ws.send_json({"type": "init", "correlation_id": client_corr_id})
 
-    try:
+        try:
+            async with httpx.AsyncClient() as c:
+                r = await c.get(f"{EVENT_DB_URL}/events/user/{owner}", params={"ms_type": "file_ops", "limit": 1})
+                ev = r.json().get("events", [])
+                if ev:
+                    await ws.send_json({"type": "events", "data": ev[0]})
+        except Exception:
+            pass
+
         while True:
             await ws.receive_text()
-    except WebSocketDisconnect:
-        _clients[owner] = [c for c in _clients.get(owner, []) if c["ws"] is not ws]
+    except (WebSocketDisconnect, Exception):
+        pass
+    finally:
+        if owner in _clients:
+            _clients[owner] = [c for c in _clients.get(owner, []) if c["ws"] is not ws]
+            if not _clients[owner]:
+                del _clients[owner]
 
 
 async def relay_events():

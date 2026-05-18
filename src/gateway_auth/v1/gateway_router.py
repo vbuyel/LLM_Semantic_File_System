@@ -14,7 +14,12 @@ gateway_router = APIRouter()
 
 import uuid
 
-def _get_headers(request: Request, headers: Optional[dict[str]] = {}) -> dict[str]:
+def _get_headers(request: Request, headers: Optional[dict[str, str]] = None) -> dict[str, str]:
+    if headers is None:
+        headers = {}
+    else:
+        headers = headers.copy()
+
     if auth := request.headers.get("Authorization"):
         headers["Authorization"] = auth
     if storage_source := request.headers.get("X-Storage-Source"):
