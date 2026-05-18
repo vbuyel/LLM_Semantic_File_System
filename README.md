@@ -50,30 +50,40 @@ Semantic FS is a microservices-based application with the following components:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         Frontend (UI)                          │
-│                    http://localhost:5500                        │
+│                          Frontend (UI)                          │
+│                     http://localhost:5500                       │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Gateway (Port 8000)                         │
-│               Authentication & Request Routing                 │
+│                     Gateway (Port 8000)                         │
+│                Authentication & Request Routing                 │
 └─────────────────────────────────────────────────────────────────┘
-         │                    │                    │
-         ▼                    ▼                    ▼
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│   LLM Svc    │    │  File Ops    │    │  Vector DB   │
-│   (8001)     │    │   (8002)     │    │   (8004)     │
-│              │    │              │    │              │
-│ AI Agent     │    │ Upload/Down  │    │ Semantic     │
-│ Web Search   │    │ List/Delete  │    │ Search       │
-│ RAG Search   │    │ Rename       │    │ Embeddings   │
-└──────────────┘    └──────────────┘    └──────────────┘
-         │                    │                    │
-         ▼                    ▼                    ▼
+                    │                    │
+                    ▼                    ▼
+              ┌──────────────┐    ┌──────────────┐
+              │   AI Agent   │    │   File Ops   │
+              │    (8001)    │    │    (8002)    │
+              │              │    │              │
+              │              │    │ Upload/Down  │
+              │ Web Search   │    │ List/Delete  │
+              │ RAG Search   │    │ Rename       │
+              └──────────────┘    └──────────────┘
+                    │                    │
+                    ▼                    ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Kafka Broker (Events)                       │
+│                     Kafka Broker (Events)                       │
 └─────────────────────────────────────────────────────────────────┘
+                   │                    │
+                   ▼                    ▼
+            ┌──────────────┐    ┌──────────────┐
+            │  Event DB    │    │  Vector DB   │
+            │   (8003)     │    │   (8004)     │
+            │              │    │              │
+            │ Upload/Down  │    │ Semantic     │
+            │ List/Delete  │    │ Search       │
+            │ Rename       │    │ Embeddings   │
+            └──────────────┘    └──────────────┘
 ```
 
 **Technology Stack:**
