@@ -143,6 +143,8 @@ async def list_files(
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unsupported storage source: {storage_source}")
         file_items = [FileItem(**f) for f in files] if files else []
         return ListFilesResponse(files=file_items, storage_type=storage_source)
+    except HTTPException:
+        raise
     except NotImplementedError as e:
         raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, str(e))
     except ValueError as e:
@@ -168,6 +170,8 @@ async def delete_file(
         else:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unsupported storage source: {storage_source}")
         return {"message": f"File {path} deleted from {storage_source}"}
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
     except Exception as e:
@@ -194,6 +198,8 @@ async def rename_file(
         else:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unsupported storage source: {storage_source}")
         return {"message": f"File renamed to {new_name}", **result}
+    except HTTPException:
+        raise
     except FileNotFoundError as e:
         print(f"[ERROR] FileNotFoundError: {e}")
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
