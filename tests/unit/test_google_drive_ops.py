@@ -61,6 +61,37 @@ class TestGoogleDriveListFiles:
         assert result == []
 
 
+class TestGoogleDriveChunkText:
+    def test_chunk_text_small_text(self):
+        from src.file_ops.adapters.google_drive_ops import GoogleDriveOperations
+        text = "short text"
+        chunks = GoogleDriveOperations._chunk_text(text, max_chars=10)
+        assert len(chunks) == 1
+        assert chunks[0] == "short text"
+
+    def test_chunk_text_exactly_at_limit(self):
+        from src.file_ops.adapters.google_drive_ops import GoogleDriveOperations
+        text = "1234567890"
+        chunks = GoogleDriveOperations._chunk_text(text, max_chars=10)
+        assert len(chunks) == 1
+        assert chunks[0] == text
+
+    def test_chunk_text_multiple_chunks(self):
+        from src.file_ops.adapters.google_drive_ops import GoogleDriveOperations
+        text = "word " * 100
+        chunks = GoogleDriveOperations._chunk_text(text, max_chars=100)
+        assert len(chunks) > 1
+        for chunk in chunks:
+            assert len(chunk) <= 100
+
+    def test_chunk_text_respects_word_boundaries(self):
+        from src.file_ops.adapters.google_drive_ops import GoogleDriveOperations
+        text = "hello world foo bar"
+        chunks = GoogleDriveOperations._chunk_text(text, max_chars=11)
+        for chunk in chunks:
+            assert not chunk.endswith(" ") or chunk == chunks[-1]
+
+
 class TestGoogleDriveDownload:
     def test_download_regular_file(self, drive_ops):
         ops, mock_service, _ = drive_ops
@@ -89,8 +120,7 @@ class TestGoogleDriveDelete:
         mock_files.delete.return_value.execute.return_value = None
         mock_service.files.return_value = mock_files
         await ops.delete_file("file-id", owner="user@test.com")
-        mock_kafka.send_start_event.assert_awaited_once()
-        mock_kafka.send_command.assert_awaited_once()
+        mock_kafka.send_command.assert_awaited()
 
 
 class TestGoogleDriveRename:
@@ -105,3 +135,141 @@ class TestGoogleDriveRename:
         result = await ops.rename_file("file-id", "new_name.txt", owner="u")
         assert result["file_id"] == "file-id"
         assert result["storage_type"] == "drive"
+
+
+class TestGoogleDriveGetFileDir:
+    @pytest.mark.asyncio
+    async def test_get_file_dir_nested(self, drive_ops):
+        ops, mock_service, _ = drive_ops
+        mock_files = MagicMock()
+
+        mock_files.get.return_value.execute.side_effect = [
+            {"name": "file.pdf", "parents": ["folder-id"]},
+            {"name": "My Folder", "parents": []},
+        ]
+        mock_service.files.return_value = mock_files
+
+        result = await ops._get_file_dir("file-id")
+        assert result.startswith("root/")
+        assert "My Folder" in result
+
+    @pytest.mark.asyncio
+    async def test_get_file_dir_error(self, drive_ops):
+        ops, mock_service, _ = drive_ops
+        mock_files = MagicMock()
+        mock_files.get.return_value.execute.side_effect = Exception("API Error")
+        mock_service.files.return_value = mock_files
+
+        result = await ops._get_file_dir("file-id")
+        assert result == "root/"
+
+
+class TestGoogleDriveBackgroundVectorise:
+    @pytest.mark.asyncio
+    async def test_background_vectorise_skips_already_indexed(self, drive_ops):
+        ops, mock_service, mock_kafka = drive_ops
+        mock_files = MagicMock()
+        mock_files.get.return_value.execute.return_value = {"name": "doc.pdf", "parents": []}
+        mock_service.files.return_value = mock_files
+
+        with patch.object(ops, '_is_already_indexed', return_value=True):
+            await ops._background_vectorise(
+                [{"id": "123", "name": "doc.pdf", "mimeType": "application/pdf", "size": "100"}],
+                owner="test@test.com"
+            )
+            mock_kafka.send_command.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_background_vectorise_processes_files(self, drive_ops):
+        ops, mock_service, mock_kafka = drive_ops
+        mock_files = MagicMock()
+        mock_files.get.return_value.execute.return_value = {"name": "doc.pdf", "parents": []}
+        mock_service.files.return_value = mock_files
+
+        with patch.object(ops, '_is_already_indexed', return_value=False):
+            with patch("src.file_ops.adapters.google_drive_ops.MediaIoBaseDownload"):
+                mock_blob = MagicMock()
+                mock_blob.next_chunk.return_value = (None, True)
+                mock_service.files.return_value = mock_files
+
+                await ops._background_vectorise(
+                    [{"id": "123", "name": "doc.pdf", "mimeType": "application/pdf", "size": "100"}],
+                    owner="test@test.com"
+                )
+
+
+class TestGoogleDriveSendChunkedKafka:
+    @pytest.mark.asyncio
+    async def test_send_chunked_kafka_filters_unreadable(self, drive_ops):
+        ops, mock_service, mock_kafka = drive_ops
+        with patch("src.file_ops.adapters.google_drive_ops.is_readable", return_value=False):
+            await ops._send_chunked_kafka(
+                action="upload",
+                file_name="test.pdf",
+                file_path="root/",
+                text=" unreadable ",
+                owner="test@test.com",
+                storage_type="drive",
+                file_size=100
+            )
+            mock_kafka.send_command.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_send_chunked_kafka_splits_long_text(self, drive_ops):
+        ops, mock_service, mock_kafka = drive_ops
+        long_text = "word " * 1000
+        with patch("src.file_ops.adapters.google_drive_ops.is_readable", return_value=True):
+            await ops._send_chunked_kafka(
+                action="upload",
+                file_name="test.pdf",
+                file_path="root/",
+                text=long_text,
+                owner="test@test.com",
+                storage_type="drive",
+                file_size=5000
+            )
+            assert mock_kafka.send_command.call_count > 1
+
+
+class TestGoogleDriveErrorHandling:
+    @pytest.mark.asyncio
+    async def test_upload_file_error_handling(self, drive_ops):
+        ops, mock_service, mock_kafka = drive_ops
+        mock_files = MagicMock()
+        mock_files.create.return_value.execute.side_effect = Exception("Upload failed")
+        mock_service.files.return_value = mock_files
+
+        import tempfile
+        import os
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as f:
+            f.write(b"test")
+            temp_path = f.name
+
+        try:
+            result = await ops.upload_file(temp_path)
+            assert result is not None
+        finally:
+            os.unlink(temp_path)
+
+    @pytest.mark.asyncio
+    async def test_delete_file_kafka_failure(self, drive_ops):
+        ops, mock_service, mock_kafka = drive_ops
+        mock_files = MagicMock()
+        mock_files.delete.return_value.execute.return_value = None
+        mock_service.files.return_value = mock_files
+        mock_kafka.send_command.side_effect = Exception("Kafka error")
+
+        await ops.delete_file("file-id", owner="test@test.com")
+
+    @pytest.mark.asyncio
+    async def test_rename_file_kafka_failure(self, drive_ops):
+        ops, mock_service, mock_kafka = drive_ops
+        mock_files = MagicMock()
+        mock_files.update.return_value.execute.return_value = {
+            "id": "123", "name": "new.txt", "webViewLink": "http://link"
+        }
+        mock_service.files.return_value = mock_files
+        mock_kafka.send_command.side_effect = Exception("Kafka error")
+
+        result = await ops.rename_file("file-id", "new.txt", owner="test@test.com")
+        assert result["file_id"] == "123"

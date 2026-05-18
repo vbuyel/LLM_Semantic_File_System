@@ -93,6 +93,8 @@ class KafkaOperations:
                     "storage_type": data.storage_type,
                     "chunk_index": data.chunk_index,
                     "file_size": data.file_size,
+                    "new_path": data.new_path,
+                    "old_file_name": data.old_file_name,
                 },
             }
             await self._producer.send(self._request_topic, command)

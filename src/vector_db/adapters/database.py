@@ -109,15 +109,25 @@ class DataBase:
         print("[DEBUG] Searching for simular text")
         conn = self._get_connection()
         try:
-            result = conn.execute(f'''
-                SELECT id, owner, file_name, file_path, text_chunk
-                FROM {self.table}
-                WHERE owner = %s
-                ORDER BY embedding <=> %s ASC
-                LIMIT %s
-                ''',
-                (owner, np.array(embedding, dtype=np.float32), limit),
-            )
+            if owner is None:
+                result = conn.execute(f'''
+                    SELECT id, owner, file_name, file_path, text_chunk
+                    FROM {self.table}
+                    ORDER BY embedding <=> %s ASC
+                    LIMIT %s
+                    ''',
+                    (np.array(embedding, dtype=np.float32), limit),
+                )
+            else:
+                result = conn.execute(f'''
+                    SELECT id, owner, file_name, file_path, text_chunk
+                    FROM {self.table}
+                    WHERE owner = %s
+                    ORDER BY embedding <=> %s ASC
+                    LIMIT %s
+                    ''',
+                    (owner, np.array(embedding, dtype=np.float32), limit),
+                )
             return RAGResults(data=[DocMetadata(**row) for row in result])
         finally:
             conn.close()
@@ -129,7 +139,7 @@ class DataBase:
         if not text:
             raise ValueError("No text provided to upload")
 
-        if object.file_size and self._file_exists(object.file_path, object.file_name, object.file_size):
+        if object.file_size is not None and object.file_size > 0 and self._file_exists(object.file_path, object.file_name, object.file_size):
             print(f"[DEBUG] Skipping {object.file_path}: already indexed (size={object.file_size})")
             return ObjectUploaded(name=object.file_name, chunks_added=0)
 
@@ -210,6 +220,8 @@ class DataBase:
                 parts = object.new_path.rsplit("/", 1)
                 new_dir = parts[0] + "/" if len(parts) > 1 else ""
                 new_file_name = parts[-1] if parts[-1] else object.new_name
+                if not new_file_name:
+                    new_file_name = object.new_name
             else:
                 new_dir = "root/"
                 new_file_name = object.new_name

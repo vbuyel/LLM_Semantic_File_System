@@ -318,10 +318,18 @@ class GoogleDriveOperations:
 
 
     async def delete_file(self, file_path: str, owner: Optional[str] = None) -> None:
+        try:
+            file_meta = self.service.files().get(
+                fileId=file_path,
+                fields="name,parents"
+            ).execute()
+        except Exception as e:
+            logger.warning(f"Failed to get file metadata: {e}")
+            file_meta = {"name": file_path, "parents": []}
+
+        file_name = file_meta.get("name", file_path)
         dir_path = await self._get_file_dir(file_path)
-        file_name = dir_path.split("/")[-1]
-        print(f"[DEBUG] deleting file {file_name} on path: {dir_path}")
-        
+
         self.service.files().delete(fileId=file_path).execute()
         try:
             await self.kafka.send_command(
@@ -339,11 +347,18 @@ class GoogleDriveOperations:
 
 
     async def rename_file(self, file_path: str, new_name: str, owner: Optional[str] = None) -> dict:
-        print(f"[DEBUG] GoogleDrive rename: file_path={file_path}, new_name={new_name}")
+        try:
+            file_meta = self.service.files().get(
+                fileId=file_path,
+                fields="name,parents"
+            ).execute()
+        except Exception as e:
+            logger.warning(f"Failed to get file metadata: {e}")
+            file_meta = {"name": file_path, "parents": []}
+
+        old_file_name = file_meta.get("name", file_path)
         dir_path = await self._get_file_dir(file_path)
-        old_file_name = dir_path.split("/")[-1]
-        print(f"[DEBUG] renaming file on path: {dir_path}")
-        
+
         file = self.service.files().update(
             fileId=file_path,
             body={"name": new_name},

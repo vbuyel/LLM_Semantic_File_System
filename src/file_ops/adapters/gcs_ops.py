@@ -154,9 +154,10 @@ class GCSOperations:
             raise ValueError("file_path cannot be empty")
 
         blob = self.bucket.blob(file_path)
-        file_existed = blob.exists()
-        if file_existed:
-            blob.delete()
+        if not blob.exists():
+            raise FileNotFoundError(f"File not found in bucket: {file_path}")
+
+        blob.delete()
 
         db_file_path = "root/"
         db_file_name = file_path.split("/")[-1]
@@ -173,9 +174,6 @@ class GCSOperations:
             )
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")
-
-        if not file_existed:
-            raise FileNotFoundError(f"File not found in bucket: {file_path}")
 
 
     async def rename_file(self, file_path: str, new_name: str, owner: Optional[str] = None) -> dict:

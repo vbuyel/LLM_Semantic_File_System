@@ -22,13 +22,16 @@ class UploadObject(BaseModel):
     text: str | None = None
     file_size: int = 0
 
-    def divide_into_chunks(self, text: str, chunk_size: int = 150, overlap: int = 20) -> List[str]:
+    def divide_into_chunks(self, text: str, chunk_size: int = 150, overlap: int = 20, min_chunk_size: int = 50) -> List[str]:
         words = text.split()
         chunks = []
         for i in range(0, len(words), chunk_size - overlap):
             chunk = " ".join(words[i : i + chunk_size])
             if chunk:
-                chunks.append(chunk)
+                if min_chunk_size and chunks and len(chunk.split()) < min_chunk_size:
+                    chunks[-1] += " " + chunk
+                else:
+                    chunks.append(chunk)
         return chunks
 
 class ObjectDeleted(BaseModel):

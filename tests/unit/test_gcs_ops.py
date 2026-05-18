@@ -1,5 +1,5 @@
 """
-Unit tests for src.file_ops.adapters.gcs_ops (GCSOperations).
+Unit tests for adapters.gcs_ops (GCSOperations).
 """
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
@@ -120,6 +120,17 @@ class TestGCSDelete:
         with pytest.raises(FileNotFoundError):
             await ops.delete_file("missing.txt")
 
+    @pytest.mark.asyncio
+    async def test_delete_file_exists_sends_kafka(self, gcs_ops):
+        ops, mock_bucket, mock_kafka = gcs_ops
+        mock_blob = MagicMock()
+        mock_blob.exists.return_value = True
+        mock_bucket.blob.return_value = mock_blob
+
+        await ops.delete_file("existing.txt")
+
+        assert mock_kafka.send_command.called
+
 
 class TestGCSRename:
     @pytest.mark.asyncio
@@ -142,3 +153,47 @@ class TestGCSRename:
         mock_bucket.blob.return_value = mock_blob
         with pytest.raises(FileNotFoundError):
             await ops.rename_file("missing.txt", "new.txt")
+
+    @pytest.mark.asyncio
+    async def test_rename_success(self, gcs_ops):
+        ops, mock_bucket, mock_kafka = gcs_ops
+        mock_blob = MagicMock()
+        mock_blob.exists.return_value = True
+        mock_bucket.blob.return_value = mock_blob
+        mock_bucket.rename_blob.return_value = MagicMock()
+
+        result = await ops.rename_file("old_name.txt", "new_name.txt")
+
+        assert result["file_id"] == "new_name.txt"
+        assert result["storage_type"] == "gcs"
+        assert mock_kafka.send_command.called
+
+
+class TestGCSErrorPropagation:
+    @pytest.mark.asyncio
+    async def test_upload_kafka_failure_does_not_raise(self, gcs_ops):
+        ops, mock_bucket, mock_kafka = gcs_ops
+        mock_kafka.send_command.side_effect = Exception("Kafka down")
+
+        import tempfile
+        import os
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as f:
+            f.write(b"test content")
+            temp_path = f.name
+
+        try:
+            result = await ops.upload_file(temp_path)
+            assert result["file_id"]
+        finally:
+            os.unlink(temp_path)
+
+    @pytest.mark.asyncio
+    async def test_delete_kafka_failure_still_raises_file_not_found(self, gcs_ops):
+        ops, mock_bucket, mock_kafka = gcs_ops
+        mock_blob = MagicMock()
+        mock_blob.exists.return_value = False
+        mock_bucket.blob.return_value = mock_blob
+        mock_kafka.send_command.side_effect = Exception("Kafka down")
+
+        with pytest.raises(FileNotFoundError):
+            await ops.delete_file("nonexistent.txt")
