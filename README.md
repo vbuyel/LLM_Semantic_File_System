@@ -18,9 +18,9 @@
 ## Table of Contents
 
 - [What is Semantic FS?](#-what-is-semantic-fs)
-  - [For End Users](#-for-end-users)
+  - [For End Users](###-For-End-Users)
   - [For Developers](#-for-developers)
-- [System Architecture](#️-system-architecture)
+- [System Architecture](-system-architecture)
   - [Microservice Architecture Diagram](#microservice-architecture-diagram)
   - [Event-Driven Data Flow](#event-driven-data-flow)
 - [Tech Stack & Microservices](#️-tech-stack--microservices)
