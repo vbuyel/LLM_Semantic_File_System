@@ -95,6 +95,16 @@ class App {
             <div class="layout-dashboard">
                 ${Sidebar.render()}
                 <main class="main-content">
+                    <header class="mobile-header">
+                        <button id="mobile-menu-toggle" class="mobile-header__toggle" aria-label="Open menu">
+                            <i data-lucide="menu"></i>
+                        </button>
+                        <div class="mobile-header__logo">
+                            <i data-lucide="layers" class="text-accent"></i>
+                            <span class="logo-text">Semantic FS</span>
+                        </div>
+                        <div style="width: 32px;"></div> <!-- visual spacer to balance the flex layout -->
+                    </header>
                     ${StatusBar.render()}
                     ${AIInterface.render()}
                     <div class="content-body">
@@ -122,6 +132,13 @@ class App {
                 await api.auth.logout();
                 state.set('user', null);
                 state.set('files', []);
+            };
+        }
+
+        const menuToggle = document.getElementById('mobile-menu-toggle');
+        if (menuToggle) {
+            menuToggle.onclick = () => {
+                Sidebar.toggle(true);
             };
         }
 

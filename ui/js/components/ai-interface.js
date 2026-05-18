@@ -6,6 +6,16 @@ export const AIInterface = {
     render() {
         const isSearching = state.get('isSearching');
         const searchResult = state.get('searchResult');
+        const user = state.get('user');
+
+        let aiSearchScopeMessage = '';
+        if (user) {
+            if (user.isGuest) {
+                aiSearchScopeMessage = "AI searches ONLY in Google Cloud Storage. AI can process ONLY human-readable files. File vectorization may take some time.";
+            } else {
+                aiSearchScopeMessage = "AI searches ONLY in Google Drive. AI can process ONLY human-readable files. File vectorization may take some time (depending on the number of files in Google Drive).";
+            }
+        }
 
         return `
             <div class="ai-bar-container">
@@ -18,6 +28,11 @@ export const AIInterface = {
                         <kbd>Enter</kbd>
                     </div>
                 </div>
+                ${aiSearchScopeMessage ? `
+                <div class="ai-bar__info-text fade-in">
+                    <i data-lucide="info" size="12"></i>
+                    <span>${aiSearchScopeMessage}</span>
+                </div>` : ''}
                 ${isSearching ? AIThinking.render() : ''}
                 ${searchResult ? this.renderSearchResults(searchResult) : ''}
             </div>
@@ -29,7 +44,7 @@ export const AIInterface = {
         const markdownHtml = result.text
             ? DOMPurify.sanitize(marked.parse(result.text))
             : 'Found some relevant files:';
-        
+
         return `
             <div class="search-results fade-in">
                 <div class="search-results__header">
