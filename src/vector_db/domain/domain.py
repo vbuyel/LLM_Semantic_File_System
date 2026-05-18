@@ -39,7 +39,7 @@ class DeleteObject(BaseModel):
     path: str
     file_name: str = ""
     storage_type: str
-    owner: str | None = None
+    owner: str
 
 class RenameObject(BaseModel):
     old_path: str

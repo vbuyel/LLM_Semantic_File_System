@@ -62,6 +62,7 @@ class GoogleDriveOperations:
             chunks.append(" ".join(current))
         return chunks
 
+
     async def _send_chunked_kafka(
         self, action: str, file_name: str, file_path: str, text: str,
         owner: Optional[str], storage_type: str, file_size: int = 0,
@@ -96,6 +97,7 @@ class GoogleDriveOperations:
                     f"Failed to send Kafka event (chunk {i+1}/{len(chunks)}): {e}"
                 )
 
+
     def _download_file_with_retry(
         self, file_id: str, mime_type: Optional[str] = None,
         file_name: Optional[str] = None, max_retries: int = 3,
@@ -115,15 +117,11 @@ class GoogleDriveOperations:
                 else:
                     raise
 
-    async def _get_file_path(self, file_id: str) -> str:
+
+    async def _get_file_dir(self, file_id: str) -> str:
         try:
-            file_meta = self.service.files().get(
-                fileId=file_id,
-                fields="parents,name"
-            ).execute()
-            
             path_parts = []
-            current_parents = file_meta.get("parents", [])
+            current_parents = [file_id]
             
             while current_parents:
                 folder_id = current_parents[0]
@@ -135,11 +133,10 @@ class GoogleDriveOperations:
                 current_parents = folder_meta.get("parents", [])
             
             path_parts.reverse()
-            path_parts.append(file_meta.get("name", ""))
-            return "root/" + "/".join(path_parts) if path_parts else f"root/{file_id}"
+            return "root/" + "/".join(path_parts[:-1]) + "/" if len(path_parts) > 1 else "root/"
         except Exception as e:
-            logger.warning(f"Failed to get file path: {e}")
-            return f"root/{file_id}"
+            logger.warning(f"Failed to get file dir: {e}")
+            return "root/"
 
 
     async def upload_file(
@@ -170,11 +167,10 @@ class GoogleDriveOperations:
             logger.warning(f"Text extraction failed for {source_path}: {e}")
             text = ""
 
-        real_path = await self._get_file_path(file["id"])
-        dir_path = "root/" + "/".join(real_path.split("/")[:-1]) + "/" if "/" in real_path else "root/"
+        real_path = await self._get_file_dir(file["id"])
         
         await self._send_chunked_kafka(
-            "upload", file["name"], dir_path, text, owner, "drive",
+            "upload", file["name"], real_path, text, owner, "drive",
             file_size=os.path.getsize(source_path),
         )
 
@@ -270,7 +266,7 @@ class GoogleDriveOperations:
                 file_name = item.get('name', '')
                 file_size = int(item.get('size', 0) or 0)
 
-                if not is_dir and await self._is_already_indexed(file_id, file_name, file_size):
+                if not is_dir and await self._is_already_indexed(await self._get_file_dir(file_id), file_name, file_size):
                     logger.info(f"Skipping {file_name} ({file_id}): already indexed")
                     return
 
@@ -288,8 +284,10 @@ class GoogleDriveOperations:
                     except Exception as e:
                         logger.warning(f"Text extraction failed for {file_id}: {e}")
 
+                dir_path = await self._get_file_dir(file_id)
+
                 await self._send_chunked_kafka(
-                    "upload", file_name, file_id, text, owner, "drive",
+                    "upload", file_name, dir_path, text, owner, "drive",
                     file_size=file_size,
                 )
 
@@ -363,9 +361,9 @@ class GoogleDriveOperations:
 
 
     async def delete_file(self, file_path: str, owner: Optional[str] = None) -> None:
-        real_path = await self._get_file_path(file_path)
-        dir_path = "root/" + "/".join(real_path.split("/")[:-1]) + "/" if "/" in real_path else "root/"
-        file_name = real_path.split("/")[-1]
+        dir_path = await self._get_file_dir(file_path)
+        file_name = dir_path.split("/")[-1]
+        print(f"[DEBUG] deleting file {file_name} on path: {dir_path}")
         
         self.service.files().delete(fileId=file_path).execute()
         try:
@@ -385,9 +383,9 @@ class GoogleDriveOperations:
 
     async def rename_file(self, file_path: str, new_name: str, owner: Optional[str] = None) -> dict:
         print(f"[DEBUG] GoogleDrive rename: file_path={file_path}, new_name={new_name}")
-        old_path = await self._get_file_path(file_path)
-        old_dir = "root/" + "/".join(old_path.split("/")[:-1]) + "/" if "/" in old_path else "root/"
-        old_file_name = old_path.split("/")[-1]
+        dir_path = await self._get_file_dir(file_path)
+        old_file_name = dir_path.split("/")[-1]
+        print(f"[DEBUG] renaming file on path: {dir_path}")
         
         file = self.service.files().update(
             fileId=file_path,
@@ -395,15 +393,13 @@ class GoogleDriveOperations:
             fields="id, name, webViewLink"
         ).execute()
 
-        new_dir = old_dir
-
         try:
             await self.kafka.send_command(
                 SendToKafka(
                     action="rename",
                     file_name=new_name,
-                    file_path=old_dir,
-                    new_path=new_dir,
+                    file_path=dir_path,
+                    new_path=dir_path,
                     old_file_name=old_file_name,
                     text="",
                     owner=owner,

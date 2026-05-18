@@ -176,32 +176,28 @@ class DataBase:
     def delete_object(self, object: DeleteObject) -> ObjectDeleted:
         conn = self._get_connection()
         try:
-            path = object.path
-            # Use file_name if provided, otherwise extract from path
-            file_name = object.file_name if object.file_name else path.rstrip("/").rsplit("/", 1)[-1]
-            
-            if object.owner and file_name:
+            if object.owner and object.file_name:
                 cur = conn.execute(
                     f"DELETE FROM {self.table} WHERE file_path = %s AND file_name = %s AND owner = %s",
-                    (path, file_name, object.owner),
+                    (object.path, object.file_name, object.owner),
                 )
             elif object.owner:
                 cur = conn.execute(
                     f"DELETE FROM {self.table} WHERE file_path = %s AND owner = %s",
-                    (path, object.owner),
+                    (object.path, object.owner),
                 )
-            elif file_name:
+            elif object.file_name:
                 cur = conn.execute(
                     f"DELETE FROM {self.table} WHERE file_path = %s AND file_name = %s",
-                    (path, file_name),
+                    (object.path, object.file_name),
                 )
             else:
                 cur = conn.execute(
                     f"DELETE FROM {self.table} WHERE file_path = %s",
-                    (path,),
+                    (object.path,),
                 )
             
-            return ObjectDeleted(name=file_name, chunks_removed=cur.rowcount)
+            return ObjectDeleted(name=object.file_name or object.path, chunks_removed=cur.rowcount)
         finally:
             conn.close()
 
