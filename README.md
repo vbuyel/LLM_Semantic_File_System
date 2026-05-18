@@ -1,4 +1,4 @@
-# 🚀 LLM Semantic File System (Semantic FS)
+# LLM Semantic File System (Semantic FS)
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.11+-blue.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
@@ -14,45 +14,45 @@
 
 ---
 
-## 📖 Table of Contents
+## Table of Contents
 
 - [What is Semantic FS?](#-what-is-semantic-fs)
   - [For End Users](#-for-end-users)
   - [For Developers](#-for-developers)
-- [🏗️ System Architecture](#️-system-architecture)
+- [System Architecture](#️-system-architecture)
   - [Microservice Architecture Diagram](#microservice-architecture-diagram)
   - [Event-Driven Data Flow](#event-driven-data-flow)
-- [🛠️ Tech Stack & Microservices](#️-tech-stack--microservices)
-- [🚀 Quick Start](#-quick-start)
+- [Tech Stack & Microservices](#️-tech-stack--microservices)
+- [Quick Start](#-quick-start)
   - [Prerequisites](#prerequisites)
   - [1. Clone & Configure](#1-clone--configure)
   - [2. Spin up Services (Convenient Way)](#2-spin-up-services-convenient-way)
   - [3. Spin up Services (Manual Way)](#3-spin-up-services-manual-way)
-- [🧪 Testing Strategy](#-testing-strategy)
+- [Testing Strategy](#-testing-strategy)
   - [The Global pytest Import Conflict](#the-global-pytest-import-conflict)
   - [The Solution: Service-Specific Environments](#the-solution-service-specific-environments)
   - [Running All Tests Sequentially](#running-all-tests-sequentially)
-- [🔌 API Reference](#-api-reference)
+- [API Reference](#-api-reference)
   - [Gateway Service (Port 8000)](#gateway-service-port-8000)
   - [LLM Service (Port 8001)](#llm-service-port-8001)
   - [File Operations Service (Port 8002)](#file-operations-service-port-8002)
   - [Vector Database Service (Port 8004)](#vector-database-service-port-8004)
-- [🔧 Troubleshooting](#-troubleshooting)
+- [Troubleshooting](#-troubleshooting)
 
 ---
 
-## 🌟 What is Semantic FS?
+## What is Semantic FS?
 
 **Semantic FS** is a modern, high-performance file management system that elevates traditional file operations with AI-powered semantic search. Instead of relying solely on exact filename matches, the system indexes the *actual textual content* of your files and understands user intent using Natural Language Processing (NLP).
 
-### 👥 For End Users
+### For End Users
 
 - **Semantic Content Search**: Find your files by asking natural language questions like *"Where is my resume?"*, *"Find the tax invoice from last year"*, or *"Show me the Python script that processes data"*.
 - **Autonomous AI Assistant**: Chat with a persistent AI assistant that can seamlessly switch between searching your files (RAG) and searching the web to answer your questions.
 - **Unified Storage Interface**: Seamlessly switch between **Google Cloud Storage (GCS)** and **Google Drive** directly from a single web dashboard.
 - **Premium Real-Time Dashboard**: Monitor file uploads, database syncs, and event logs in a beautiful, responsive dark-themed user interface.
 
-### 💻 For Developers
+### For Developers
 
 - **Strict Separation of Concerns**: Built as 5 completely autonomous, decoupled FastAPI microservices, each with its own package configuration (`requirements.txt`) and dedicated virtual environment (`.venv`).
 - **Event-Driven & Asynchronous**: Utilizes **Apache Kafka** for streaming events, such as tracking file uploads, background document extraction, and vector index synchronization.
@@ -60,7 +60,7 @@
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ### Microservice Architecture Diagram
 
@@ -92,7 +92,7 @@ graph TD
 
 ---
 
-## 🛠️ Tech Stack & Microservices
+## Tech Stack & Microservices
 
 | Service Name | Default Port | Primary Responsibilities | Stack / Dependencies |
 | :--- | :---: | :--- | :--- |
@@ -105,7 +105,7 @@ graph TD
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -210,7 +210,7 @@ If you prefer starting services manually in separate terminals, follow this orde
 
 ---
 
-## 🧪 Testing Strategy
+## Testing Strategy
 
 ### The Global `pytest` Import Conflict
 
@@ -241,7 +241,7 @@ cd src/file_ops
 
 ---
 
-## 🔌 API Reference
+## API Reference
 
 ### Gateway Service (Port 8000)
 - `GET /health` — Simple health check.
@@ -279,22 +279,19 @@ cd src/file_ops
 
 ---
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
-### ❌ Python Module Mismatch / `ModuleNotFoundError` during `pytest`
+### Python Module Mismatch / `ModuleNotFoundError` during `pytest`
 - **Cause**: Running `pytest` from the root workspace folder.
 - **Solution**: Execute tests via `./run_tests.sh` or navigate to the specific service directory (e.g., `src/file_ops`) and run tests using local virtualenv binaries: `./.venv/bin/pytest -v`.
 
-### ❌ `TopicAlreadyExistsError` or Kafka Connection Refused
+### `TopicAlreadyExistsError` or Kafka Connection Refused
 - **Cause**: Kafka is either not running or the topics are currently being created in the background.
 - **Solution**: Run `docker ps` to verify the `llm-semantic-kafka` container is active. If needed, restart it:
   ```bash
   cd src/kafka && docker-compose down && docker-compose up -d
   ```
 
-### ❌ `CREATE EXTENSION vector` failure on PostgreSQL startup
+### `CREATE EXTENSION vector` failure on PostgreSQL startup
 - **Cause**: Your local PostgreSQL database does not have the `pgvector` extension installed.
 - **Solution**: Run your PostgreSQL database via Docker with `pgvector` built-in, or install it on your OS (e.g., via Homebrew on macOS: `brew install pgvector`).
-
----
-<p align="center">Made with ❤️ for high-performance semantic file indexing.</p>
