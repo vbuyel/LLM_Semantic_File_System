@@ -17,28 +17,28 @@
 
 ## Table of Contents
 
-- [What is Semantic FS?](#-what-is-semantic-fs)
-  - [For End Users](#-for-end-users)
-  - [For Developers](#-for-developers)
-- [System Architecture](-system-architecture)
+- [What is Semantic FS?](#what-is-semantic-fs)
+  - [For End Users](#for-end-users)
+  - [For Developers](#for-developers)
+- [System Architecture](#system-architecture)
   - [Microservice Architecture Diagram](#microservice-architecture-diagram)
   - [Event-Driven Data Flow](#event-driven-data-flow)
-- [Tech Stack & Microservices](#️-tech-stack--microservices)
-- [Quick Start](#-quick-start)
+- [Tech Stack & Microservices](#tech-stack--microservices)
+- [Quick Start](#quick-start)
   - [Prerequisites](#prerequisites)
   - [1. Clone & Configure](#1-clone--configure)
   - [2. Spin up Services (Convenient Way)](#2-spin-up-services-convenient-way)
   - [3. Spin up Services (Manual Way)](#3-spin-up-services-manual-way)
-- [Testing Strategy](#-testing-strategy)
+- [Testing Strategy](#testing-strategy)
   - [The Global pytest Import Conflict](#the-global-pytest-import-conflict)
   - [The Solution: Service-Specific Environments](#the-solution-service-specific-environments)
   - [Running All Tests Sequentially](#running-all-tests-sequentially)
-- [API Reference](#-api-reference)
+- [API Reference](#api-reference)
   - [Gateway Service (Port 8000)](#gateway-service-port-8000)
   - [LLM Service (Port 8001)](#llm-service-port-8001)
   - [File Operations Service (Port 8002)](#file-operations-service-port-8002)
   - [Vector Database Service (Port 8004)](#vector-database-service-port-8004)
-- [Troubleshooting](#-troubleshooting)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
