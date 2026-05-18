@@ -34,8 +34,8 @@ class App {
             } catch (err) {
                 console.error('[App] OAuth callback error:', err);
             }
-            window.history.replaceState({}, '', '/');
-        } else if (window.location.pathname === '/auth/google') {
+            window.history.replaceState({}, '', window.location.pathname);
+        } else if (window.location.pathname.endsWith('/auth/google')) {
             this.appElement.innerHTML = `
                 <div class="auth fade-in">
                     <div class="auth__container" style="justify-content: center; text-align: center;">
