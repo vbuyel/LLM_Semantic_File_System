@@ -1,7 +1,7 @@
 import urllib.parse
 import secrets
 
-from src.gateway_auth.domain.settings import Settings, oauth_states
+from domain.settings import Settings, oauth_states
 
 settings = Settings()
 

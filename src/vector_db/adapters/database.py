@@ -8,7 +8,7 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 from dotenv import load_dotenv
 
-from src.vector_db.domain.domain import DeleteObject, DocMetadata, ObjectDeleted, ObjectRenamed, RAGResults, ObjectUploaded, RenameObject, UploadObject
+from domain.domain import DeleteObject, DocMetadata, ObjectDeleted, ObjectRenamed, RAGResults, ObjectUploaded, RenameObject, UploadObject
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 

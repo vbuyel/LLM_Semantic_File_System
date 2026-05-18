@@ -1,9 +1,9 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.gateway_auth.v1.gateway_router import gateway_router
-from src.gateway_auth.v1.oauth_router import oauth_router
-from src.gateway_auth.v1.events_router import event_router, start_relay, stop_relay
+from v1.gateway_router import gateway_router
+from v1.oauth_router import oauth_router
+from v1.events_router import event_router, start_relay, stop_relay
 
 
 @asynccontextmanager

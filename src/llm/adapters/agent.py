@@ -9,9 +9,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from src.llm.domain.domain import SearchRequest, SearchResponse
-from src.llm.adapters.rag_search import RAGSearch
-from src.llm.adapters.web_search import WebSearch
+from domain.domain import SearchRequest, SearchResponse
+from adapters.rag_search import RAGSearch
+from adapters.web_search import WebSearch
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 

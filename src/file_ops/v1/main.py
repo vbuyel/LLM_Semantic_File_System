@@ -12,10 +12,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
 from typing import Optional, AsyncGenerator
-from src.file_ops.domain.domain import UploadResponse, ListFilesResponse, FileItem
-from src.file_ops.adapters.gcs_ops import GCSOperations
-from src.file_ops.adapters.google_drive_ops import GoogleDriveOperations
-from src.file_ops.adapters.kafka import KafkaOperations
+from domain.domain import UploadResponse, ListFilesResponse, FileItem
+from adapters.gcs_ops import GCSOperations
+from adapters.google_drive_ops import GoogleDriveOperations
+from adapters.kafka import KafkaOperations
 
 
 kafka_ops = KafkaOperations()

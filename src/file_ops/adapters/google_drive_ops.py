@@ -10,14 +10,14 @@ import time
 from pathlib import Path
 import requests
 
-from src.file_ops.adapters.kafka import KafkaOperations
-from src.file_ops.adapters.text_extractor import (
+from adapters.kafka import KafkaOperations
+from adapters.text_extractor import (
     clean_text,
     extract_text_from_bytes,
     extract_text_from_file,
     is_readable,
 )
-from src.file_ops.domain.domain import SendToKafka
+from domain.domain import SendToKafka
 
 logger = logging.getLogger(__name__)
 

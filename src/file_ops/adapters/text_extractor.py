@@ -32,9 +32,6 @@ try:
 except ImportError:
     XLSX_AVAILABLE = False
 
-# ---------------------------------------------------------------------------
-# Extension whitelists  (all lower-case, with leading dot)
-# ---------------------------------------------------------------------------
 
 _TEXT_EXTENSIONS = {
     # Documentation / markup
@@ -59,11 +56,6 @@ _TEXT_EXTENSIONS = {
 _DOC_EXTENSIONS = {".pdf", ".docx", ".pptx", ".xlsx"}
 
 SUPPORTED_EXTENSIONS = _TEXT_EXTENSIONS | _DOC_EXTENSIONS
-
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
 
 
 def extract_text_from_bytes(content: bytes, ext: str) -> str:
@@ -146,11 +138,6 @@ def extract_text_from_file(file_path: str) -> str:
     return _read_text(file_path)
 
 
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
-
 def _normalise_ext(ext: str) -> str:
     ext = ext.strip().lower()
     if not ext.startswith("."):
@@ -179,10 +166,6 @@ def _read_text(file_path: str) -> str:
             continue
     return ""
 
-
-# ---------------------------------------------------------------------------
-# Text quality helpers  (used by file_ops adapters before sending to Kafka)
-# ---------------------------------------------------------------------------
 
 _RE_RUNS = re.compile(r"[^\S\t\n\r]+")
 

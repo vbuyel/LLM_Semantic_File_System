@@ -6,7 +6,7 @@ import psycopg
 from psycopg import sql
 from dotenv import load_dotenv
 
-from src.event_db.domain.events import EventItem
+from domain.events import EventItem
 
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")

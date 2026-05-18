@@ -6,9 +6,9 @@ from google.cloud import storage
 from typing import Optional
 import os
 
-from src.file_ops.adapters.kafka import KafkaOperations
-from src.file_ops.adapters.text_extractor import extract_text_from_file
-from src.file_ops.domain.domain import SendToKafka
+from adapters.kafka import KafkaOperations
+from adapters.text_extractor import extract_text_from_file
+from domain.domain import SendToKafka
 
 logger = logging.getLogger(__name__)
 

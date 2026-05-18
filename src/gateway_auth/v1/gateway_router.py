@@ -1,13 +1,12 @@
 import requests
-from uuid import uuid4
 from typing import Optional
 
 from fastapi import status, APIRouter, Depends, File, Query, Request, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 
-from src.gateway_auth.domain.file_ops import ListOfObjects, PathToGetObjects
-from src.gateway_auth.domain.agent import ResponseToUser, UserRequest
-from src.gateway_auth.domain.settings import settings
+from domain.file_ops import ListOfObjects, PathToGetObjects
+from domain.agent import ResponseToUser, UserRequest
+from domain.settings import settings
 
 
 gateway_router = APIRouter()

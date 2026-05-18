@@ -23,8 +23,8 @@ except ImportError:
     AIOKafkaConsumer = None
     AIOKafkaProducer = None
 
-from src.vector_db.adapters.database import DataBase
-from src.vector_db.domain.domain import DeleteObject, RenameObject, UploadObject
+from adapters.database import DataBase
+from domain.domain import DeleteObject, RenameObject, UploadObject
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 

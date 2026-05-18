@@ -4,8 +4,8 @@ from fastapi.responses import RedirectResponse
 import aiohttp
 import jwt
 
-from src.gateway_auth.adapters.oauth_google import generate_google_oauth_redirect_uri
-from src.gateway_auth.domain.settings import settings, oauth_states
+from adapters.oauth_google import generate_google_oauth_redirect_uri
+from domain.settings import settings, oauth_states
 
 
 oauth_router = APIRouter()

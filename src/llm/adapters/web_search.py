@@ -3,8 +3,8 @@ import os
 
 from exa_py import AsyncExa
 
-from src.llm.adapters.kafka import Kafka
-from src.llm.domain.domain import SearchResponse
+from adapters.kafka import Kafka
+from domain.domain import SearchResponse
 
 
 logger = logging.getLogger(__name__)

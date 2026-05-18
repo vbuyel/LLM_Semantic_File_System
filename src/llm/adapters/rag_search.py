@@ -1,7 +1,5 @@
-import time
-
-from src.llm.domain.domain import RAGResponse
-from src.llm.adapters.kafka import Kafka
+from domain.domain import RAGResponse
+from adapters.kafka import Kafka
 
 
 class RAGSearch:

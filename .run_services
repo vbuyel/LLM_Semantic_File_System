@@ -1,0 +1,21 @@
+Infrastructure:
+cd src/kafka && docker-compose up -d
+python -m src.kafka.broker
+
+UI:
+cd ui && npx serve -s . -p 5500
+
+Gateway:
+uvicorn src.gateway_auth.v1.main:app --port 8000
+
+LLM:
+uvicorn src.llm.v1.main:app --port 8001
+
+File Ops:
+uvicorn src.file_ops.v1.main:app --port 8002
+
+Event DataBase:
+uvicorn src.event_db.v1.main:app --port 8003
+
+Vector DataBase:
+uvicorn src.vector_db.v1.main:app --port 8004

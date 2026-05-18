@@ -5,7 +5,7 @@ from typing import Optional
 
 from aiokafka import AIOKafkaProducer
 
-from src.file_ops.domain.domain import SendToKafka
+from domain.domain import SendToKafka
 
 
 class KafkaOperations:

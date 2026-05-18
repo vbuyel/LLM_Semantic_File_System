@@ -14,7 +14,7 @@ from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.event_db.adapters.database import DataBase
+from adapters.database import DataBase
 
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")

@@ -6,8 +6,8 @@ Run the server:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.llm.domain.domain import SearchResponse, SearchRequest
-from src.llm.adapters.agent import AgentResearcher
+from domain.domain import SearchResponse, SearchRequest
+from adapters.agent import AgentResearcher
 
 
 app = FastAPI()

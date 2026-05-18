@@ -2,7 +2,7 @@ import os, json, asyncio, uuid
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 import httpx
 import websockets
-from src.gateway_auth.domain.settings import settings
+from domain.settings import settings
 
 event_router = APIRouter()
 EVENT_DB_URL = os.getenv("EVENT_DB_URL", settings.EVENT_DB_URL)
