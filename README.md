@@ -1,388 +1,300 @@
-# LLM Semantic File System
+# 🚀 LLM Semantic File System (Semantic FS)
 
 <p align="center">
-  <strong>AI-Driven File Management with Semantic Search</strong>
+  <img src="https://img.shields.io/badge/Python-3.11+-blue.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
+  <img src="https://img.shields.io/badge/FastAPI-0.100+-009688.svg?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/Docker-Supported-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/Apache%20Kafka-Event--Driven-808080.svg?style=for-the-badge&logo=apache-kafka&logoColor=white" alt="Kafka" />
+  <img src="https://img.shields.io/badge/PostgreSQL-pgvector-4169E1.svg?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
 </p>
 
 <p align="center">
-  <a href="#features">Features</a> •
-  <a href="#architecture">Architecture</a> •
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#configuration">Configuration</a> •
-  <a href="#for-developers">For Developers</a> •
-  <a href="#api-reference">API Reference</a>
+  <strong>An Intelligent, Event-Driven Microservices Platform with AI-Powered Semantic Search & Multi-Storage Support</strong>
 </p>
 
 ---
 
-## What is Semantic FS?
+## 📖 Table of Contents
 
-Semantic FS is an intelligent file management system that combines traditional file operations with AI-powered semantic search. Store your files in Google Drive or Google Cloud Storage, then use natural language to find exactly what you need — the system understands the *content* of your files, not just their names.
-
-### For End Users
-
-**Key Benefits:**
-
-- **Semantic Search**: Ask questions like "Where is my resume?" or "Find the project proposal from last month" — the AI understands your files' content
-- **AI Assistant**: Chat with an AI that has access to both the web and your personal files
-- **Multiple Storage Options**: Choose between Google Drive or Google Cloud Storage
-- **Modern Interface**: Clean, dark-themed UI with real-time event tracking
-
-**How to Use:**
-
-1. Open the web interface at `http://localhost:5500`
-2. Sign in with your Google account (OAuth)
-3. Upload files or connect your Google Drive
-4. Use the AI chat to find files by asking natural language questions
-5. Manage files: upload, download, rename, delete — all from the browser
-
-**Example Queries:**
-
-- "Find my tax documents from 2024"
-- "Show me the Python script about data processing"
-- "What files contain information about the project timeline?"
-
-### For Software Engineers
-
-**System Overview:**
-
-Semantic FS is a microservices-based application with the following components:
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                          Frontend (UI)                          │
-│                     http://localhost:5500                       │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     Gateway (Port 8000)                         │
-│                Authentication & Request Routing                 │
-└─────────────────────────────────────────────────────────────────┘
-                    │                    │
-                    ▼                    ▼
-              ┌──────────────┐    ┌──────────────┐
-              │   AI Agent   │    │   File Ops   │
-              │    (8001)    │    │    (8002)    │
-              │              │    │              │
-              │              │    │ Upload/Down  │
-              │ Web Search   │    │ List/Delete  │
-              │ RAG Search   │    │ Rename       │
-              └──────────────┘    └──────────────┘
-                    │                    │
-                    ▼                    ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     Kafka Broker (Events)                       │
-└─────────────────────────────────────────────────────────────────┘
-                   │                    │
-                   ▼                    ▼
-            ┌──────────────┐    ┌──────────────┐
-            │  Event DB    │    │  Vector DB   │
-            │   (8003)     │    │   (8004)     │
-            │              │    │              │
-            │ Upload/Down  │    │ Semantic     │
-            │ List/Delete  │    │ Search       │
-            │ Rename       │    │ Embeddings   │
-            └──────────────┘    └──────────────┘
-```
-
-**Technology Stack:**
-
-| Component | Technology |
-|-----------|------------|
-| Backend Framework | FastAPI (Python) |
-| Frontend | Vanilla JavaScript + Vite |
-| Vector Database | PostgreSQL + pgvector |
-| Embeddings | Sentence Transformers (all-MiniLM-L6-v2) |
-| LLM Backend | Ollama (local) / OpenAI / Anthropic |
-| Event Streaming | Kafka |
-| Storage | Google Cloud Storage, Google Drive API |
-| Authentication | Google OAuth 2.0, JWT |
-| Search API | Exa (web search) |
-
-**Microservices:**
-
-| Service | Port | Purpose |
-|---------|------|---------|
-| Gateway | 8000 | Auth gateway, request routing |
-| LLM | 8001 | AI agent, tool calling, RAG |
-| File Ops | 8002 | File CRUD operations |
-| Event DB | 8003 | Event persistence |
-| Vector DB | 8004 | Semantic search, embeddings |
+- [What is Semantic FS?](#-what-is-semantic-fs)
+  - [For End Users](#-for-end-users)
+  - [For Developers](#-for-developers)
+- [🏗️ System Architecture](#️-system-architecture)
+  - [Microservice Architecture Diagram](#microservice-architecture-diagram)
+  - [Event-Driven Data Flow](#event-driven-data-flow)
+- [🛠️ Tech Stack & Microservices](#️-tech-stack--microservices)
+- [🚀 Quick Start](#-quick-start)
+  - [Prerequisites](#prerequisites)
+  - [1. Clone & Configure](#1-clone--configure)
+  - [2. Spin up Services (Convenient Way)](#2-spin-up-services-convenient-way)
+  - [3. Spin up Services (Manual Way)](#3-spin-up-services-manual-way)
+- [🧪 Testing Strategy](#-testing-strategy)
+  - [The Global pytest Import Conflict](#the-global-pytest-import-conflict)
+  - [The Solution: Service-Specific Environments](#the-solution-service-specific-environments)
+  - [Running All Tests Sequentially](#running-all-tests-sequentially)
+- [🔌 API Reference](#-api-reference)
+  - [Gateway Service (Port 8000)](#gateway-service-port-8000)
+  - [LLM Service (Port 8001)](#llm-service-port-8001)
+  - [File Operations Service (Port 8002)](#file-operations-service-port-8002)
+  - [Vector Database Service (Port 8004)](#vector-database-service-port-8004)
+- [🔧 Troubleshooting](#-troubleshooting)
 
 ---
 
-## Features
+## 🌟 What is Semantic FS?
 
-### AI-Powered Search
+**Semantic FS** is a modern, high-performance file management system that elevates traditional file operations with AI-powered semantic search. Instead of relying solely on exact filename matches, the system indexes the *actual textual content* of your files and understands user intent using Natural Language Processing (NLP).
 
-- **Semantic Understanding**: Uses vector embeddings to find files by content similarity
-- **Natural Language Queries**: Ask questions in plain English
-- **Hybrid Search**: Combines RAG (files) with web search when needed
+### 👥 For End Users
 
-### File Management
+- **Semantic Content Search**: Find your files by asking natural language questions like *"Where is my resume?"*, *"Find the tax invoice from last year"*, or *"Show me the Python script that processes data"*.
+- **Autonomous AI Assistant**: Chat with a persistent AI assistant that can seamlessly switch between searching your files (RAG) and searching the web to answer your questions.
+- **Unified Storage Interface**: Seamlessly switch between **Google Cloud Storage (GCS)** and **Google Drive** directly from a single web dashboard.
+- **Premium Real-Time Dashboard**: Monitor file uploads, database syncs, and event logs in a beautiful, responsive dark-themed user interface.
 
-- **Upload**: Drag-and-drop or browse to upload files
-- **Download**: Download any file from your storage
-- **Rename**: Rename files with ease
-- **Delete**: Remove files with confirmation
-- **Multi-Storage**: Seamlessly switch between GCS and Google Drive
+### 💻 For Developers
 
-### AI Assistant
-
-- **Tool-Calling Agent**: Intelligent agent that decides when to search files vs. the web
-- **Web Search**: Real-time web search for general queries
-- **File Context**: Full access to your indexed files for personalized answers
+- **Strict Separation of Concerns**: Built as 5 completely autonomous, decoupled FastAPI microservices, each with its own package configuration (`requirements.txt`) and dedicated virtual environment (`.venv`).
+- **Event-Driven & Asynchronous**: Utilizes **Apache Kafka** for streaming events, such as tracking file uploads, background document extraction, and vector index synchronization.
+- **Robust Local Testing**: Comprehensive test coverage across all layers of the codebase (unit and system tests) running in fully isolated testing environments.
 
 ---
 
-## Quick Start
+## 🏗️ System Architecture
+
+### Microservice Architecture Diagram
+
+```mermaid
+graph TD
+    UI[Frontend Dashboard<br/>Port 5500] <-->|HTTP / WebSockets| GW[Gateway & Auth Service<br/>Port 8000]
+    
+    GW <-->|REST API| LLM[LLM Service<br/>Port 8001]
+    GW <-->|REST API| FO[File Operations Service<br/>Port 8002]
+    
+    FO -.->|Upload / Sync Events| Kafka[(Apache Kafka<br/>Port 9092)]
+    
+    Kafka -->|Consumer: Index Documents| VDB[Vector Database Service<br/>Port 8004]
+    Kafka -->|Consumer: Persist Logs| EDB[Event DB Service<br/>Port 8003]
+    
+    EDB <-->|WebSockets / HTTP| GW
+    
+    VDB <-->|PostgreSQL + pgvector| PG[(PostgreSQL Database<br/>Port 5432)]
+    FO <-->|Storage Drivers| GCS[Google Cloud Storage]
+    FO <-->|Storage Drivers| GD[Google Drive API]
+```
+
+### Event-Driven Data Flow
+
+1. **File Upload**: The user uploads a file via the UI.
+2. **Text Extraction**: The **File Operations Service** (`file_ops`) saves the file, parses its format (PDF, DOCX, TXT, etc.), extracts textual chunks, and publishes an `upload` event to Kafka.
+3. **Semantic Indexing**: The **Vector Database Service** (`vector_db`) consumes the event, converts text chunks into 384-dimensional dense vectors using a Sentence Transformer model, and indexes them in **PostgreSQL + pgvector**.
+4. **Activity Logging**: The **Event DB Service** (`event_db`) consumes the Kafka event, records it in the PostgreSQL event log, and forwards the log in real-time to the Gateway WebSocket for UI notifications.
+
+---
+
+## 🛠️ Tech Stack & Microservices
+
+| Service Name | Default Port | Primary Responsibilities | Stack / Dependencies |
+| :--- | :---: | :--- | :--- |
+| **Gateway** | `8000` | User Authentication (Google OAuth 2.0, JWT), API reverse proxying, event relay via WebSockets. | FastAPI, Python-JWT, HTTPX |
+| **LLM Service** | `8001` | Tool-calling AI agent, prompt orchestration, Exa-powered web search, and local/remote LLM interface. | FastAPI, OpenAI SDK, Exa API |
+| **File Operations** | `8002` | Upload, download, delete, rename, text extraction, and OAuth client integration. | FastAPI, google-cloud-storage, google-api-python-client |
+| **Event DB** | `8003` | Persistent storage of system action logs, history search, and real-time WebSocket push. | FastAPI, psycopg (PostgreSQL), AIOKafka |
+| **Vector DB** | `8004` | Generating text embeddings, querying cosine distance, indexing text chunks, and pgvector operations. | FastAPI, sentence-transformers, pgvector, psycopg |
+| **Kafka Infrastructure** | `9092` | Decoupled event broker. | Apache Kafka (Docker) |
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Docker and Docker Compose
-- Python 3.11+
-- Node.js 18+
-- Google Cloud Console project (for OAuth)
-
-### Setup Steps
-
-**1. Clone and Configure:**
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd LLM_Semantic_File_System
-
-# Copy environment template
-cp .env.example .env
-```
-
-**2. Configure Environment Variables:**
-
-Edit `.env` with your credentials:
-
-```env
-# Google OAuth (get from Google Cloud Console)
-GOOGLE_CLIENT_ID=your_client_id
-GOOGLE_CLIENT_SECRET=your_client_secret
-
-# JWT Secret (generate a random string)
-JWT_SECRET=your_jwt_secret
-
-# LLM Configuration
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-
-# Exa Search (optional)
-EXA_API_KEY=your_exa_key
-
-# Google Cloud Storage
-GCS_BUCKET_NAME=your_bucket
-
-# PostgreSQL for Vector DB
-DOCS_POSTGRESQL_USERNAME=postgres
-DOCS_POSTGRESQL_PASSWORD=postgres
-DOCS_POSTGRESQL_HOST=localhost
-DOCS_POSTGRESQL_PORT=5432
-DOCS_POSTGRESQL_DB=documents
-
-# Ollama (local LLM)
-MODEL=llama3
-```
-
-**3. Start Services:**
-
-```bash
-# Start infrastructure (Kafka, PostgreSQL)
-cd src/kafka && docker-compose up -d
-python -m src.kafka.broker &
-
-# Start all microservices
-uvicorn src.gateway_auth.v1.main:app --port 8000 &
-uvicorn src.llm.v1.main:app --port 8001 &
-uvicorn src.file_ops.v1.main:app --port 8002 &
-uvicorn src.event_db.v1.main:app --port 8003 &
-uvicorn src.vector_db.v1.main:app --port 8004 &
-
-# Start frontend
-cd ui && npx serve -s . -p 5500
-```
-
-**Or use the convenience script:**
-
-```bash
-# Each line from .run_services
-```
-
-**4. Access the Application:**
-
-Open `http://localhost:5500` in your browser and sign in with Google.
+Make sure you have the following installed on your system:
+- **Docker** and **Docker Compose**
+- **Python 3.11 or 3.13+**
+- **Node.js** (for simple static server serving the UI)
 
 ---
 
-## Configuration
+### 1. Clone & Configure
 
-### Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `GOOGLE_CLIENT_ID` | OAuth client ID from Google Cloud Console | Yes |
-| `GOOGLE_CLIENT_SECRET` | OAuth client secret | Yes |
-| `JWT_SECRET` | Secret for JWT token signing | Yes |
-| `OPENAI_API_KEY` | OpenAI API key | No* |
-| `ANTHROPIC_API_KEY` | Anthropic API key | No* |
-| `EXA_API_KEY` | Exa web search API key | No |
-| `GCS_BUCKET_NAME` | Google Cloud Storage bucket | Yes |
-| `DOCS_POSTGRESQL_*` | PostgreSQL connection for vector DB | Yes |
-
-*At least one LLM provider is required.
-
-### Service Configuration
-
-Each microservice has its own `.env` in its directory. The main configuration is in the project root `.env`.
+1. Clone this repository to your local system:
+   ```bash
+   git clone <repository-url>
+   cd LLM_Semantic_File_System
+   ```
+2. Create and fill in your root-level environment configuration file:
+   ```bash
+   cp .env.example .env
+   ```
+3. Edit the `.env` file with your credentials:
+   ```env
+   # Google OAuth Credentials (obtain from Google Cloud Console)
+   GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=your_google_client_secret
+   
+   # JWT Configuration
+   JWT_SECRET=your_jwt_signature_secret_key
+   
+   # LLM Backend Configuration
+   OPENAI_API_KEY=sk-proj-... # Optional if using Ollama
+   MODEL=gpt-4o-mini          # or local ollama models like llama3
+   
+   # Web Search API (Optional)
+   EXA_API_KEY=your_exa_search_api_key
+   
+   # Cloud Storage Buckets
+   GCS_BUCKET_NAME=your-gcs-bucket-name
+   
+   # PostgreSQL Connection Info (Vector DB & Event DB)
+   DOCS_POSTGRESQL_USERNAME=postgres
+   DOCS_POSTGRESQL_PASSWORD=postgres
+   DOCS_POSTGRESQL_HOST=localhost
+   DOCS_POSTGRESQL_PORT=5432
+   DOCS_POSTGRESQL_DB=documents
+   ```
 
 ---
 
-## For Developers
+### 2. Spin up Services (Convenient Way)
 
-### Project Structure
-
-```
-LLM_Semantic_File_System/
-├── src/
-│   ├── gateway_auth/      # Authentication gateway
-│   ├── llm/              # AI agent, RAG, web search
-│   ├── file_ops/         # File operations (GCS, Drive)
-│   ├── event_db/         # Event persistence
-│   ├── vector_db/        # Semantic search (pgvector)
-│   └── kafka/            # Event streaming
-├── ui/                   # Frontend (HTML/CSS/JS)
-├── tests/                # Test suite
-└── .run_services         # Startup commands
-```
-
-### Key Modules
-
-**LLM Service (`src/llm/`):**
-- `adapters/agent.py` — AI agent with tool-calling (RAG + web search)
-- `adapters/rag_search.py` — Semantic file search
-- `adapters/web_search.py` — Exa-powered web search
-
-**File Operations (`src/file_ops/`):**
-- `adapters/gcs_ops.py` — Google Cloud Storage operations
-- `adapters/google_drive_ops.py` — Google Drive API integration
-- `adapters/text_extractor.py` — Extract text from files for indexing
-
-**Vector Database (`src/vector_db/`):**
-- `adapters/database.py` — PostgreSQL + pgvector for semantic search
-- Uses sentence-transformers for embeddings
-
-### Adding New Features
-
-**To add a new storage provider:**
-
-1. Create an adapter in `src/file_ops/adapters/`
-2. Implement the same interface as `GCSOperations` or `GoogleDriveOperations`
-3. Update the API in `src/file_ops/v1/main.py` to handle the new provider
-
-**To add a new LLM provider:**
-
-1. Modify `src/llm/adapters/agent.py`
-2. The agent currently uses OpenAI-compatible API (Ollama)
-3. Add new tool definitions for additional capabilities
-
-### Testing
+We have provided a premium, fully automated orchestration script: [run_services.sh](file:///Users/vladbuyel/Documents/Projects/LLM_Semantic_File_System/run_services.sh). It will automatically start Kafka, create topics, run all 5 microservices in their correct virtual environments, start the Frontend UI, and log everything nicely.
 
 ```bash
-# Run all tests
-pytest
+# Run the orchestration script
+./run_services.sh
+```
 
-# Run specific test file
-pytest tests/test_file_ops.py -v
+To stop all background microservices, simply press `Ctrl+C` in your terminal. The script will trap the signal and shut everything down safely!
+
+---
+
+### 3. Spin up Services (Manual Way)
+
+If you prefer starting services manually in separate terminals, follow this order:
+
+1. **Start Kafka Docker container**:
+   ```bash
+   cd src/kafka && docker-compose up -d
+   ```
+2. **Initialize Kafka topics**:
+   ```bash
+   # From project root using any service environment
+   ./src/file_ops/.venv/bin/python src/kafka/broker.py
+   ```
+3. **Run individual microservices**:
+   - **Gateway (Port 8000)**:
+     ```bash
+     cd src/gateway_auth && ./.venv/bin/uvicorn v1.main:app --port 8000
+     ```
+   - **LLM Service (Port 8001)**:
+     ```bash
+     cd src/llm && ./.venv/bin/uvicorn v1.main:app --port 8001
+     ```
+   - **File Operations (Port 8002)**:
+     ```bash
+     cd src/file_ops && ./.venv/bin/uvicorn v1.main:app --port 8002
+     ```
+   - **Event DB (Port 8003)**:
+     ```bash
+     cd src/event_db && ./.venv/bin/uvicorn v1.main:app --port 8003
+     ```
+   - **Vector DB (Port 8004)**:
+     ```bash
+     cd src/vector_db && ./.venv/bin/uvicorn v1.main:app --port 8004
+     ```
+4. **Run the static UI Frontend (Port 5500)**:
+   ```bash
+   cd ui && npx serve -s . -p 5500
+   ```
+
+---
+
+## 🧪 Testing Strategy
+
+### The Global `pytest` Import Conflict
+
+Since each microservice is a completely decoupled Python project containing duplicate top-level package names (such as `domain` and `adapters`), running a simple global command like:
+```bash
+pytest -v
+```
+from the root directory **will fail with 24+ ModuleNotFoundError/ImportError conflicts**. This is because Python's module discovery mechanism gets confused about which service's `domain.domain` or `adapters` package to import.
+
+### The Solution: Service-Specific Environments
+
+To resolve this completely, all tests should be executed *within* their individual service directories using their local virtual environments (`.venv/bin/pytest`), ensuring 100% test isolation.
+
+### Running All Tests Sequentially
+
+We have created an automated test runner script [run_tests.sh](file:///Users/vladbuyel/Documents/Projects/LLM_Semantic_File_System/run_tests.sh) in the workspace root. It traverses through each microservice, activates its specific virtual environment, and executes its complete suite of system and unit tests:
+
+```bash
+# Run all tests cleanly
+./run_tests.sh
+```
+
+If you want to run tests for a specific service manually:
+```bash
+cd src/file_ops
+./.venv/bin/pytest -v
 ```
 
 ---
 
-## API Reference
+## 🔌 API Reference
 
-### Gateway (Port 8000)
-
-- `GET /health` — Health check
+### Gateway Service (Port 8000)
+- `GET /health` — Simple health check.
+- `POST /get_response` — Route user queries directly to the LLM service.
+- `GET /events/user/{owner}` — Fetch past user logs and system actions.
 
 ### LLM Service (Port 8001)
+- `GET /health` — Check LLM service health.
+- `POST /get_response` — Query tool-calling AI agent.
+  - **Payload Structure**:
+    ```json
+    {
+      "text": "What is inside my taxes file?",
+      "owner": "user@example.com",
+      "correlation_id": "optional-uuid"
+    }
+    ```
 
-- `GET /health` — Health check
-- `POST /get_response` — Get AI response with tool access
+### File Operations Service (Port 8002)
+- `GET /health` — Health check.
+- `POST /upload` — Upload physical files to Google Cloud Storage or Google Drive.
+- `GET /get_all` — Retrieve list of files.
+- `DELETE /delete` — Delete file from active storage.
+- `PUT /rename` — Rename file in storage.
+- `GET /download` — Fetch download link/bytes of file.
 
-**Request:**
-```json
-{
-  "text": "Find my resume",
-  "owner": "user@example.com",
-  "correlation_id": "uuid"
-}
-```
+> [!NOTE]
+> All File Operations API routes require the following headers:
+> - `X-Owner`: User Email Address (e.g. `user@example.com`)
+> - `X-Auth-Provider`: `google` or `local`
+> - `X-Storage-Source`: `gcs` or `drive`
 
-**Response:**
-```json
-{
-  "text": "Found your resume at /documents/resume_2024.pdf"
-}
-```
-
-### File Operations (Port 8002)
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/upload` | POST | Upload a file |
-| `/get_all` | GET | List files in directory |
-| `/delete` | DELETE | Delete a file |
-| `/rename` | PUT | Rename a file |
-| `/download` | GET | Download a file |
-
-All endpoints require headers:
-- `X-Owner`: User email
-- `X-Auth-Provider`: "google" or "local"
-- `X-Storage-Source`: "gcs" or "drive"
-
-### Vector Database (Port 8004)
-
-Used internally for semantic search. Exposes endpoints for:
-- Document indexing
-- Semantic search
-- Document deletion/renaming
+### Vector Database Service (Port 8004)
+- `GET /check-file-exists` — Checks whether a file with matching path/size has already been embedded to prevent redundant indexing.
 
 ---
 
-## Troubleshooting
+## 🔧 Troubleshooting
 
-### Common Issues
+### ❌ Python Module Mismatch / `ModuleNotFoundError` during `pytest`
+- **Cause**: Running `pytest` from the root workspace folder.
+- **Solution**: Execute tests via `./run_tests.sh` or navigate to the specific service directory (e.g., `src/file_ops`) and run tests using local virtualenv binaries: `./.venv/bin/pytest -v`.
 
-**LLM not responding:**
-- Ensure Ollama is running: `ollama serve`
-- Check the model is available: `ollama list`
+### ❌ `TopicAlreadyExistsError` or Kafka Connection Refused
+- **Cause**: Kafka is either not running or the topics are currently being created in the background.
+- **Solution**: Run `docker ps` to verify the `llm-semantic-kafka` container is active. If needed, restart it:
+  ```bash
+  cd src/kafka && docker-compose down && docker-compose up -d
+  ```
 
-**Files not searchable:**
-- Check PostgreSQL connection
-- Verify vector extension is installed: `CREATE EXTENSION vector`
-
-**OAuth not working:**
-- Verify redirect URIs in Google Cloud Console
-- Check client ID and secret in `.env`
-
-### Logs
-
-Check individual service logs in their respective Docker containers or terminal output.
+### ❌ `CREATE EXTENSION vector` failure on PostgreSQL startup
+- **Cause**: Your local PostgreSQL database does not have the `pgvector` extension installed.
+- **Solution**: Run your PostgreSQL database via Docker with `pgvector` built-in, or install it on your OS (e.g., via Homebrew on macOS: `brew install pgvector`).
 
 ---
-
-## License
-
-MIT License
-
----
-
-## Contributing
-
-Contributions are welcome! Please read the contributing guidelines before submitting PRs.
+<p align="center">Made with ❤️ for high-performance semantic file indexing.</p>
