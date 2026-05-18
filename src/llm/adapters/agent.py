@@ -3,6 +3,7 @@ import inspect
 import json
 import os
 import re
+import uuid
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -30,23 +31,23 @@ class AgentResearcher:
             "call_rag": self.rag.do_search,
         }
         self.tools = [
-            # {
-            #     "type": "function",
-            #     "function": {
-            #         "name": "call_web_searcher",
-            #         "description": "Search the web for information based on a query",
-            #         "parameters": {
-            #             "type": "object",
-            #             "properties": {
-            #                 "text": {
-            #                     "type": "string",
-            #                     "description": "The search query text",
-            #                 }
-            #             },
-            #             "required": ["text"],
-            #         },
-            #     },
-            # },
+            {
+                "type": "function",
+                "function": {
+                    "name": "call_web_searcher",
+                    "description": "Search the web for information based on a query",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "text": {
+                                "type": "string",
+                                "description": "The search query text",
+                            }
+                        },
+                        "required": ["text"],
+                    },
+                },
+            },
             {
                 "type": "function",
                 "function": {
@@ -185,10 +186,11 @@ class AgentResearcher:
                     )
 
                 tool_owner = request.owner
+                corr_id = request.correlation_id
                 if inspect.iscoroutinefunction(callable_func):
-                    tool_result = await callable_func(tool_text, tool_owner)
+                    tool_result = await callable_func(tool_text, tool_owner, corr_id)
                 else:
-                    tool_result = await asyncio.to_thread(callable_func, tool_text, tool_owner)
+                    tool_result = await asyncio.to_thread(callable_func, tool_text, tool_owner, corr_id)
                 messages.append(
                     {
                         "role": "tool",

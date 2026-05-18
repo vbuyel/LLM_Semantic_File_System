@@ -18,10 +18,10 @@ class RAGSearch:
             self._started = True
 
 
-    async def do_search(self, query: str, owner: str) -> RAGResponse:
+    async def do_search(self, query: str, owner: str, correlation_id: str) -> RAGResponse:
         await self._ensure_started()
         try:
-            await self._kafka.send_event(self._start_event, owner)
+            await self._kafka.send_event(self._start_event, owner, correlation_id)
 
             owner = owner if "@gmail.com" in owner else "guest"
             data = await self._kafka.send_command(self.command, query, owner)

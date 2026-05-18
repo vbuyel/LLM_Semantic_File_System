@@ -68,11 +68,12 @@ class Kafka:
                 await Kafka._consumer.start()
 
 
-    async def send_event(self, event: str, owner: str):
+    async def send_event(self, event: str, owner: str, correlation_id: str):
         payload = {
             "owner": owner,
             "ms_type": "agent",
             "event": event,
+            "correlation_id": correlation_id,
         }
         await Kafka._producer.send(self._event_db_topic, payload)
 

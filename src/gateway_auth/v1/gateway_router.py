@@ -44,6 +44,7 @@ def call_ai_agent(request: Request, user_request: UserRequest) -> ResponseToUser
     payload = {
         "text": user_request.text,
         "owner": owner,
+        "correlation_id": headers.get("X-Correlation-ID"),
     }
 
     print(f"[DEBUG] Sending owner to agent: {payload.get('owner')}")

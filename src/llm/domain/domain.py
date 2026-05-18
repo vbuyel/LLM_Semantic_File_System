@@ -11,6 +11,7 @@ class RAGResponse(BaseModel):
 class SearchRequest(BaseModel):
     text: str
     owner: str
+    correlation_id: str
 
 class SearchResponse(BaseModel):
     text: str

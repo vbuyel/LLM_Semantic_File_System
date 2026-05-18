@@ -24,10 +24,10 @@ class WebSearch:
             self._started = True
 
 
-    async def do_search(self, query: str, owner: str) -> SearchResponse:
+    async def do_search(self, query: str, owner: str, correlation_id: str) -> SearchResponse:
         await self._ensure_started()
         try:
-            await self._kafka.send_event(self._start_event, owner)
+            await self._kafka.send_event(self._start_event, owner, correlation_id)
             results = await self._exa.search(
                 query,
                 num_results=10,
