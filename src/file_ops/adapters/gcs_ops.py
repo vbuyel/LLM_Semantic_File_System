@@ -51,16 +51,6 @@ class GCSOperations:
         return await self._process_file_action("upload", source_path, owner, dest_name, mime_type)
 
 
-    async def update_file(
-        self,
-        source_path: str,
-        dest_name: Optional[str] = None,
-        mime_type: Optional[str] = None,
-        owner: Optional[str] = None,
-    ) -> dict:
-        return await self._process_file_action("update", source_path, owner, dest_name, mime_type)
-
-
     async def _process_file_action(
         self,
         action: str,

@@ -125,52 +125,6 @@ async def upload_file(
     )
 
 
-@app.put("/update", response_model=UploadResponse)
-async def update_file(
-    file_id: str = Query(..., description="file_id for Drive, blob path for GCS"),
-    file: UploadFile = File(...),
-    user=Depends(_get_current_user),
-):
-    temp_path = f"/tmp/{file.filename}"
-    with open(temp_path, "wb") as f:
-        f.write(await file.read())
-
-    try:
-        storage_source = user.get("storage_source")
-        owner = user.get("owner")
-        if storage_source == "drive":
-            if not user.get("token"):
-                raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google access token required for Drive update")
-            drive_ops = GoogleDriveOperations(access_token=user["token"])
-            result = await drive_ops.update_file(
-                file_id=file_id,
-                source_path=temp_path,
-                owner=owner,
-                file_name=file.filename,
-                mime_type=file.content_type,
-            )
-        elif storage_source == "gcs":
-            result = await gcs_ops.update_file(
-                source_path=temp_path,
-                dest_name=file_id,
-                mime_type=file.content_type,
-                owner=user.get("owner"),
-            )
-        else:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unsupported storage source: {storage_source}")
-    finally:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-
-    return UploadResponse(
-        file_id=result["file_id"],
-        file_name=file.filename,
-        storage_type=result["storage_type"],
-        url=result.get("url"),
-        message=f"File updated in {result['storage_type']}",
-    )
-
-
 @app.get("/get_all", response_model=ListFilesResponse)
 async def list_files(
     path: str = Query(default="/"),

@@ -181,49 +181,6 @@ class GoogleDriveOperations:
         }
 
 
-    async def update_file(
-        self,
-        file_id: str,
-        source_path: str,
-        owner: Optional[str] = None,
-        file_name: Optional[str] = None,
-        mime_type: Optional[str] = None,
-    ) -> dict:
-        meta = {}
-        if file_name:
-            meta["name"] = file_name
-
-        media = MediaFileUpload(
-            source_path,
-            mimetype=mime_type or "application/octet-stream",
-            resumable=True,
-        )
-        
-        file = self.service.files().update(
-            fileId=file_id,
-            body=meta,
-            media_body=media,
-            fields="id, name, webViewLink"
-        ).execute()
-
-        try:
-            text = extract_text_from_file(source_path)
-        except Exception as e:
-            logger.warning(f"Text extraction failed for {source_path}: {e}")
-            text = ""
-
-        await self._send_chunked_kafka(
-            "upload", file["name"], file["id"], text, owner, "drive",
-            file_size=os.path.getsize(source_path),
-        )
-
-        return {
-            "file_id": file["id"],
-            "url": file.get("webViewLink"),
-            "storage_type": "drive",
-        }
-
-
     async def _is_already_indexed(self, file_path: str, file_name: str, file_size: int) -> bool:
         """Check vector DB before downloading — skip if already indexed."""
         try:

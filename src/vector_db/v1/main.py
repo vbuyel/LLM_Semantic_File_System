@@ -115,31 +115,6 @@ async def _run_consumer_loop():
                         "correlation_id": correlation_id,
                         "data": result.model_dump(mode="json"),
                     }
-                elif action == "update":
-                    chunk_index = payload.get("chunk_index", 0)
-                    print(f"File is updating (chunk_index={chunk_index})")
-
-                    if chunk_index == 0:
-                        object_to_delete = DeleteObject(
-                            path=payload.get("file_path", ""),
-                            storage_type=payload.get("storage_type", ""),
-                            owner=payload.get("owner")
-                        )
-                        get_db().delete_object(object_to_delete)
-
-                    object_to_upload = UploadObject(
-                        owner=payload.get("owner"),
-                        file_name=payload.get("file_name", ""),
-                        file_path=payload.get("file_path", ""),
-                        text=payload.get("text", ""),
-                        file_size=payload.get("file_size", 0),
-                    )
-                    result = get_db().upload_object(object_to_upload, chunk_index=chunk_index)
-
-                    reply_message = {
-                        "correlation_id": correlation_id,
-                        "data": result.model_dump(mode="json"),
-                    }
                 elif action == "delete":
                     print("File is deleting now")
                     object_to_delete = DeleteObject(
