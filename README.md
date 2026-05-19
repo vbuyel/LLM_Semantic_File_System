@@ -72,16 +72,16 @@ graph TD
     GW <-->|REST API| LLM[LLM Service<br/>Port 8001]
     GW -->|REST API| FO[File Operations Service<br/>Port 8002]
     
-    LLM -->|Commands| Kafka[(Apache Kafka<br/>Port 9092)]
-    FO -->|Commands| Kafka[(Apache Kafka<br/>Port 9092)]
+    LLM <-->|Commands / Events| Kafka[(Apache Kafka<br/>Port 9092)]
+    FO -->|Commands / Events| Kafka[(Apache Kafka<br/>Port 9092)]
     
-    Kafka <-->|Commands / Events| VDB[Vector Database Service<br/>Port 8004]
+    Kafka <-->|Commands| VDB[Vector Database Service<br/>Port 8004]
     Kafka -->|Events| EDB[Event DB Service<br/>Port 8003]
     
     EDB <-->|WebSockets| GW
     
-    VDB <-->|Documents| PG[(PostgreSQL Database<br/>Port 5432)]
-    EDB <-->|Events| PG[(PostgreSQL Database<br/>Port 5432)]
+    VDB <-->|Documents| PG1[(PostgreSQL Database<br/>Port 5432)]
+    EDB <-->|Events| PG2[(PostgreSQL Database<br/>Port 5432)]
 
     FO <-.->|Storage for not auth| GCS[Google Cloud Storage]
     FO <-.->|Storage for auth| GD[Google Drive API]
