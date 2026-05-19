@@ -81,10 +81,10 @@ graph TD
     EDB <-->|WebSockets| GW
     
     VDB <-->|Documents| PG[(PostgreSQL Database<br/>Port 5432)]
-    VDB <-->|Events| PG[(PostgreSQL Database<br/>Port 5432)]
-    
-    FO <-.->|Storage Drivers| GCS[Google Cloud Storage]
-    FO <-.->|Storage Drivers| GD[Google Drive API]
+    EDB <-->|Events| PG[(PostgreSQL Database<br/>Port 5432)]
+
+    FO <-.->|| GCS[Google Cloud Storage]
+    FO <-.->|| GD[Google Drive API]
 ```
 
 ### Event-Driven Data Flow
