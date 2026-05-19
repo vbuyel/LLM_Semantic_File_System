@@ -19,6 +19,6 @@ class Settings(BaseSettings):
     EVENT_DB_URL: str = "http://localhost:8003"
     EVENT_DB_WS_URL: str = "ws://localhost:8003/ws/gateway"
 
-    model_config = SettingsConfigDict(env_file="src/gateway_auth/.env")
+    model_config = SettingsConfigDict(env_file=".env")
 
 settings = Settings()

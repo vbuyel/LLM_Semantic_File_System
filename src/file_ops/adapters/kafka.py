@@ -26,7 +26,7 @@ class KafkaOperations:
         self._request_topic = os.getenv("REQUEST_TOPICS", "service.requests").split(",")[0]
         self._reply_topic = os.getenv("REPLY_TOPIC", "service.replies")
         self._event_db_topic = os.getenv("EVENT_DB_TOPIC", "send_event")
-        self._producer = AIOKafkaProducer(**self._get_producer_config())
+        self._producer: AIOKafkaProducer | None = None
         KafkaOperations._initialized = True
 
 
@@ -40,6 +40,8 @@ class KafkaOperations:
 
     async def start(self) -> None:
         """Start the producer. Call once at app startup."""
+        if self._producer is None:
+            self._producer = AIOKafkaProducer(**self._get_producer_config())
         await self._producer.start()
         try:
             from aiokafka.admin import AIOKafkaAdminClient, NewTopic
