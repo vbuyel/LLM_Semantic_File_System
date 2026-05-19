@@ -67,21 +67,24 @@
 
 ```mermaid
 graph TD
-    UI[Frontend Dashboard<br/>Port 5500] <-->|HTTP / WebSockets| GW[Gateway & Auth Service<br/>Port 8000]
+    UI[Frontend Dashboard<br/>Port 5500] <-->|REST API| GW[Gateway & Auth Service<br/>Port 8000]
     
     GW <-->|REST API| LLM[LLM Service<br/>Port 8001]
-    GW <-->|REST API| FO[File Operations Service<br/>Port 8002]
+    GW -->|REST API| FO[File Operations Service<br/>Port 8002]
     
-    FO -.->|Upload / Sync Events| Kafka[(Apache Kafka<br/>Port 9092)]
+    LLM -->|Commands| Kafka[(Apache Kafka<br/>Port 9092)]
+    FO -->|Commands| Kafka[(Apache Kafka<br/>Port 9092)]
     
-    Kafka -->|Consumer: Index Documents| VDB[Vector Database Service<br/>Port 8004]
-    Kafka -->|Consumer: Persist Logs| EDB[Event DB Service<br/>Port 8003]
+    Kafka <-->|Commands / Events| VDB[Vector Database Service<br/>Port 8004]
+    Kafka -->|Events| EDB[Event DB Service<br/>Port 8003]
     
-    EDB <-->|WebSockets / HTTP| GW
+    EDB <-->|WebSockets| GW
     
-    VDB <-->|PostgreSQL + pgvector| PG[(PostgreSQL Database<br/>Port 5432)]
-    FO <-->|Storage Drivers| GCS[Google Cloud Storage]
-    FO <-->|Storage Drivers| GD[Google Drive API]
+    VDB <-->|Documents| PG[(PostgreSQL Database<br/>Port 5432)]
+    VDB <-->|Events| PG[(PostgreSQL Database<br/>Port 5432)]
+    
+    FO <-.->|Storage Drivers| GCS[Google Cloud Storage]
+    FO <-.->|Storage Drivers| GD[Google Drive API]
 ```
 
 ### Event-Driven Data Flow
