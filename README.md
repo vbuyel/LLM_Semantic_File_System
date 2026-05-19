@@ -83,8 +83,8 @@ graph TD
     VDB <-->|Documents| PG[(PostgreSQL Database<br/>Port 5432)]
     EDB <-->|Events| PG[(PostgreSQL Database<br/>Port 5432)]
 
-    FO <-.->|| GCS[Google Cloud Storage]
-    FO <-.->|| GD[Google Drive API]
+    FO <-.->|Storage for not auth| GCS[Google Cloud Storage]
+    FO <-.->|Storage for auth| GD[Google Drive API]
 ```
 
 ### Event-Driven Data Flow
