@@ -44,20 +44,20 @@
 
 ## What is Semantic FS?
 
-**Semantic FS** is a modern, high-performance file management system that elevates traditional file operations with AI-powered semantic search. Instead of relying solely on exact filename matches, the system indexes the *actual textual content* of your files and understands user intent using Natural Language Processing (NLP).
+**Semantic FS** is an event-driven file management platform that combines standard file operations with AI-powered semantic search. It indexes the actual text in your documents and retrieves files by meaning instead of by exact filename.
 
 ### For End Users
 
-- **Semantic Content Search**: Find your files by asking natural language questions like *"Where is my resume?"*, *"Find the tax invoice from last year"*, or *"Show me the Python script that processes data"*.
-- **Autonomous AI Assistant**: Chat with a persistent AI assistant that can seamlessly switch between searching your files (RAG) and searching the web to answer your questions.
-- **Unified Storage Interface**: Seamlessly switch between **Google Cloud Storage (GCS)** and **Google Drive** directly from a single web dashboard.
-- **Premium Real-Time Dashboard**: Monitor file uploads, database syncs, and event logs in a beautiful, responsive dark-themed user interface.
+- **Search by meaning**: Ask questions like *"Where is my resume?"*, *"Find the tax invoice from last year"*, or *"Show me the Python script that processes data"*.
+- **AI assistant experience**: Let the assistant choose whether to search your documents or use the web to answer your query.
+- **Unified storage access**: Switch between **Google Cloud Storage (GCS)** and **Google Drive** from one dashboard.
+- **Real-time activity view**: Track file uploads, database updates, and event logs as they happen.
 
 ### For Developers
 
-- **Strict Separation of Concerns**: Built as 5 completely autonomous, decoupled FastAPI microservices, each with its own package configuration (`requirements.txt`) and dedicated virtual environment (`.venv`).
-- **Event-Driven & Asynchronous**: Utilizes **Apache Kafka** for streaming events, such as tracking file uploads, background document extraction, and vector index synchronization.
-- **Robust Local Testing**: Comprehensive test coverage across all layers of the codebase (unit and system tests) running in fully isolated testing environments.
+- **Decoupled microservice design**: The project is composed of separate FastAPI services, each with its own `requirements.txt` and dedicated virtual environment.
+- **Event-driven architecture**: Uses **Apache Kafka** to stream events between services and keep the system responsive.
+- **Isolated test environments**: Each service has independent unit and system tests to avoid import conflicts.
 
 ---
 
@@ -127,29 +127,29 @@ Make sure you have the following installed on your system:
    git clone <repository-url>
    cd LLM_Semantic_File_System
    ```
-2. Create and fill in your root-level environment configuration file:
+2. Create and populate the root `.env` file:
    ```bash
    cp .env.example .env
    ```
-3. Edit the `.env` file with your credentials:
+3. Update `.env` with your credentials and local configuration:
    ```env
-   # Google OAuth Credentials (obtain from Google Cloud Console)
+   # Google OAuth Credentials (from Google Cloud Console)
    GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
    GOOGLE_CLIENT_SECRET=your_google_client_secret
-   
+
    # JWT Configuration
    JWT_SECRET=your_jwt_signature_secret_key
-   
+
    # LLM Backend Configuration
    OPENAI_API_KEY=sk-proj-... # Optional if using Ollama
-   MODEL=gpt-4o-mini          # or local ollama models like llama3
-   
+   MODEL=gpt-4o-mini          # or local Ollama model name
+
    # Web Search API (Optional)
    EXA_API_KEY=your_exa_search_api_key
-   
+
    # Cloud Storage Buckets
    GCS_BUCKET_NAME=your-gcs-bucket-name
-   
+
    # PostgreSQL Connection Info (Vector DB & Event DB)
    DOCS_POSTGRESQL_USERNAME=postgres
    DOCS_POSTGRESQL_PASSWORD=postgres
@@ -160,20 +160,7 @@ Make sure you have the following installed on your system:
 
 ---
 
-### 2. Spin up Services (Convenient Way)
-
-We have provided a premium, fully automated orchestration script: [run_services.sh](file:///Users/vladbuyel/Documents/Projects/LLM_Semantic_File_System/run_services.sh). It will automatically start Kafka, create topics, run all 5 microservices in their correct virtual environments, start the Frontend UI, and log everything nicely.
-
-```bash
-# Run the orchestration script
-./run_services.sh
-```
-
-To stop all background microservices, simply press `Ctrl+C` in your terminal. The script will trap the signal and shut everything down safely!
-
----
-
-### 3. Spin up Services (Manual Way)
+### 2. Spin up Services
 
 If you prefer starting services manually in separate terminals, follow this order:
 
@@ -218,26 +205,21 @@ If you prefer starting services manually in separate terminals, follow this orde
 
 ### The Global `pytest` Import Conflict
 
-Since each microservice is a completely decoupled Python project containing duplicate top-level package names (such as `domain` and `adapters`), running a simple global command like:
-```bash
-pytest -v
-```
-from the root directory **will fail with 24+ ModuleNotFoundError/ImportError conflicts**. This is because Python's module discovery mechanism gets confused about which service's `domain.domain` or `adapters` package to import.
+Because each microservice is organized as an independent Python package, running `pytest` from the repo root can cause module resolution conflicts. Shared package names like `domain` and `adapters` may be resolved incorrectly across services.
 
-### The Solution: Service-Specific Environments
+### The Solution: Service-Specific Execution
 
-To resolve this completely, all tests should be executed *within* their individual service directories using their local virtual environments (`.venv/bin/pytest`), ensuring 100% test isolation.
+Run tests inside each service folder with its own virtual environment. This keeps imports isolated and avoids cross-service naming collisions.
 
 ### Running All Tests Sequentially
 
-We have created an automated test runner script [run_tests.sh](file:///Users/vladbuyel/Documents/Projects/LLM_Semantic_File_System/run_tests.sh) in the workspace root. It traverses through each microservice, activates its specific virtual environment, and executes its complete suite of system and unit tests:
+Use the automation script in the workspace root to run every service suite in sequence:
 
 ```bash
-# Run all tests cleanly
 ./run_tests.sh
 ```
 
-If you want to run tests for a specific service manually:
+To run a single service test suite manually:
 ```bash
 cd src/file_ops
 ./.venv/bin/pytest -v
