@@ -29,6 +29,7 @@ _kafka_healthy = False
 
 
 def get_db():
+    """Setup Event DB"""
     global _db
     if _db is None:
         _db = DataBase()
@@ -36,7 +37,7 @@ def get_db():
 
 
 async def _keep_consuming():
-    """Run consumer loop with auto-restart on unexpected crashes."""
+    """Run consumer loop with auto-restart on unexpected crashes"""
     global _kafka_task, _kafka_healthy
     retry_delay = 1.0
     while True:
@@ -130,7 +131,7 @@ def health_check():
 
 
 async def process_requests():
-    """Listen for Kafka requests, search DB, send replies."""
+    """Listen for Kafka requests"""
     global _kafka_healthy
     topics_str = os.getenv("REQUEST_TOPICS", "send_event")
     topics_list = [t.strip() for t in topics_str.split(",") if t.strip()]
@@ -160,39 +161,34 @@ async def process_requests():
         async for msg in consumer:
             try:
                 data = msg.value
-                print(f"[DEBUG] EventDB received Kafka message: {data}")
 
                 owner = data.get("owner")
                 ms_type = data.get("ms_type")
                 event = data.get("event")
                 correlation_id = data.get("correlation_id")
-                
-                print(f"[DEBUG] EventDB extracted owner='{owner}', ms_type='{ms_type}', event='{event}', correlation_id='{correlation_id}'")
-                
+
                 if not owner:
-                    print(f"[WARNING] EventDB: Skipping event '{event}' - no owner provided")
-                else:
-                    print(f"[DEBUG] EventDB: Adding event to database for owner='{owner}', ms_type='{ms_type}', event='{event}'")
-                    ev = get_db().add_event(owner=owner, ms_type=ms_type, event=event, correlation_id=correlation_id)
-                    print(f"[DEBUG] EventDB: Event added successfully")
-                    
-                    if _gateway_ws:
-                        print(f"[DEBUG] EventDB: Pushing event to gateway WebSocket")
-                        try:
-                            await _gateway_ws.send_json({
-                                "type": "events",
-                                "data": {
-                                    **ev.model_dump(),
-                                    "owner": owner,
-                                }
-                            })
-                            print(f"[DEBUG] EventDB: Event pushed to gateway")
-                        except Exception as e:
-                            print(f"[ERROR] EventDB: Failed to push event to gateway: {e}")
-                    else:
-                        print(f"[DEBUG] EventDB: No gateway WebSocket connected, skipping push")
+                    print("[DEBUG] EventDB: Skipping message without owner")
+                    continue
                 
-                print("[DEBUG] EventDB: Event processing completed")
+                ev = get_db().add_event(owner=owner, ms_type=ms_type, event=event, correlation_id=correlation_id)
+                print(f"[DEBUG] EventDB: Event added successfully")
+                
+                if _gateway_ws:
+                    try:
+                        await _gateway_ws.send_json({
+                            "type": "events",
+                            "data": {
+                                **ev.model_dump(),
+                                "owner": owner,
+                            }
+                        })
+                        print(f"[DEBUG] EventDB: Event pushed to gateway")
+                    except Exception as e:
+                        print(f"[ERROR] EventDB: Failed to push event to gateway: {e}")
+                else:
+                    print(f"[DEBUG] EventDB: No gateway WebSocket connected, skipping push")
+                
             except Exception as e:
                 print(f"[ERROR] EventDB: Error processing message: {e}")
     finally:

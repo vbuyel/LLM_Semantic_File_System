@@ -45,11 +45,13 @@ class DataBase:
 
 
     def _get_connection(self):
+        """Called each time to prevent Event DB Failure"""
         conn = psycopg.connect(self.url, autocommit=True)
         return conn
 
 
     def _setup_database(self):
+        """Setup Event DB when starting the server"""
         conn = self._get_connection()
         try:
             conn.execute(sql.SQL('''
@@ -58,14 +60,9 @@ class DataBase:
                     owner TEXT NOT NULL,
                     ms_type TEXT NOT NULL DEFAULT '',
                     event TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    correlation_id TEXT NOT NULL
                 )
-            ''').format(sql.Identifier(self.table)))
-            conn.execute(sql.SQL('''
-                ALTER TABLE {} ADD COLUMN IF NOT EXISTS ms_type TEXT NOT NULL DEFAULT ''
-            ''').format(sql.Identifier(self.table)))
-            conn.execute(sql.SQL('''
-                ALTER TABLE {} ADD COLUMN IF NOT EXISTS correlation_id TEXT
             ''').format(sql.Identifier(self.table)))
         except Exception as e:
             print(f"Warning creating table: {e}")
@@ -74,7 +71,7 @@ class DataBase:
 
 
     def add_event(self, owner: str, ms_type: str, event: str, correlation_id: str | None = None) -> EventItem:
-        print(f"[DEBUG] Database: add_event called with owner='{owner}', event='{event}', correlation_id='{correlation_id}'")
+        """Add user's event into DB"""
         conn = self._get_connection()
         try:
             print(f"[DEBUG] Database: Executing INSERT for owner='{owner}', event='{event}'")
@@ -96,6 +93,7 @@ class DataBase:
 
 
     def cleanup_old_events(self, retention_days: int, batch_size: int = 1000) -> int:
+        """Cleaning DB each time"""
         conn = self._get_connection()
         total_deleted = 0
         try:
@@ -127,7 +125,7 @@ class DataBase:
 
 
     def get_events_by_owner(self, owner: str, ms_type: str, limit: int = 1, offset: int = 0) -> list[EventItem]:
-        print(f"[DEBUG] Database: get_events_by_owner called for owner='{owner}', limit={limit}, offset={offset}")
+        """Get user's last event"""
         conn = self._get_connection()
         try:
             with conn.execute(
@@ -151,7 +149,7 @@ class DataBase:
 
 
     def get_events_by_owner_or_session(self, owner: str, correlation_id: str | None, ms_type: str, limit: int = 100, offset: int = 0) -> list[EventItem]:
-        print(f"[DEBUG] Database: get_events_by_owner_or_session called for owner='{owner}', correlation_id='{correlation_id}', limit={limit}, offset={offset}")
+        """Get user's last event"""
         conn = self._get_connection()
         try:
             if correlation_id:
