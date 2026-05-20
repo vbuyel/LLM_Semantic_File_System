@@ -160,9 +160,9 @@ export const api = {
         },
         connect(owner, onMessage) {
             let ws;
-            const corrId = Events.getCorrelationId();
 
             function _connect() {
+                const corrId = Events.getCorrelationId();
                 const wsUrl = corrId
                     ? `${WS_SERVER}/events/ws/${encodeURIComponent(owner)}?correlation_id=${corrId}`
                     : `${WS_SERVER}/events/ws/${encodeURIComponent(owner)}`;
