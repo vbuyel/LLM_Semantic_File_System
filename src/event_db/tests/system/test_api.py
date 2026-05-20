@@ -33,48 +33,40 @@ def test_get_user_events_without_correlation_id():
     mock_db = MagicMock()
     mock_db.get_events_by_owner.return_value = [
         EventItem(ms_type="action", event="click"),
-        EventItem(ms_type="action", event="scroll"),
     ]
 
     with patch("v1.main.get_db", return_value=mock_db):
         response = client.get(
             "/events/user/vlad",
-            params={"ms_type": "action", "limit": 10, "offset": 2}
+            params={"ms_type": "action"},
         )
         assert response.status_code == 200
         data = response.json()
         assert "events" in data
-        assert len(data["events"]) == 2
+        assert len(data["events"]) == 1
         assert data["events"][0]["event"] == "click"
-        assert data["events"][1]["event"] == "scroll"
 
-        mock_db.get_events_by_owner.assert_called_once_with(
-            "vlad", "action", limit=10, offset=2
-        )
-        mock_db.get_events_by_owner_or_session.assert_not_called()
+        mock_db.get_events_by_owner.assert_called_once_with("vlad", "action", None)
 
 
 def test_get_user_events_with_correlation_id():
-    """Verify GET /events/user/{owner} with correlation_id invokes get_events_by_owner_or_session."""
+    """Verify GET /events/user/{owner} with correlation_id passes it to get_events_by_owner."""
     mock_db = MagicMock()
-    mock_db.get_events_by_owner_or_session.return_value = [
+    mock_db.get_events_by_owner.return_value = [
         EventItem(ms_type="action", event="click"),
     ]
 
     with patch("v1.main.get_db", return_value=mock_db):
         response = client.get(
             "/events/user/vlad",
-            params={"ms_type": "action", "limit": 5, "offset": 0, "correlation_id": "corr-123"}
+            params={"ms_type": "action", "correlation_id": "corr-123"},
         )
         assert response.status_code == 200
         data = response.json()
         assert len(data["events"]) == 1
         assert data["events"][0]["event"] == "click"
 
-        mock_db.get_events_by_owner_or_session.assert_called_once_with(
-            "vlad", "corr-123", "action", limit=5, offset=0
-        )
-        mock_db.get_events_by_owner.assert_not_called()
+        mock_db.get_events_by_owner.assert_called_once_with("vlad", "action", "corr-123")
 
 
 def test_get_user_events_missing_ms_type():

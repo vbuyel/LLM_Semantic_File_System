@@ -102,13 +102,10 @@ app.add_middleware(
 
 
 @app.get("/events/user/{owner}")
-def get_user_events(owner: str, ms_type: str = Query(...), limit: int = Query(100), offset: int = Query(0), correlation_id: str | None = Query(None)):
-    """REST endpoint for fetching user events."""
+def get_user_events(owner: str, ms_type: str = Query(...), correlation_id: str | None = Query(None)):
+    """REST endpoint for fetching user's last event."""
     db = get_db()
-    if correlation_id:
-        events = db.get_events_by_owner_or_session(owner, correlation_id, ms_type, limit=limit, offset=offset)
-    else:
-        events = db.get_events_by_owner(owner, ms_type, limit=limit, offset=offset)
+    events = db.get_events_by_owner(owner, ms_type, correlation_id)
     return {"events": events}
 
 

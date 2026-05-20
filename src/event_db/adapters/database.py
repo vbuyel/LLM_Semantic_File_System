@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from typing import Any
 
 import psycopg
 from psycopg import sql
@@ -44,13 +43,13 @@ class DataBase:
         self._setup_database()
 
 
-    def _get_connection(self):
+    def _get_connection(self) -> psycopg.Connection:
         """Called each time to prevent Event DB Failure"""
         conn = psycopg.connect(self.url, autocommit=True)
         return conn
 
 
-    def _setup_database(self):
+    def _setup_database(self) -> None:
         """Setup Event DB when starting the server"""
         conn = self._get_connection()
         try:
@@ -124,52 +123,45 @@ class DataBase:
         return total_deleted
 
 
-    def get_events_by_owner(self, owner: str, ms_type: str, limit: int = 1, offset: int = 0) -> list[EventItem]:
-        """Get user's last event"""
-        conn = self._get_connection()
-        try:
-            with conn.execute(
-                sql.SQL('''
-                SELECT ms_type, event
-                FROM {}
-                WHERE owner = %s AND ms_type = %s
-                ORDER BY created_at DESC
-                LIMIT %s OFFSET %s
-                ''').format(sql.Identifier(self.table)),
-                (owner, ms_type, limit, offset),
-            ) as cur:
-                rows = cur.fetchall()
-                print(f"[DEBUG] Database: Found {len(rows)} events for owner='{owner}'")
-                return [
-                    EventItem(ms_type=r[0], event=r[1])
-                    for r in rows
-                ]
-        finally:
-            conn.close()
-
-
-    def get_events_by_owner_or_session(self, owner: str, correlation_id: str | None, ms_type: str, limit: int = 100, offset: int = 0) -> list[EventItem]:
-        """Get user's last event"""
+    def get_events_by_owner(
+        self,
+        owner: str,
+        ms_type: str,
+        correlation_id: str | None = None,
+    ) -> list[EventItem]:
+        """Get user's last event, optionally filtered by session correlation_id."""
         conn = self._get_connection()
         try:
             if correlation_id:
-                with conn.execute(
-                    sql.SQL('''
+                query = sql.SQL('''
                     SELECT ms_type, event
                     FROM {}
                     WHERE (owner = %s OR correlation_id = %s) AND ms_type = %s
                     ORDER BY created_at DESC
-                    LIMIT %s OFFSET %s
-                    ''').format(sql.Identifier(self.table)),
-                    (owner, correlation_id, ms_type, limit, offset),
-                ) as cur:
-                    rows = cur.fetchall()
-                    print(f"[DEBUG] Database: Found {len(rows)} events for owner='{owner}' or correlation_id='{correlation_id}'")
-                    return [
-                        EventItem(ms_type=r[0], event=r[1])
-                        for r in rows
-                    ]
+                    LIMIT 1
+                ''').format(sql.Identifier(self.table))
+                params = (owner, correlation_id, ms_type)
+                debug_msg = (
+                    f"[DEBUG] Database: Found {{}} events for owner='{owner}' "
+                    f"or correlation_id='{correlation_id}'"
+                )
             else:
-                return self.get_events_by_owner(owner, ms_type, limit, offset)
+                query = sql.SQL('''
+                    SELECT ms_type, event
+                    FROM {}
+                    WHERE owner = %s AND ms_type = %s
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                ''').format(sql.Identifier(self.table))
+                params = (owner, ms_type)
+                debug_msg = f"[DEBUG] Database: Found {{}} events for owner='{owner}'"
+
+            with conn.execute(query, params) as cur:
+                rows = cur.fetchall()
+                print(debug_msg.format(len(rows)))
+                return [
+                    EventItem(ms_type=r[0], event=r[1])
+                    for r in rows
+                ]
         finally:
             conn.close()

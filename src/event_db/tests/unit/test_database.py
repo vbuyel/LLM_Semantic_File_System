@@ -90,34 +90,31 @@ def test_add_event_db_failure():
 
 
 def test_get_events_by_owner():
-    """Verify get_events_by_owner returns expected EventItems with correct parameters."""
+    """Verify get_events_by_owner returns expected EventItems without correlation_id."""
     mock_conn = MagicMock()
     mock_cur = MagicMock()
-    mock_cur.fetchall.return_value = [
-        ("user_action", "event_1"),
-        ("user_action", "event_2"),
-    ]
+    mock_cur.fetchall.return_value = [("user_action", "event_1")]
     mock_conn.execute.return_value.__enter__.return_value = mock_cur
 
     with patch.object(DataBase, "_setup_database"):
         db = DataBase()
 
         with patch.object(db, "_get_connection", return_value=mock_conn):
-            events = db.get_events_by_owner(owner="vlad", ms_type="user_action", limit=5, offset=1)
+            events = db.get_events_by_owner(owner="vlad", ms_type="user_action")
 
-            assert len(events) == 2
+            assert len(events) == 1
             assert events[0].ms_type == "user_action"
             assert events[0].event == "event_1"
             assert events[0].correlation_id is None
 
             mock_conn.execute.assert_called_once()
             args, kwargs = mock_conn.execute.call_args
-            assert args[1] == ("vlad", "user_action", 5, 1)
+            assert args[1] == ("vlad", "user_action")
             mock_conn.close.assert_called_once()
 
 
-def test_get_events_by_owner_or_session():
-    """Verify get_events_by_owner_or_session chooses query path correctly."""
+def test_get_events_by_owner_with_correlation_id():
+    """Verify get_events_by_owner uses session filter when correlation_id is provided."""
     mock_conn = MagicMock()
     mock_cur = MagicMock()
     mock_cur.fetchall.return_value = [("user_action", "session_event")]
@@ -126,33 +123,18 @@ def test_get_events_by_owner_or_session():
     with patch.object(DataBase, "_setup_database"):
         db = DataBase()
 
-        # Branch 1: correlation_id provided
         with patch.object(db, "_get_connection", return_value=mock_conn):
-            events = db.get_events_by_owner_or_session(
+            events = db.get_events_by_owner(
                 owner="vlad",
-                correlation_id="corr-999",
                 ms_type="user_action",
-                limit=10,
-                offset=0
+                correlation_id="corr-999",
             )
             assert len(events) == 1
             assert events[0].event == "session_event"
             mock_conn.execute.assert_called_once()
             args, kwargs = mock_conn.execute.call_args
-            assert args[1] == ("vlad", "corr-999", "user_action", 10, 0)
+            assert args[1] == ("vlad", "corr-999", "user_action")
             mock_conn.close.assert_called_once()
-
-        # Branch 2: correlation_id is None (should delegate to get_events_by_owner)
-        with patch.object(db, "_get_connection", return_value=mock_conn):
-            with patch.object(db, "get_events_by_owner") as mock_get_owner:
-                db.get_events_by_owner_or_session(
-                    owner="vlad",
-                    correlation_id=None,
-                    ms_type="user_action",
-                    limit=10,
-                    offset=0
-                )
-                mock_get_owner.assert_called_once_with("vlad", "user_action", 10, 0)
 
 
 def test_cleanup_old_events_batching():
