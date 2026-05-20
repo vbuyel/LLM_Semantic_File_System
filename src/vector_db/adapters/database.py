@@ -54,7 +54,8 @@ class DataBase:
 
 
     def _setup_database(self):
-        conn = self._get_connection()
+        # conn = self._get_connection()
+        conn = psycopg.connect(self.url, autocommit=True, row_factory=dict_row)
         try:
             conn.execute("""CREATE EXTENSION IF NOT EXISTS vector""")
         except Exception as e:

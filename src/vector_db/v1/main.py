@@ -8,20 +8,12 @@ import json
 import os
 from pathlib import Path
 from contextlib import asynccontextmanager
+from sentence_transformers import SentenceTransformer
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-try:
-    from sentence_transformers import SentenceTransformer
-except ImportError:
-    SentenceTransformer = None
-
-try:
-    from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-except ImportError:
-    AIOKafkaConsumer = None
-    AIOKafkaProducer = None
 
 from adapters.database import DataBase
 from domain.domain import DeleteObject, RenameObject, UploadObject
