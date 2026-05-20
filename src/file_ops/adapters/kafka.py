@@ -4,6 +4,7 @@ import uuid
 from typing import Optional
 
 from aiokafka import AIOKafkaProducer
+from aiokafka.admin import AIOKafkaAdminClient, NewTopic
 
 from domain.domain import SendToKafka
 
@@ -44,7 +45,6 @@ class KafkaOperations:
             self._producer = AIOKafkaProducer(**self._get_producer_config())
         await self._producer.start()
         try:
-            from aiokafka.admin import AIOKafkaAdminClient, NewTopic
             admin = AIOKafkaAdminClient(bootstrap_servers=self._bootstrap_servers)
             await admin.start()
             existing = await admin.list_topics()

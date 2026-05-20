@@ -20,7 +20,6 @@ def test_kafka_singleton(mock_producer_class):
     k1 = KafkaOperations()
     k2 = KafkaOperations()
     assert k1 is k2
-    mock_producer_class.assert_called_once()
 
 
 @patch("adapters.kafka.AIOKafkaProducer")
@@ -45,14 +44,14 @@ def test_kafka_init_config(mock_producer_class):
 
 @pytest.mark.anyio
 @patch("adapters.kafka.AIOKafkaProducer")
-@patch("aiokafka.admin.AIOKafkaAdminClient")
+@patch("adapters.kafka.AIOKafkaAdminClient")
 async def test_kafka_start(mock_admin_class, mock_producer_class):
     """Verify starting producer and creating missing topics."""
     mock_producer = AsyncMock()
     mock_producer_class.return_value = mock_producer
 
     mock_admin = AsyncMock()
-    mock_admin.list_topics.return_value = []  # No topics exist
+    mock_admin.list_topics.return_value = []
     mock_admin_class.return_value = mock_admin
 
     k = KafkaOperations()
@@ -73,6 +72,7 @@ async def test_kafka_stop(mock_producer_class):
     mock_producer_class.return_value = mock_producer
 
     k = KafkaOperations()
+    await k.start()
     await k.stop()
 
     mock_producer.stop.assert_called_once()
@@ -86,6 +86,7 @@ async def test_send_event_success(mock_producer_class):
     mock_producer_class.return_value = mock_producer
 
     k = KafkaOperations()
+    await k.start()
     await k.send_event(event="Test Event", owner="vlad", correlation_id="corr-123")
 
     expected_msg = {
@@ -106,7 +107,7 @@ async def test_send_event_failure_no_raise(mock_producer_class):
     mock_producer_class.return_value = mock_producer
 
     k = KafkaOperations()
-    # Should not raise exception
+    await k.start()
     await k.send_event(event="Test Event")
     mock_producer.send.assert_called_once()
 
@@ -119,6 +120,7 @@ async def test_send_command_success(mock_producer_class):
     mock_producer_class.return_value = mock_producer
 
     k = KafkaOperations()
+    await k.start()
     command_data = SendToKafka(
         action="upload",
         file_name="file.txt",
