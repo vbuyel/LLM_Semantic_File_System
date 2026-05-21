@@ -3,15 +3,20 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import os
 
 from adapters.gcs_ops import GCSOperations
+from adapters.text_extractor import TextExtractorOperations
 
 
 @pytest.fixture(autouse=True)
 def mock_kafka():
-    """Mock KafkaOperations singleton."""
-    with patch("adapters.gcs_ops.KafkaOperations") as mock_class:
-        mock_instance = MagicMock()
-        mock_instance.send_command = AsyncMock()
-        mock_class.return_value = mock_instance
+    """Mock KafkaOperations used by GCS and TextExtractor."""
+    mock_instance = MagicMock()
+    mock_instance.send_command = AsyncMock()
+    with (
+        patch("adapters.gcs_ops.KafkaOperations") as mock_gcs_kafka,
+        patch("adapters.text_extractor.KafkaOperations") as mock_te_kafka,
+    ):
+        mock_gcs_kafka.return_value = mock_instance
+        mock_te_kafka.return_value = mock_instance
         yield mock_instance
 
 
@@ -57,7 +62,7 @@ async def test_gcs_upload_file_path_validation(mock_exists):
 @pytest.mark.anyio
 @patch("os.path.exists", return_value=True)
 @patch("os.path.getsize", return_value=500)
-@patch("adapters.gcs_ops.extract_text_from_file", return_value="Extracted text content")
+@patch.object(TextExtractorOperations, "extract_text_from_file", return_value="Extracted text content")
 async def test_gcs_upload_file_success(mock_extract, mock_getsize, mock_exists, mock_kafka):
     """Verify successful upload of file and sending Kafka event."""
     gcs = GCSOperations(bucket_name="my-bucket")
@@ -91,7 +96,7 @@ async def test_gcs_upload_file_success(mock_extract, mock_getsize, mock_exists, 
     # Verify text extraction called
     mock_extract.assert_called_once_with("local/dir/test.txt")
     
-    # Verify Kafka command sent
+    # Verify chunked Kafka upload sent
     mock_kafka.send_command.assert_called_once()
     sent_data = mock_kafka.send_command.call_args[0][0]
     assert sent_data.action == "upload"
@@ -99,13 +104,15 @@ async def test_gcs_upload_file_success(mock_extract, mock_getsize, mock_exists, 
     assert sent_data.file_path == "root/"
     assert sent_data.text == "Extracted text content"
     assert sent_data.owner == "vlad"
+    assert sent_data.storage_type == "gcs"
+    assert sent_data.chunk_index == 0
     assert sent_data.file_size == 500
 
 
 @pytest.mark.anyio
 @patch("os.path.exists", return_value=True)
 @patch("os.path.getsize", return_value=500)
-@patch("adapters.gcs_ops.extract_text_from_file", side_effect=Exception("Extraction Error"))
+@patch.object(TextExtractorOperations, "extract_text_from_file", side_effect=Exception("Extraction Error"))
 async def test_gcs_upload_file_extraction_failure(mock_extract, mock_getsize, mock_exists, mock_kafka):
     """Verify upload completes even if text extraction fails."""
     gcs = GCSOperations(bucket_name="my-bucket")
@@ -123,10 +130,8 @@ async def test_gcs_upload_file_extraction_failure(mock_extract, mock_getsize, mo
     result = await gcs.upload_file(source_path="test.txt", owner="vlad")
     assert result["file_id"] == "test.txt"
     
-    # Text sent to kafka should be empty
-    mock_kafka.send_command.assert_called_once()
-    sent_data = mock_kafka.send_command.call_args[0][0]
-    assert sent_data.text == ""
+    # Empty text after extraction failure is skipped by send_chunked_kafka
+    mock_kafka.send_command.assert_not_called()
 
 
 def test_gcs_list_files():

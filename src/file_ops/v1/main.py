@@ -82,9 +82,7 @@ async def upload_file(
     file: UploadFile = File(...),
     user=Depends(_get_current_user),
 ):
-    # Сохраняем во временный файл
     temp_path = f"/tmp/{file.filename}"
-
     with open(temp_path, "wb") as f:
         f.write(await file.read())
 
@@ -112,7 +110,6 @@ async def upload_file(
         else:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unsupported storage source: {storage_source}")
     finally:
-        # Cleanup
         if os.path.exists(temp_path):
             os.remove(temp_path)
 

@@ -5,7 +5,7 @@ from typing import Optional, List
 class UploadResponse(BaseModel):
     file_id: str
     file_name: str
-    storage_type: str  # "gcs" или "drive"
+    storage_type: str
     url: Optional[str] = None
     message: str
 

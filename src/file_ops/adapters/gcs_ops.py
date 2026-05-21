@@ -7,35 +7,34 @@ from typing import Optional
 import os
 
 from adapters.kafka import KafkaOperations
-from adapters.text_extractor import extract_text_from_file
+from adapters.text_extractor import TextExtractorOperations
 from domain.domain import SendToKafka
 
 logger = logging.getLogger(__name__)
 
 
 class GCSOperations:
-    def __init__(self, bucket_name: str, credentials_path: Optional[str] = None):
+    def __init__(self, bucket_name: str):
         self.bucket_name = bucket_name
-        self.credentials_path = credentials_path
         self._client = None
         self._bucket = None
         self._executor = ThreadPoolExecutor(max_workers=2)
         self.kafka = KafkaOperations()
+        self.text_extractor = TextExtractorOperations()
         self.owner_ops = "guest"
 
 
     @property
-    def client(self):
+    def client(self) -> storage.Client:
+        """Get the GCS client"""
         if self._client is None:
-            if self.credentials_path:
-                self._client = storage.Client.from_service_account_json(self.credentials_path)
-            else:
-                self._client = storage.Client()
+            self._client = storage.Client()
         return self._client
 
 
     @property
-    def bucket(self):
+    def bucket(self) -> storage.Bucket:
+        """Get the GCS bucket"""
         if self._bucket is None:
             self._bucket = self.client.bucket(self.bucket_name)
         return self._bucket
@@ -48,17 +47,7 @@ class GCSOperations:
         mime_type: Optional[str] = None,
         owner: Optional[str] = None,
     ) -> dict:
-        return await self._process_file_action("upload", source_path, owner, dest_name, mime_type)
-
-
-    async def _process_file_action(
-        self,
-        action: str,
-        source_path: str,
-        owner: Optional[str] = None,
-        dest_name: Optional[str] = None,
-        mime_type: Optional[str] = None,
-    ) -> dict:
+        """Upload a file to GCS"""
         if not source_path:
             raise ValueError("source_path cannot be empty")
         if not os.path.exists(source_path):
@@ -74,23 +63,21 @@ class GCSOperations:
         )
 
         try:
-            text = extract_text_from_file(source_path)
+            text = self.text_extractor.extract_text_from_file(source_path)
         except Exception as e:
             logger.warning(f"Text extraction failed for {source_path}: {e}")
             text = ""
 
         file_path = "root/"
         try:
-            await self.kafka.send_command(
-                SendToKafka(
-                    action=action,
-                    file_name=blob_name,
-                    file_path=file_path,
-                    text=text[:1000] if text else "",
-                    owner=owner,
-                    storage_type="gcs",
-                    file_size=os.path.getsize(source_path),
-                )
+            await self.text_extractor.send_chunked_kafka(
+                action="upload",
+                file_name=blob_name,
+                file_path=file_path,
+                text=text,
+                owner=owner,
+                storage_type="gcs",
+                file_size=os.path.getsize(source_path),
             )
         except Exception as e:
             logger.warning(f"Failed to send Kafka event: {e}")
@@ -103,8 +90,7 @@ class GCSOperations:
 
 
     def list_files(self, directory_path: str = "/") -> list:
-        if directory_path is None:
-            directory_path = "/"
+        """List files in a directory"""
         prefix = directory_path.lstrip("/")
         if prefix and not prefix.endswith("/"):
             prefix += "/"
@@ -136,6 +122,7 @@ class GCSOperations:
 
 
     def download_file(self, file_path: str) -> tuple:
+        """Download a file from GCS"""
         if not file_path:
             raise ValueError("file_path cannot be empty")
 
@@ -150,6 +137,7 @@ class GCSOperations:
 
 
     async def delete_file(self, file_path: str, owner: Optional[str] = None) -> None:
+        """Delete a file from GCS"""
         if not file_path:
             raise ValueError("file_path cannot be empty")
 
@@ -177,6 +165,7 @@ class GCSOperations:
 
 
     async def rename_file(self, file_path: str, new_name: str, owner: Optional[str] = None) -> dict:
+        """Rename a file in GCS"""
         if not file_path:
             raise ValueError("file_path cannot be empty")
         if not new_name:

@@ -5,6 +5,7 @@ import os
 import requests
 
 from adapters.google_drive_ops import GoogleDriveOperations
+from adapters.text_extractor import TextExtractorOperations
 
 
 @pytest.fixture(autouse=True)
@@ -29,49 +30,52 @@ def mock_drive_service():
 
 def test_chunk_text():
     """Verify text chunking splits by word boundaries under max character limits."""
+    extractor = TextExtractorOperations()
+
     # Short text
     short = "Hello World"
-    assert GoogleDriveOperations._chunk_text(short, max_chars=20) == [short]
+    assert extractor.chunk_text(short, max_chars=20) == [short]
 
     # Splitting at word boundaries
     text = "one two three four five"
     # max_chars=13 should chunk as: "one two three" (13 chars), "four five" (9 chars)
-    chunks = GoogleDriveOperations._chunk_text(text, max_chars=13)
+    chunks = extractor.chunk_text(text, max_chars=13)
     assert chunks == ["one two three", "four five"]
 
     # Single extremely long word
     long_word = "abcdefghijklmnopqrstuvwxyz"
-    assert GoogleDriveOperations._chunk_text(long_word, max_chars=5) == [long_word]
+    assert extractor.chunk_text(long_word, max_chars=5) == [long_word]
 
 
 @pytest.mark.anyio
-async def test_send_chunked_kafka(mock_kafka, mock_drive_service):
+async def test_send_chunked_kafka(mock_kafka):
     """Verify chunked text is cleaned, checked for readability, and sent to Kafka."""
-    drive = GoogleDriveOperations(access_token="test_token")
-    
+    extractor = TextExtractorOperations()
+    extractor.kafka = mock_kafka
+
     # 1. Unreadable text should be skipped
-    await drive._send_chunked_kafka(
+    await extractor.send_chunked_kafka(
         action="upload",
         file_name="bad.txt",
         file_path="root/",
         text="$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$",
         owner="vlad",
-        storage_type="drive"
+        storage_type="drive",
     )
     mock_kafka.send_command.assert_not_called()
 
     # 2. Readable text should be chunked and sent
     long_readable_text = " ".join(["word"] * 50)  # ~250 chars
     # We pass low max_chars to force chunking. We must make sure chunks are >= 10 chars to be readable.
-    with patch.object(drive, "_chunk_text", return_value=["chunk1_longer_than_10_chars", "chunk2_longer_than_10_chars"]):
-        await drive._send_chunked_kafka(
+    with patch.object(extractor, "chunk_text", return_value=["chunk1_longer_than_10_chars", "chunk2_longer_than_10_chars"]):
+        await extractor.send_chunked_kafka(
             action="upload",
             file_name="good.txt",
             file_path="root/",
             text=long_readable_text,
             owner="vlad",
             storage_type="drive",
-            file_size=100
+            file_size=100,
         )
         assert mock_kafka.send_command.call_count == 2
         
@@ -163,7 +167,7 @@ async def test_is_already_indexed(mock_get, mock_drive_service):
 
 
 @pytest.mark.anyio
-@patch("adapters.google_drive_ops.extract_text_from_bytes", return_value="drive file content")
+@patch.object(TextExtractorOperations, "extract_text_from_bytes", return_value="drive file content")
 async def test_background_vectorise(mock_extract, mock_kafka, mock_drive_service):
     """Verify background vectorisation downloads files, checks db, and sends chunks."""
     drive = GoogleDriveOperations(access_token="test-token")

@@ -11,91 +11,27 @@ from pathlib import Path
 import requests
 
 from adapters.kafka import KafkaOperations
-from adapters.text_extractor import (
-    clean_text,
-    extract_text_from_bytes,
-    extract_text_from_file,
-    is_readable,
-)
+from adapters.text_extractor import TextExtractorOperations
 from domain.domain import SendToKafka
 
 logger = logging.getLogger(__name__)
 
-MAX_CHUNK_CHARS = 150 * 1024  # 150KB per Kafka message — keeps each msg safely under broker limits
-
-MIME_TO_EXT = {
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
-}
-
 
 class GoogleDriveOperations:
+    _MIME_TO_EXT = {
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+    }
+
+
     def __init__(self, access_token: str):
         creds = Credentials(token=access_token)
         self.service = build("drive", "v3", credentials=creds)
         self._access_token = access_token
         self.kafka = KafkaOperations()
+        self.text_extractor = TextExtractorOperations()
         self._vector_db_url = os.getenv("VECTOR_DB_URL", "http://localhost:8004")
-
-
-    @staticmethod
-    def _chunk_text(text: str, max_chars: int = MAX_CHUNK_CHARS) -> list[str]:
-        """Split text at word boundaries, keeping each chunk ≤ max_chars."""
-        if len(text) <= max_chars:
-            return [text]
-        words = text.split()
-        chunks: list[str] = []
-        current: list[str] = []
-        current_len = 0
-        for word in words:
-            word_len = len(word)
-            sep = 1 if current else 0
-            if current_len + sep + word_len > max_chars and current:
-                chunks.append(" ".join(current))
-                current = [word]
-                current_len = word_len
-            else:
-                current_len += sep + word_len
-                current.append(word)
-        if current:
-            chunks.append(" ".join(current))
-        return chunks
-
-
-    async def _send_chunked_kafka(
-        self, action: str, file_name: str, file_path: str, text: str,
-        owner: Optional[str], storage_type: str, file_size: int = 0,
-    ) -> None:
-        text = clean_text(text)
-        if not is_readable(text):
-            logger.info(f"Skipping {file_path}: no readable text after cleaning")
-            return
-
-        raw_chunks = self._chunk_text(text)
-        chunks = [c for c in raw_chunks if is_readable(c)]
-        if not chunks:
-            logger.info(f"Skipping {file_path}: no readable chunks after filtering")
-            return
-
-        for i, chunk in enumerate(chunks):
-            try:
-                await self.kafka.send_command(
-                    SendToKafka(
-                        action=action,
-                        file_name=file_name,
-                        file_path=file_path,
-                        text=chunk,
-                        owner=owner,
-                        storage_type=storage_type,
-                        chunk_index=i,
-                        file_size=file_size,
-                    )
-                )
-            except Exception as e:
-                logger.warning(
-                    f"Failed to send Kafka event (chunk {i+1}/{len(chunks)}): {e}"
-                )
 
 
     def _download_file_with_retry(
@@ -162,15 +98,20 @@ class GoogleDriveOperations:
         ).execute()
 
         try:
-            text = extract_text_from_file(source_path)
+            text = self.text_extractor.extract_text_from_file(source_path)
         except Exception as e:
             logger.warning(f"Text extraction failed for {source_path}: {e}")
             text = ""
 
         real_path = await self._get_file_dir(file["id"])
         
-        await self._send_chunked_kafka(
-            "upload", file["name"], real_path, text, owner, "drive",
+        await self.text_extractor.send_chunked_kafka(
+            action="upload",
+            file_name=file["name"],
+            file_path=real_path,
+            text=text,
+            owner=owner,
+            storage_type="drive",
             file_size=os.path.getsize(source_path),
         )
 
@@ -235,16 +176,21 @@ class GoogleDriveOperations:
                             self._download_file_with_retry,
                             file_id, item.get('mimeType'), file_name,
                         )
-                        ext = Path(downloaded_name).suffix if '.' in downloaded_name else MIME_TO_EXT.get(mime_type, '')
+                        ext = Path(downloaded_name).suffix if '.' in downloaded_name else self._MIME_TO_EXT.get(mime_type, '')
                         if content:
-                            text = extract_text_from_bytes(content, ext)
+                            text = self.text_extractor.extract_text_from_bytes(content, ext)
                     except Exception as e:
                         logger.warning(f"Text extraction failed for {file_id}: {e}")
 
                 dir_path = await self._get_file_dir(file_id)
 
-                await self._send_chunked_kafka(
-                    "upload", file_name, dir_path, text, owner, "drive",
+                await self.text_extractor.send_chunked_kafka(
+                    action="upload",
+                    file_name=file_name,
+                    file_path=dir_path,
+                    text=text,
+                    owner=owner,
+                    storage_type="drive",
                     file_size=file_size,
                 )
 
