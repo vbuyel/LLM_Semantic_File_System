@@ -6,7 +6,7 @@ from domain.settings import Settings, oauth_states
 settings = Settings()
 
 
-def generate_google_oauth_redirect_uri():
+def generate_google_oauth_redirect_uri() -> str:
     random_state = secrets.token_urlsafe(16)
     oauth_states.add(random_state)
 

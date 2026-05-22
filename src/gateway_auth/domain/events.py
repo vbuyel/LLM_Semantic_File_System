@@ -6,4 +6,3 @@ class EventItem(BaseModel):
     ms_type: str
     event: str
     correlation_id: Optional[str] = None
-

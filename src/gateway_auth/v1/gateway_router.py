@@ -1,4 +1,5 @@
 import requests
+import uuid
 from typing import Optional
 
 from fastapi import status, APIRouter, Depends, File, Query, Request, HTTPException, UploadFile
@@ -11,8 +12,6 @@ from domain.settings import settings
 
 gateway_router = APIRouter()
 
-
-import uuid
 
 def _get_headers(request: Request, headers: Optional[dict[str, str]] = None) -> dict[str, str]:
     if headers is None:
@@ -51,7 +50,6 @@ def call_ai_agent(request: Request, user_request: UserRequest) -> ResponseToUser
         "correlation_id": headers.get("X-Correlation-ID"),
     }
 
-    print(f"[DEBUG] Sending owner to agent: {payload.get('owner')}")
     try:
         response = requests.post(
             url=f"{settings.AGENT_SERVER}/get_response",
@@ -78,7 +76,6 @@ def get_objects_from_storage(request: Request, query: PathToGetObjects = Depends
     """Get list of available user's files and folders"""
     headers = _get_headers(request)
     
-    print(f"[DEBUG] X-Owner: {headers.get("X-Owner")}")
     try:
         response = requests.get(
             url=f'{settings.FILE_OPS_SERVER}/get_all',
@@ -108,7 +105,6 @@ def upload_object_into_storage(request: Request, file: UploadFile = File(...)):
 
     files = {"file": (file.filename, file.file, file.content_type)}
 
-    print(f"[DEBUG] Sending owner to file_ops: {headers.get('X-Owner')}")
     try:
         response = requests.post(
             url=f"{settings.FILE_OPS_SERVER}/upload",
@@ -136,7 +132,6 @@ def delete_object_from_storage(request: Request, path: str = Query(...)):
     """Delete user's file or folder from Cloud"""
     headers = _get_headers(request)
 
-    print(f"[DEBUG] Sending owner to file_ops: {headers.get('X-Owner')}")
     try:
         response = requests.delete(
             url=f"{settings.FILE_OPS_SERVER}/delete",
@@ -164,7 +159,6 @@ def rename_object_in_storage(request: Request, path: str = Query(...), new_name:
     """Rename a file in cloud storage"""
     headers = _get_headers(request)
 
-    print(f"[DEBUG] Sending owner to file_ops: {headers.get('X-Owner')}")
     try:
         response = requests.put(
             url=f"{settings.FILE_OPS_SERVER}/rename",
@@ -192,7 +186,6 @@ def download_object_from_storage(request: Request, path: str = Query(...)):
     """Download a file from cloud storage and stream it back to the client."""
     headers = _get_headers(request)
 
-    print(f"[DEBUG] Sending owner to file_ops: {headers.get('X-Owner')}")
     try:
         response = requests.get(
             url=f"{settings.FILE_OPS_SERVER}/download",

@@ -54,15 +54,19 @@ async def relay_events():
         try:
             async with websockets.connect(EVENT_DB_WS) as edb:
                 print("[relay] Connected to event_db")
+                
                 async for raw in edb:
                     msg = json.loads(raw)
                     data = msg.get("data", {})
+
                     if msg.get("type") == "events" and data:
                         owner = data.get("owner")
                         event_corr_id = data.get("correlation_id")
+
                         for client in _clients.get(owner, []):
                             ws = client["ws"]
                             client_corr_id = client["correlation_id"]
+
                             # Only relay if correlation_id matches (or event has no correlation_id for backward compat)
                             if event_corr_id is None or event_corr_id == client_corr_id:
                                 try:

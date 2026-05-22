@@ -14,6 +14,7 @@ class Settings(BaseSettings):
         "email",
         "https://www.googleapis.com/auth/drive",
     ]
+    GOOGLE_TOKEN_URL: str = "https://oauth2.googleapis.com/token"
     AGENT_SERVER: str
     FILE_OPS_SERVER: str
     EVENT_DB_URL: str = "http://localhost:8003"

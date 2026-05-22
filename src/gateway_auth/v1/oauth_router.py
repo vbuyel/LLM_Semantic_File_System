@@ -1,6 +1,7 @@
 from fastapi import status, APIRouter, Body, HTTPException
 from typing import Annotated
 from fastapi.responses import RedirectResponse
+from fastapi import status
 import aiohttp
 import jwt
 
@@ -14,7 +15,7 @@ oauth_router = APIRouter()
 @oauth_router.get("/google/url")
 def get_google_oauth_redirect_url():
     uri = generate_google_oauth_redirect_uri()
-    return RedirectResponse(url=uri, status_code=302)
+    return RedirectResponse(url=uri, status_code=status.HTTP_302_FOUND)
 
 
 @oauth_router.post("/google/callback")
@@ -27,7 +28,7 @@ async def handle_google_oauth_callback(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid state")
     oauth_states.discard(state)
 
-    google_token_url = "https://oauth2.googleapis.com/token"
+    google_token_url = settings.GOOGLE_TOKEN_URL
 
     async with aiohttp.ClientSession() as session:
         async with session.post(
