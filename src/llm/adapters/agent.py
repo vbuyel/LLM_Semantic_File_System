@@ -3,7 +3,6 @@ import inspect
 import json
 import os
 import re
-import uuid
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -19,7 +18,7 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 class AgentResearcher:
     def __init__(self):
         self.client = OpenAI(
-            base_url="http://localhost:11434/v1",
+            base_url=os.getenv("BASE_MODEL_URL"),
             api_key="ollama",
         )
         self.model = os.getenv("MODEL")
@@ -146,6 +145,7 @@ class AgentResearcher:
             {"role": "user", "content": request.text},
         ]
         try:
+            # Prepare parameters for model
             request_kwargs = {
                 "model": self.model,
                 "messages": messages,
@@ -159,10 +159,13 @@ class AgentResearcher:
                     "type": "function",
                     "function": {"name": "call_rag"},
                 }
+            
+            # Call model with paramesters
             response = self.client.chat.completions.create(**request_kwargs)
         except Exception as e:
             return SearchResponse(text=f"Error: {e}")
 
+        # Get what tools should be used
         tool_calls = response.choices[0].message.tool_calls or []
         while tool_calls:
             messages.append(self._assistant_message_payload(response.choices[0].message))
