@@ -42,10 +42,10 @@ class GCSOperations:
 
     async def upload_file(
         self,
+        owner: str,
         source_path: str,
         dest_name: Optional[str] = None,
         mime_type: Optional[str] = None,
-        owner: Optional[str] = None,
     ) -> dict:
         """Upload a file to GCS"""
         if not source_path:
@@ -136,7 +136,7 @@ class GCSOperations:
         return (content, file_name, mime_type)
 
 
-    async def delete_file(self, file_path: str, owner: Optional[str] = None) -> None:
+    async def delete_file(self, file_path: str, owner: str) -> None:
         """Delete a file from GCS"""
         if not file_path:
             raise ValueError("file_path cannot be empty")
@@ -164,7 +164,7 @@ class GCSOperations:
             logger.warning(f"Failed to send Kafka event: {e}")
 
 
-    async def rename_file(self, file_path: str, new_name: str, owner: Optional[str] = None) -> dict:
+    async def rename_file(self, file_path: str, new_name: str, owner: str) -> dict:
         """Rename a file in GCS"""
         if not file_path:
             raise ValueError("file_path cannot be empty")

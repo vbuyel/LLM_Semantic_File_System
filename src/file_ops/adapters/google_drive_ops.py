@@ -77,8 +77,8 @@ class GoogleDriveOperations:
 
     async def upload_file(
         self,
+        owner: str,
         source_path: str,
-        owner: Optional[str] = None,
         file_name: Optional[str] = None,
         mime_type: Optional[str] = None,
         folder_id: Optional[str] = None,
@@ -263,7 +263,7 @@ class GoogleDriveOperations:
         return buffer.getvalue(), file_name, mime_type
 
 
-    async def delete_file(self, file_path: str, owner: Optional[str] = None) -> None:
+    async def delete_file(self, file_path: str, owner: str) -> None:
         try:
             file_meta = self.service.files().get(
                 fileId=file_path,
@@ -292,7 +292,7 @@ class GoogleDriveOperations:
             logger.warning(f"Failed to send Kafka event: {e}")
 
 
-    async def rename_file(self, file_path: str, new_name: str, owner: Optional[str] = None) -> dict:
+    async def rename_file(self, file_path: str, new_name: str, owner: str) -> dict:
         try:
             file_meta = self.service.files().get(
                 fileId=file_path,

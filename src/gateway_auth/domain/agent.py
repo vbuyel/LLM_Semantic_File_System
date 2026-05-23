@@ -1,10 +1,9 @@
 from pydantic import BaseModel
-from typing import Optional
 
 
 class UserRequest(BaseModel):
     text: str
-    owner: Optional[str] = None
+    owner: str
 
 class ResponseToUser(BaseModel):
     text: str

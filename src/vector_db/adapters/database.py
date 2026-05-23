@@ -54,7 +54,6 @@ class DataBase:
 
 
     def _setup_database(self):
-        # conn = self._get_connection()
         conn = psycopg.connect(self.url, autocommit=True, row_factory=dict_row)
         try:
             conn.execute("""CREATE EXTENSION IF NOT EXISTS vector""")
@@ -110,25 +109,15 @@ class DataBase:
         print("[DEBUG] Searching for simular text")
         conn = self._get_connection()
         try:
-            if owner is None:
-                result = conn.execute(f'''
-                    SELECT id, owner, file_name, file_path, text_chunk
-                    FROM {self.table}
-                    ORDER BY embedding <=> %s ASC
-                    LIMIT %s
-                    ''',
-                    (np.array(embedding, dtype=np.float32), limit),
-                )
-            else:
-                result = conn.execute(f'''
-                    SELECT id, owner, file_name, file_path, text_chunk
-                    FROM {self.table}
-                    WHERE owner = %s
-                    ORDER BY embedding <=> %s ASC
-                    LIMIT %s
-                    ''',
-                    (owner, np.array(embedding, dtype=np.float32), limit),
-                )
+            result = conn.execute(f'''
+                SELECT id, owner, file_name, file_path, text_chunk
+                FROM {self.table}
+                WHERE owner = %s
+                ORDER BY embedding <=> %s ASC
+                LIMIT %s
+                ''',
+                (owner, np.array(embedding, dtype=np.float32), limit),
+            )
             return RAGResults(data=[DocMetadata(**row) for row in result])
         finally:
             conn.close()
@@ -149,25 +138,15 @@ class DataBase:
         conn = self._get_connection()
         try:
             if chunk_index == 0:
-                if object.owner and object.file_name:
+                if object.file_name:
                     conn.execute(
                         f"DELETE FROM {self.table} WHERE file_path = %s AND file_name = %s AND owner = %s",
                         (object.file_path, object.file_name, object.owner),
                     )
-                elif object.owner:
+                else:
                     conn.execute(
                         f"DELETE FROM {self.table} WHERE file_path = %s AND owner = %s",
                         (object.file_path, object.owner),
-                    )
-                elif object.file_name:
-                    conn.execute(
-                        f"DELETE FROM {self.table} WHERE file_path = %s AND file_name = %s",
-                        (object.file_path, object.file_name),
-                    )
-                else:
-                    conn.execute(
-                        f"DELETE FROM {self.table} WHERE file_path = %s",
-                        (object.file_path,),
                     )
 
             for chunk in chunks:
@@ -187,25 +166,15 @@ class DataBase:
     def delete_object(self, object: DeleteObject) -> ObjectDeleted:
         conn = self._get_connection()
         try:
-            if object.owner and object.file_name:
+            if object.file_name:
                 cur = conn.execute(
                     f"DELETE FROM {self.table} WHERE file_path = %s AND file_name = %s AND owner = %s",
                     (object.path, object.file_name, object.owner),
                 )
-            elif object.owner:
+            else:
                 cur = conn.execute(
                     f"DELETE FROM {self.table} WHERE file_path = %s AND owner = %s",
                     (object.path, object.owner),
-                )
-            elif object.file_name:
-                cur = conn.execute(
-                    f"DELETE FROM {self.table} WHERE file_path = %s AND file_name = %s",
-                    (object.path, object.file_name),
-                )
-            else:
-                cur = conn.execute(
-                    f"DELETE FROM {self.table} WHERE file_path = %s",
-                    (object.path,),
                 )
             
             return ObjectDeleted(name=object.file_name or object.path, chunks_removed=cur.rowcount)
@@ -229,18 +198,12 @@ class DataBase:
 
             old_file_name = object.old_file_name
 
-            if object.owner and old_file_name:
+            if old_file_name:
                 where_clause = "file_path = %s AND file_name = %s AND owner = %s"
                 params = (object.old_path, old_file_name, object.owner)
-            elif object.owner:
+            else:
                 where_clause = "file_path = %s AND owner = %s"
                 params = (object.old_path, object.owner)
-            elif old_file_name:
-                where_clause = "file_path = %s AND file_name = %s"
-                params = (object.old_path, old_file_name)
-            else:
-                where_clause = "file_path = %s"
-                params = (object.old_path,)
 
             if object.new_path:
                 conn.execute(

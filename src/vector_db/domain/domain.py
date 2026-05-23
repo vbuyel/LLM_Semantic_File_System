@@ -16,7 +16,7 @@ class ObjectUploaded(BaseModel):
     chunks_added: int = 0
 
 class UploadObject(BaseModel):
-    owner: str | None = None
+    owner: str
     file_name: str
     file_path: str
     text: str | None = None
@@ -56,5 +56,5 @@ class ObjectRenamed(BaseModel):
     name: str
 
 class UploadEvent(BaseModel):
-    owner: Optional[str] = None
+    owner: str
     event: str
