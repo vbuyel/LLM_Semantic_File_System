@@ -35,7 +35,7 @@ def test_rag_results_validation():
 
 
 def test_upload_object_divide_into_chunks_basic():
-    uploader = UploadObject(file_name="test.txt", file_path="/path/test.txt")
+    uploader = UploadObject(owner="guest", file_name="test.txt", file_path="/path/test.txt")
     
     # Text with 10 words
     text = "one two three four five six seven eight nine ten"
@@ -52,7 +52,7 @@ def test_upload_object_divide_into_chunks_basic():
 
 
 def test_upload_object_divide_into_chunks_short_text():
-    uploader = UploadObject(file_name="test.txt", file_path="/path/test.txt")
+    uploader = UploadObject(owner="guest", file_name="test.txt", file_path="/path/test.txt")
     
     # Text is shorter than min_chunk_size
     text = "hello world"
@@ -63,13 +63,13 @@ def test_upload_object_divide_into_chunks_short_text():
 
 
 def test_upload_object_divide_into_chunks_empty():
-    uploader = UploadObject(file_name="test.txt", file_path="/path/test.txt")
+    uploader = UploadObject(owner="guest", file_name="test.txt", file_path="/path/test.txt")
     chunks = uploader.divide_into_chunks("")
     assert chunks == []
 
 
 def test_upload_object_divide_into_chunks_invalid_step():
-    uploader = UploadObject(file_name="test.txt", file_path="/path/test.txt")
+    uploader = UploadObject(owner="guest", file_name="test.txt", file_path="/path/test.txt")
     
     # When chunk_size <= overlap, range step is 0 or negative, which raises ValueError in range()
     with pytest.raises(ValueError):

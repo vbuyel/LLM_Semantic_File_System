@@ -49,13 +49,13 @@ async def test_gcs_upload_file_path_validation(mock_exists):
 
     # Empty source path
     with pytest.raises(ValueError) as exc:
-        await gcs.upload_file(source_path="")
+        await gcs.upload_file(owner="guest", source_path="")
     assert "source_path cannot be empty" in str(exc.value)
 
     # Path doesn't exist
     mock_exists.return_value = False
     with pytest.raises(FileNotFoundError) as exc:
-        await gcs.upload_file(source_path="non_existent.txt")
+        await gcs.upload_file(owner="guest", source_path="non_existent.txt")
     assert "Source file not found" in str(exc.value)
 
 

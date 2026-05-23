@@ -129,18 +129,19 @@ def test_search_similar_no_owner(mock_db_dependencies):
     mock_conn.execute.return_value = []
     
     query_emb = [0.1] * 384
-    results = db.search_similar(None, query_emb, limit=5)
+    results = db.search_similar("guest", query_emb, limit=5)
     
     assert results.data == []
     
-    # Verify exact SQL sent without owner filter
+    # Verify SQL always includes owner filter
     called_args = mock_conn.execute.call_args[0]
     sql = called_args[0]
     params = called_args[1]
     
-    assert "WHERE owner = %s" not in sql
-    assert isinstance(params[0], np.ndarray)
-    assert params[1] == 5
+    assert "WHERE owner = %s" in sql
+    assert params[0] == "guest"
+    assert isinstance(params[1], np.ndarray)
+    assert params[2] == 5
 
 
 def test_upload_object_no_text(mock_db_dependencies):
@@ -149,7 +150,7 @@ def test_upload_object_no_text(mock_db_dependencies):
     from adapters.database import DataBase
     db = DataBase()
     
-    obj = UploadObject(file_name="a.txt", file_path="dir/", text=None)
+    obj = UploadObject(owner="guest", file_name="a.txt", file_path="dir/", text=None)
     with pytest.raises(ValueError) as exc_info:
         db.upload_object(obj)
     assert "No text provided to upload" in str(exc_info.value)
@@ -164,7 +165,7 @@ def test_upload_object_already_indexed(mock_db_dependencies):
     # Mock _file_exists to return True
     db._file_exists = MagicMock(return_value=True)
     
-    obj = UploadObject(file_name="a.txt", file_path="dir/", text="some content", file_size=123)
+    obj = UploadObject(owner="guest", file_name="a.txt", file_path="dir/", text="some content", file_size=123)
     result = db.upload_object(obj)
     
     assert result.name == "a.txt"
@@ -244,14 +245,14 @@ def test_delete_object_path_only(mock_db_dependencies):
     mock_cursor = mock_conn.execute.return_value
     mock_cursor.rowcount = 10
     
-    obj = DeleteObject(path="dir/to/delete", file_name="", storage_type="local", owner="")
+    obj = DeleteObject(path="dir/to/delete", file_name="", storage_type="local", owner="guest")
     result = db.delete_object(obj)
     
     assert result.name == "dir/to/delete"
     assert result.chunks_removed == 10
     mock_conn.execute.assert_called_with(
-        "DELETE FROM documents WHERE file_path = %s",
-        ("dir/to/delete",)
+        "DELETE FROM documents WHERE file_path = %s AND owner = %s",
+        ("dir/to/delete", "guest")
     )
 
 
@@ -292,7 +293,7 @@ def test_rename_object_no_new_path(mock_db_dependencies):
         new_path="",
         new_name="new_name.txt",
         storage_type="local",
-        owner=""
+        owner="guest"
     )
     
     result = db.rename_object(obj)
@@ -300,6 +301,6 @@ def test_rename_object_no_new_path(mock_db_dependencies):
     
     # Verify update query when only new_name is provided
     mock_conn.execute.assert_called_with(
-        "\n                    UPDATE documents\n                    SET file_name = %s\n                    WHERE file_path = %s AND file_name = %s\n                    ",
-        ("new_name.txt", "old_dir/", "old.txt")
+        "\n                    UPDATE documents\n                    SET file_name = %s\n                    WHERE file_path = %s AND file_name = %s AND owner = %s\n                    ",
+        ("new_name.txt", "old_dir/", "old.txt", "guest")
     )
