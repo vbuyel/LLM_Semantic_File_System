@@ -98,6 +98,7 @@ class GCSOperations:
         files = []
 
         blobs = self.client.list_blobs(self.bucket, prefix=prefix, delimiter="/")
+        all_blobs = list(blobs)
 
         for prefix_name in blobs.prefixes:
             folder_name = prefix_name.rstrip("/").split("/")[-1]
@@ -109,7 +110,7 @@ class GCSOperations:
                 "modified": None,
             })
 
-        for blob in blobs:
+        for blob in all_blobs:
             files.append({
                 "path": blob.name,
                 "name": blob.name.split("/")[-1],
