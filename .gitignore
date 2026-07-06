@@ -2,3 +2,5 @@
 !.github/
 __*
 logs
+*.drawio
+benchmarks/results/
