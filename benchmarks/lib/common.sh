@@ -171,3 +171,44 @@ gateway_file_headers() {
   echo "-H" "X-Auth-Provider: ${BENCH_AUTH_PROVIDER}"
   echo "-H" "X-Storage-Source: ${BENCH_STORAGE_SOURCE}"
 }
+
+LLM_DATASET="${LLM_DATASET:-${BENCHMARK_ROOT}/llm/dataset_50.json}"
+LLM_EVAL_OWNER="${LLM_EVAL_OWNER:-${BENCH_OWNER}}"
+LLM_MIN_CASES="${LLM_MIN_CASES:-50}"
+
+run_llm_eval() {
+  local metric="$1"
+  shift
+  local llm_python="${PROJECT_ROOT}/src/llm/.venv/bin/python"
+  local eval_script="${BENCHMARK_ROOT}/llm/evaluate.py"
+
+  if [[ ! -x "$llm_python" ]]; then
+    echo "ERROR: LLM virtualenv not found at ${llm_python}" >&2
+    echo "Create it: cd src/llm && python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt" >&2
+    exit 1
+  fi
+
+  if [[ ! -f "$eval_script" ]]; then
+    echo "ERROR: evaluator not found: ${eval_script}" >&2
+    exit 1
+  fi
+
+  if [[ ! -f "$LLM_DATASET" ]]; then
+    echo "Generating dataset with ${LLM_MIN_CASES} cases..."
+    "$llm_python" "${BENCHMARK_ROOT}/llm/generate_dataset.py" \
+      --count "$LLM_MIN_CASES" \
+      --owner "$LLM_EVAL_OWNER" \
+      --output "$LLM_DATASET"
+  fi
+
+  (
+    cd "${PROJECT_ROOT}/src/llm"
+    exec "$llm_python" "$eval_script" \
+      --metric "$metric" \
+      --dataset "$LLM_DATASET" \
+      --owner "$LLM_EVAL_OWNER" \
+      --results-dir "$RESULTS_DIR" \
+      --min-cases "$LLM_MIN_CASES" \
+      "$@"
+  )
+}

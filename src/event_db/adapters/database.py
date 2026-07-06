@@ -50,7 +50,7 @@ class DataBase:
 
 
     def _setup_database(self) -> None:
-        """Setup Event DB when starting the server"""
+        """Setup Event DB when starting the server."""
         conn = self._get_connection()
         try:
             conn.execute(sql.SQL('''
@@ -60,9 +60,24 @@ class DataBase:
                     ms_type TEXT NOT NULL DEFAULT '',
                     event TEXT NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    correlation_id TEXT NOT NULL
+                    correlation_id TEXT NOT NULL DEFAULT ''
                 )
             ''').format(sql.Identifier(self.table)))
+
+            # Migrate legacy tables created before ms_type / correlation_id existed.
+            for migration in (
+                "ADD COLUMN IF NOT EXISTS ms_type TEXT NOT NULL DEFAULT ''",
+                "ADD COLUMN IF NOT EXISTS correlation_id TEXT NOT NULL DEFAULT ''",
+                "ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            ):
+                try:
+                    conn.execute(
+                        sql.SQL("ALTER TABLE {} " + migration).format(
+                            sql.Identifier(self.table)
+                        )
+                    )
+                except Exception as exc:
+                    print(f"Warning migrating table column: {exc}")
         except Exception as e:
             print(f"Warning creating table: {e}")
         finally:

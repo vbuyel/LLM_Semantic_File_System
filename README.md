@@ -233,7 +233,7 @@ cd src/file_ops
 ## Benchmarks
 ```Tested locally on MacOS Tahoe 26.5.1, Air M4, 24 RAM```
 
-The `benchmarks/` suite measures latency, throughput, error rate, and circuit-breaker behavior across all microservices. Results are written to `benchmarks/results/`.
+The `benchmarks/` suite measures latency, throughput, error rate, circuit-breaker behavior across all microservices, and LLM quality (TTFT, context relevance, groundedness, answer relevance). Results are written to `benchmarks/results/`.
 
 ### Running Benchmarks
 
@@ -244,6 +244,14 @@ With all services running locally:
 ```
 
 Individual scripts are also available: `latency.sh`, `throughput.sh`, `error_rate.sh`, and `circuit_breaker.sh`. To measure circuit-breaker trips under dependency failure, stop a downstream service and rerun with `CHAOS_TARGET=llm` (or another service name).
+
+LLM quality benchmarks (50 cases, RAG + generation + evaluation):
+
+```bash
+LLM_EVAL_OWNER=your@gmail.com ./benchmarks/run_llm_benchmarks.sh
+```
+
+Individual LLM scripts: `generation_latency.sh`, `context_relevance.sh`, `groundedness.sh`, `answer_relevance.sh`. Dataset: `benchmarks/llm/dataset_50.json`.
 
 ### Latest Results (2026-07-06)
 
@@ -291,6 +299,50 @@ Run timestamp: **2026-07-06** (local). All services healthy; 1000 requests per `
 | event_db Kafka consumer | 0 |
 | vector_db Kafka consumer | 0 |
 | **Total** | **0** (0.00 trips/min) |
+
+#### LLM Quality (50 cases)
+
+Run: `LLM_EVAL_OWNER=vladbuyel@gmail.com ./benchmarks/run_llm_benchmarks.sh`  
+Model: **gemma4:e4b** via Ollama (`localhost:11434`). Source: `benchmarks/results/llm_all_20260706_213831.json`.
+
+##### Generation Latency (TTFT — Time to First Token)
+
+| Stat | TTFT (ms) | Total generation (ms) |
+| :--- | ---: | ---: |
+| avg | 22,801 | 26,546 |
+| p50 | 21,775 | 25,432 |
+| p95 | 36,617 | 47,221 |
+| min | 12,608 | 13,126 |
+| max | 43,746 | 48,954 |
+| std | 6,715 | 9,279 |
+
+Per-case wall time: ~36–128 s (includes RAG retrieval + 3 LLM judge calls for quality scoring).
+
+##### Context Relevance (релевантность контекста)
+
+Score 0.0–1.0 — how well retrieved documents match the user query.
+
+| avg | p50 | p95 | min | max | std |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 0.79 | 1.00 | 1.00 | 0.00 | 1.00 | 0.36 |
+
+##### Groundedness / Faithfulness (отсутствие галлюцинаций)
+
+Score 0.0–1.0 — whether the answer is supported by retrieved context.
+
+| avg | p50 | p95 | min | max | std |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 0.00 |
+
+##### Answer Relevance (релевантность ответа)
+
+Score 0.0–1.0 — how well the final answer addresses the user's question.
+
+| avg | p50 | p95 | min | max | std |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 0.75 | 1.00 | 1.00 | 0.00 | 1.00 | 0.37 |
+
+**Summary:** 50/50 cases completed, 0 errors. Groundedness is perfect across all cases; context and answer relevance vary — lower scores mainly on port/config queries where indexed documents don't contain the exact fact (e.g. gateway port 8000).
 
 ---
 

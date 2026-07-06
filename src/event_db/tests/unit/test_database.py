@@ -30,6 +30,20 @@ def test_database_init_fallback_port():
             mock_setup.assert_called_once()
 
 
+def test_database_setup_runs_migrations():
+    """Verify _setup_database applies column migrations for legacy schemas."""
+    mock_conn = MagicMock()
+
+    with patch.object(DataBase, "_get_connection", return_value=mock_conn):
+        DataBase()
+
+    assert mock_conn.execute.call_count == 4
+    migration_sql = str(mock_conn.execute.call_args_list[1][0][0])
+    assert "ms_type" in migration_sql
+    assert "correlation_id" in str(mock_conn.execute.call_args_list[2][0][0])
+    mock_conn.close.assert_called_once()
+
+
 def test_database_setup_exception_handling():
     """Verify that _setup_database handles exceptions gracefully and closes connection."""
     mock_conn = MagicMock()
