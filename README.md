@@ -33,6 +33,9 @@
   - [The Global pytest Import Conflict](#the-global-pytest-import-conflict)
   - [The Solution: Service-Specific Environments](#the-solution-service-specific-environments)
   - [Running All Tests Sequentially](#running-all-tests-sequentially)
+- [Benchmarks](#benchmarks)
+  - [Running Benchmarks](#running-benchmarks)
+  - [Latest Results (2026-07-06)](#latest-results-2026-07-06)
 - [API Reference](#api-reference)
   - [Gateway Service (Port 8000)](#gateway-service-port-8000)
   - [LLM Service (Port 8001)](#llm-service-port-8001)
@@ -224,6 +227,70 @@ To run a single service test suite manually:
 cd src/file_ops
 ./.venv/bin/pytest -v
 ```
+
+---
+
+## Benchmarks
+```Tested locally on MacOS Tahoe 26.5.1, Air M4, 24 RAM```
+
+The `benchmarks/` suite measures latency, throughput, error rate, and circuit-breaker behavior across all microservices. Results are written to `benchmarks/results/`.
+
+### Running Benchmarks
+
+With all services running locally:
+
+```bash
+./benchmarks/run_all.sh
+```
+
+Individual scripts are also available: `latency.sh`, `throughput.sh`, `error_rate.sh`, and `circuit_breaker.sh`. To measure circuit-breaker trips under dependency failure, stop a downstream service and rerun with `CHAOS_TARGET=llm` (or another service name).
+
+### Latest Results (2026-07-06)
+
+Run timestamp: **2026-07-06** (local). All services healthy; 1000 requests per `/health` endpoint unless noted.
+
+#### Latency (Задержка)
+
+| Service | p50 (ms) | p95 (ms) | p99 (ms) | avg (ms) | min (ms) | max (ms) |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: |
+| gateway | 0.55 | 0.73 | 0.85 | 0.57 | 0.40 | 3.20 |
+| llm | 0.56 | 0.67 | 0.77 | 0.57 | 0.44 | 1.72 |
+| file_ops | 0.42 | 0.52 | 0.68 | 0.43 | 0.34 | 2.03 |
+| event_db | 0.43 | 0.52 | 0.63 | 0.43 | 0.33 | 1.11 |
+| vector_db | 0.55 | 0.66 | 0.80 | 0.57 | 0.45 | 2.02 |
+
+#### Throughput (Пропускная способность)
+
+1000 requests per service, concurrency = 10 (Apache Bench).
+
+| Service | RPS | Failed |
+| :--- | ---: | ---: |
+| gateway | 5,225 | 0 |
+| llm | 4,611 | 0 |
+| file_ops | 8,032 | 0 |
+| event_db | 7,955 | 0 |
+| vector_db | 5,207 | 0 |
+
+#### Error Rate (Уровень ошибок)
+
+| Check | Result |
+| :--- | :--- |
+| HTTP 5xx on `/health` (per service, n=1000) | **0.00%** across all five services |
+| Kafka consumer health (`event_db`, n=1000 polls) | consumer_dead=0, queue_fail_pct=0.00% |
+| Kafka consumer health (`vector_db`, n=1000 polls) | consumer_dead=0, queue_fail_pct=0.00% |
+| Gateway proxy routes (n=10 each) | `ai_agent` 0/10 5xx, `get_objects` 0/10 5xx (0.00% total) |
+
+#### Circuit Breaker Trips
+
+30s probe window, 2s interval, no chaos target (`CHAOS_TARGET=none`).
+
+| Probe target | Trips |
+| :--- | ---: |
+| gateway `/ai_agent` | 0 |
+| gateway `/get_objects` | 0 |
+| event_db Kafka consumer | 0 |
+| vector_db Kafka consumer | 0 |
+| **Total** | **0** (0.00 trips/min) |
 
 ---
 
