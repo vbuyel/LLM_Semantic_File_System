@@ -228,6 +228,45 @@ cd src/file_ops
 ./.venv/bin/pytest -v
 ```
 
+### Benchmark Results (Load Testing)
+The repository includes `load_test.py` for basic RPS and latency percentile measurements (p50/p95/p99).
+
+| Scenario | Gateway-only |
+| :--- | :--- |
+| Endpoint | `GET /health` |
+| Setup | `--concurrency 50 --duration 15` |
+| Total requests (n) | 104752 |
+| Errors | 0 |
+| RPS | 6980.8 |
+| p50 latency | 6.85 ms |
+| p95 latency | 8.73 ms |
+| p99 latency | 16.20 ms |
+| Max latency | 48.86 ms |
+| Environment | Local |
+
+| Scenario | Full pipeline (LLM agent via Ollama) |
+| :--- | :--- |
+| Endpoint + Model | `POST /gateway/ai_agent` + `gemma4:e4d` |
+| Setup | `--concurrency 1 --duration 120` (single-request sequential) |
+| Total requests (n) | 37 |
+| Errors | 0 |
+| RPS | 0.3 |
+| p50 latency | 2.85 s |
+| p95 latency | 5.5 s |
+| p99 latency | 8.69 s |
+| Max latency | 9.85 s |
+| Environment | M4 MacBook Air (24GB RAM) |
+
+### RAG Evaluation Metrics (LLM-as-judge)
+| Metric | Value |
+| :--- | :--- |
+| Command | `python rag_eval.py --input test_cases.json --output results.json --judge ollama --model gemma4:e4b` |
+| Judge model | `ollama/gemma4:e4b` |
+| Test cases (n) | 50 |
+| Avg groundedness | 96% |
+| Avg context relevance | 87.7% |
+| Output artifact | `results.json` |
+
 ---
 
 ## Benchmarks
