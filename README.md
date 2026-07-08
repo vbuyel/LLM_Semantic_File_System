@@ -34,8 +34,7 @@
   - [The Solution: Service-Specific Environments](#the-solution-service-specific-environments)
   - [Running All Tests Sequentially](#running-all-tests-sequentially)
 - [Benchmarks](#benchmarks)
-  - [Running Benchmarks](#running-benchmarks)
-  - [Latest Results (2026-07-06)](#latest-results-2026-07-06)
+  - [RAG Evaluation Metrics (LLM-as-judge)](#rag-evaluation-metrics-llm-as-judge)
 - [API Reference](#api-reference)
   - [Gateway Service (Port 8000)](#gateway-service-port-8000)
   - [LLM Service (Port 8001)](#llm-service-port-8001)
@@ -228,7 +227,7 @@ cd src/file_ops
 ./.venv/bin/pytest -v
 ```
 
-### Benchmark Results (Load Testing)
+# Benchmarks
 The repository includes `benchmarks/load_test.py` for basic RPS and latency percentile measurements (p50/p95/p99).
 
 | Scenario | Gateway-only |
@@ -266,122 +265,6 @@ The repository includes `benchmarks/load_test.py` for basic RPS and latency perc
 | Avg groundedness | 96% |
 | Avg context relevance | 87.7% |
 | Output artifact | `benchmarks/results.json` |
-
----
-
-## Benchmarks
-```Tested locally on MacOS Tahoe 26.5.1, Air M4, 24 RAM```
-
-The `benchmarks/` suite measures latency, throughput, error rate, circuit-breaker behavior across all microservices, and LLM quality (TTFT, context relevance, groundedness, answer relevance). Results are written to `benchmarks/results/`.
-
-### Running Benchmarks
-
-With all services running locally:
-
-```bash
-./benchmarks/run_all.sh
-```
-
-Individual scripts are also available: `latency.sh`, `throughput.sh`, `error_rate.sh`, and `circuit_breaker.sh`. To measure circuit-breaker trips under dependency failure, stop a downstream service and rerun with `CHAOS_TARGET=llm` (or another service name).
-
-LLM quality benchmarks (50 cases, RAG + generation + evaluation):
-
-```bash
-LLM_EVAL_OWNER=your@gmail.com ./benchmarks/run_llm_benchmarks.sh
-```
-
-Individual LLM scripts: `generation_latency.sh`, `context_relevance.sh`, `groundedness.sh`, `answer_relevance.sh`. Dataset: `benchmarks/llm/dataset_50.json`.
-
-### Latest Results (2026-07-06)
-
-Run timestamp: **2026-07-06** (local). All services healthy; 1000 requests per `/health` endpoint unless noted.
-
-#### Latency (Задержка)
-
-| Service | p50 (ms) | p95 (ms) | p99 (ms) | avg (ms) | min (ms) | max (ms) |
-| :--- | ---: | ---: | ---: | ---: | ---: | ---: |
-| gateway | 0.55 | 0.73 | 0.85 | 0.57 | 0.40 | 3.20 |
-| llm | 0.56 | 0.67 | 0.77 | 0.57 | 0.44 | 1.72 |
-| file_ops | 0.42 | 0.52 | 0.68 | 0.43 | 0.34 | 2.03 |
-| event_db | 0.43 | 0.52 | 0.63 | 0.43 | 0.33 | 1.11 |
-| vector_db | 0.55 | 0.66 | 0.80 | 0.57 | 0.45 | 2.02 |
-
-#### Throughput (Пропускная способность)
-
-1000 requests per service, concurrency = 10 (Apache Bench).
-
-| Service | RPS | Failed |
-| :--- | ---: | ---: |
-| gateway | 5,225 | 0 |
-| llm | 4,611 | 0 |
-| file_ops | 8,032 | 0 |
-| event_db | 7,955 | 0 |
-| vector_db | 5,207 | 0 |
-
-#### Error Rate (Уровень ошибок)
-
-| Check | Result |
-| :--- | :--- |
-| HTTP 5xx on `/health` (per service, n=1000) | **0.00%** across all five services |
-| Kafka consumer health (`event_db`, n=1000 polls) | consumer_dead=0, queue_fail_pct=0.00% |
-| Kafka consumer health (`vector_db`, n=1000 polls) | consumer_dead=0, queue_fail_pct=0.00% |
-| Gateway proxy routes (n=10 each) | `ai_agent` 0/10 5xx, `get_objects` 0/10 5xx (0.00% total) |
-
-#### Circuit Breaker Trips
-
-30s probe window, 2s interval, no chaos target (`CHAOS_TARGET=none`).
-
-| Probe target | Trips |
-| :--- | ---: |
-| gateway `/ai_agent` | 0 |
-| gateway `/get_objects` | 0 |
-| event_db Kafka consumer | 0 |
-| vector_db Kafka consumer | 0 |
-| **Total** | **0** (0.00 trips/min) |
-
-#### LLM Quality (50 cases)
-
-Run: `LLM_EVAL_OWNER=vladbuyel@gmail.com ./benchmarks/run_llm_benchmarks.sh`  
-Model: **gemma4:e4b** via Ollama (`localhost:11434`). Source: `benchmarks/results/llm_all_20260706_213831.json`.
-
-##### Generation Latency (TTFT — Time to First Token)
-
-| Stat | TTFT (ms) | Total generation (ms) |
-| :--- | ---: | ---: |
-| avg | 22,801 | 26,546 |
-| p50 | 21,775 | 25,432 |
-| p95 | 36,617 | 47,221 |
-| min | 12,608 | 13,126 |
-| max | 43,746 | 48,954 |
-| std | 6,715 | 9,279 |
-
-Per-case wall time: ~36–128 s (includes RAG retrieval + 3 LLM judge calls for quality scoring).
-
-##### Context Relevance (релевантность контекста)
-
-Score 0.0–1.0 — how well retrieved documents match the user query.
-
-| avg | p50 | p95 | min | max | std |
-| ---: | ---: | ---: | ---: | ---: | ---: |
-| 0.79 | 1.00 | 1.00 | 0.00 | 1.00 | 0.36 |
-
-##### Groundedness / Faithfulness (отсутствие галлюцинаций)
-
-Score 0.0–1.0 — whether the answer is supported by retrieved context.
-
-| avg | p50 | p95 | min | max | std |
-| ---: | ---: | ---: | ---: | ---: | ---: |
-| 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 0.00 |
-
-##### Answer Relevance (релевантность ответа)
-
-Score 0.0–1.0 — how well the final answer addresses the user's question.
-
-| avg | p50 | p95 | min | max | std |
-| ---: | ---: | ---: | ---: | ---: | ---: |
-| 0.75 | 1.00 | 1.00 | 0.00 | 1.00 | 0.37 |
-
-**Summary:** 50/50 cases completed, 0 errors. Groundedness is perfect across all cases; context and answer relevance vary — lower scores mainly on port/config queries where indexed documents don't contain the exact fact (e.g. gateway port 8000).
 
 ---
 
