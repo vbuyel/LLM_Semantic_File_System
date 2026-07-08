@@ -1,0 +1,409 @@
+{
+  "summary": {
+    "n_cases": 50,
+    "avg_groundedness": 96,
+    "avg_context_relevance": 87.7
+  },
+  "results": [
+    {
+      "index": 0,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'CV \u2013 Vlad Buyel.docx' related to: VLAD BUYEL AI/Backend Engineer \u2014 RAG & LLM Systems (part-time/intern-to-full-time) vladbuyel@gmail.com \u00b7 linke?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an exact repetition of the retrieved context, meaning every claim made is fully and directly supported by the provided source material.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The retrieved context is a highly relevant and detailed summary of the professional experience, skills, and titles that directly answer the key information requested about Vlad Buyel's career profile."
+    },
+    {
+      "index": 1,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'CV \u2013 Vlad Buyel.docx' related to: natural-language search and ask questions on files in the user\u2019s Google Drive or in Google Cloud Storage. Desi?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is a verbatim reproduction of the detailed technical description provided in the retrieved context, making it fully supported.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The retrieved context is highly detailed and entirely focused on the specific technologies and projects (RAG, Google Drive/GCS integration, natural language search) mentioned in the query."
+    },
+    {
+      "index": 2,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'CV \u2013 Vlad Buyel.docx' related to: documents and ask questions about them using retrieval-augmented generation (RAG), web search, and conversatio?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an exact reproduction of the retrieved context, meaning every claim presented is fully supported by the context.",
+      "relevance_score": 95,
+      "relevance_reasoning": "The retrieved context is highly relevant because it directly details specific experience in designing and building RAG pipelines, utilizing the exact technologies (FAISS, LangChain, etc.) requested by the query."
+    },
+    {
+      "index": 3,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'CV \u2013 Vlad Buyel.docx' related to: Docker, Google Cloud Platform, CI/CD (GitHub Actions) EDUCATION BSUIR (link) | Computer Science | Sep 2024 \u2013 P?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an exact duplicate of the retrieved context, meaning every claim is fully supported by the source material.",
+      "relevance_score": 95,
+      "relevance_reasoning": "The retrieved context is highly relevant because it explicitly provides the requested technical skills, educational details, and supporting certifications, with only the 'Hobbies' section being extraneous."
+    },
+    {
+      "index": 4,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'Untitled document' related to: VLAD BUYEL Software Engineer | AI/ML Engineer | LLM & RAG Systems | Event-Driven Microservices vladbuyel@gmail?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an exact repetition of the retrieved context, meaning every claim within the answer is fully supported by the source material.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The retrieved context is highly relevant because it provides detailed, structured professional experience and technical achievements that directly address the user's request for key professional information about the individual."
+    },
+    {
+      "index": 5,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'Untitled document' related to: with improved extensibility shipped to production; density-based ad metrics successfully embedded into the pro?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is a direct repetition of the retrieved context, meaning every claim is fully supported by the source material.",
+      "relevance_score": 80,
+      "relevance_reasoning": "The context starts with the exact phrases and information requested, but the majority of the retrieved context is irrelevant, generic technical boilerplate about a microservices architecture."
+    },
+    {
+      "index": 6,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'Untitled document' related to: pgvector, Docker, GCS, Google Drive API, OpenAI SDK, Sentence Transformers PointerLM AI File Assistant (link)?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is a direct, comprehensive reproduction of the retrieved context, meaning every factual claim is fully supported.",
+      "relevance_score": 95,
+      "relevance_reasoning": "The retrieved context explicitly lists all core keywords (pgvector, Docker, GCS, OpenAI SDK, Sentence Transformers, etc.) and provides detailed technical context relating them to an AI RAG pipeline, making the majority of the information highly relevant."
+    },
+    {
+      "index": 7,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'Untitled document' related to: Maze Generator (Delphi) (link) \u00b7 Pet Project Recursive backtracking maze generation + BFS/DFS pathfinding; ren?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an exact reproduction of the retrieved context, meaning every claim is fully supported by the provided source material.",
+      "relevance_score": 50,
+      "relevance_reasoning": "While the context contains the exact, highly relevant information about the 'Maze Generator' project, the majority of the retrieved text\u2014including skills, education, and other certifications\u2014is off-topic noise."
+    },
+    {
+      "index": 8,
+      "query": "For user vladbuyel@gmail.com, what key information is in '\u041a\u0443\u0440\u0441\u043e\u0432\u0430\u044f \u0440\u0430\u0431\u043e\u0442\u0430: LLM Semantic File System' related to: \u0412\u0412\u0415\u0414\u0415\u041d\u0418\u0415 \u0421\u043e\u0432\u0440\u0435\u043c\u0435\u043d\u043d\u0430\u044f \u044d\u043f\u043e\u0445\u0430 \u0446\u0438\u0444\u0440\u043e\u0432\u0438\u0437\u0430\u0446\u0438\u0438 \u0445\u0430\u0440\u0430\u043a\u0442\u0435\u0440\u0438\u0437\u0443\u0435\u0442\u0441\u044f \u044d\u043a\u0441\u043f\u043e\u043d\u0435\u043d\u0446\u0438\u0430\u043b\u044c\u043d\u044b\u043c \u0440\u043e\u0441\u0442\u043e\u043c \u043e\u0431\u044a\u0435\u043c\u043e\u0432 \u043d\u0435\u0441\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u043e\u0439 \u0438\u043d?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is a near-verbatim reproduction of the retrieved context, meaning every claim is fully and directly supported by the source material.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The retrieved context is an accurate and complete introduction that directly addresses the core topic of digital transformation, traditional system limitations, and the emergence of LLM-integrated semantic file systems, making it perfectly relevant."
+    },
+    {
+      "index": 9,
+      "query": "For user vladbuyel@gmail.com, what key information is in '\u041a\u0443\u0440\u0441\u043e\u0432\u0430\u044f \u0440\u0430\u0431\u043e\u0442\u0430: LLM Semantic File System' related to: \u0441\u0435\u043c\u0430\u043d\u0442\u0438\u0447\u0435\u0441\u043a\u043e\u0439 \u0444\u0430\u0439\u043b\u043e\u0432\u043e\u0439 \u0441\u0438\u0441\u0442\u0435\u043c\u044b, \u0438\u043d\u0442\u0435\u0433\u0440\u0438\u0440\u0443\u044e\u0449\u0435\u0439 LLM \u0438 \u043c\u0435\u0445\u0430\u043d\u0438\u0437\u043c\u044b \u0432\u0435\u043a\u0442\u043e\u0440\u043d\u043e\u0433\u043e \u043f\u043e\u0438\u0441\u043a\u0430 \u0434\u043b\u044f \u043e\u0431\u0435\u0441\u043f\u0435\u0447\u0435\u043d\u0438\u044f \u0438\u043d\u0442\u0435\u043b\u043b\u0435\u043a\u0442\u0443\u0430\u043b\u044c\u043d?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is a direct, comprehensive, and accurate verbatim extraction of the textual information provided in the retrieved context.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The retrieved context provides a comprehensive and highly relevant technical review, directly addressing the evolution, background, and modern implementations of the semantic file system integrating LLM and vector search, as requested by the query."
+    },
+    {
+      "index": 10,
+      "query": "For user vladbuyel@gmail.com, what key information is in '\u041a\u0443\u0440\u0441\u043e\u0432\u0430\u044f \u0440\u0430\u0431\u043e\u0442\u0430: LLM Semantic File System' related to: \u0438 \u0441\u0443\u043c\u043c\u0430\u0440\u0438\u0437\u0430\u0446\u0438\u0438, \u043e\u0434\u043d\u0430\u043a\u043e \u043e\u043d\u0438 \u0441\u0438\u043b\u044c\u043d\u043e \u043f\u0440\u0438\u0432\u044f\u0437\u0430\u043d\u044b \u043a \u043e\u0431\u043b\u0430\u0447\u043d\u044b\u043c \u044d\u043a\u043e\u0441\u0438\u0441\u0442\u0435\u043c\u0430\u043c \u0432\u0435\u043d\u0434\u043e\u0440\u043e\u0432 \u0438 \u043e\u0431\u043b\u0430\u0434\u0430\u044e\u0442 \u043e\u0433\u0440\u0430\u043d\u0438\u0447\u0435\u043d\u043d\u043e\u0439 \u0433\u0438\u0431\u043a\u043e\u0441\u0442\u044c\u044e?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is a direct repetition of the relevant sections of the retrieved context, meaning every claim made is fully and verbatim supported by the source material.",
+      "relevance_score": 95,
+      "relevance_reasoning": "The context is highly relevant because it directly addresses the core problem (vendor lock-in and limited flexibility for summarization) and provides specific technical solutions and architectural justifications related to LLM Semantic File Systems."
+    },
+    {
+      "index": 11,
+      "query": "For user vladbuyel@gmail.com, what key information is in '\u041a\u0443\u0440\u0441\u043e\u0432\u0430\u044f \u0440\u0430\u0431\u043e\u0442\u0430: LLM Semantic File System' related to: \u041e\u0431\u043e\u0441\u043d\u043e\u0432\u0430\u043d\u0438\u0435 \u0442\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u043e\u0431\u043b\u0438\u043a\u0430 (\u043f\u043e \u0441\u0445\u0435\u043c\u0435 \u043f\u0440\u043e\u0435\u043a\u0442\u0430) \u041f\u0440\u043e\u0435\u043a\u0442\u0438\u0440\u0443\u0435\u043c\u0430\u044f \u0441\u0438\u0441\u0442\u0435\u043c\u0430 \u0434\u043e\u043b\u0436\u043d\u0430 \u0440\u0435\u0448\u0430\u0442\u044c \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u0435 \u043a\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0435 \u043f?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an accurate and complete extraction of the key technical claims present in the retrieved context.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The retrieved context directly and comprehensively answers the query by detailing the technical justification (\u041e\u0431\u043e\u0441\u043d\u043e\u0432\u0430\u043d\u0438\u0435 \u0442\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u043e\u0431\u043b\u0438\u043a\u0430) and outlining the solutions for all critical problems (security, freshness, cognitive load) that the designed system must solve."
+    },
+    {
+      "index": 12,
+      "query": "For user vladbuyel@gmail.com, what key information is in '\u043f\u0437_5.pdf' related to: \u041f\u0417 5 (\u0411\u0443\u0435\u043b\u044c \u0412. \u0410., \u041a\u0430\u0440\u0431\u0430\u043d\u043e\u0432\u0438\u0447 \u0421. \u0410., \u041c\u043e\u0440\u043e\u0437\u043e\u0432 \u0418. \u0410.) \u041e\u043f\u0440\u0435\u0434\u0435\u043b\u0435\u043d\u0438\u0435 \u0441\u043f\u0440\u0430\u0432\u0435\u0434\u043b\u0438\u0432\u043e\u0439 \u0446\u0435\u043d\u044b \u043f\u0440\u043e\u0434\u0443\u043a\u0442\u0430 1. \u0414\u0440\u0430\u0439\u0432\u0435\u0440\u044b \u044d\u043a\u043e\u043d\u043e\u043c\u0438?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an exact copy of the retrieved context, meaning every claim is fully supported.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The retrieved context is highly relevant as it comprehensively details the methodology for defining fair pricing and discusses specific economic drivers, matching the query's focus and the document title exactly."
+    },
+    {
+      "index": 13,
+      "query": "For user vladbuyel@gmail.com, what key information is in '\u041a\u0443\u0440\u0441\u043e\u0432\u0430\u044f \u0440\u0430\u0431\u043e\u0442\u0430: LLM Semantic File System' related to: \u0442\u043e\u0447\u043d\u043e\u0441\u0442\u0438 \u043f\u043e\u0438\u0441\u043a\u0430. \u0412 \u043e\u0442\u043b\u0438\u0447\u0438\u0435 \u043e\u0442 \u043b\u0435\u043a\u0441\u0438\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u043f\u043e\u0438\u0441\u043a\u0430, \u043f\u0440\u043e\u0435\u043a\u0442\u0438\u0440\u0443\u0435\u043c\u0430\u044f \u0441\u0438\u0441\u0442\u0435\u043c\u0430 \u0434\u043e\u043b\u0436\u043d\u0430 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u044c \u0432\u0435\u043a\u0442\u043e\u0440\u043d\u044b\u0435 \u044d\u043c\u0431\u0435\u0434\u0434\u0438?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is a verbatim reproduction of the key sections provided in the retrieved context, ensuring that every claim is fully supported by the source material.",
+      "relevance_score": 98,
+      "relevance_reasoning": "The retrieved context is highly relevant as it not only directly addresses the shift from lexical to vector embeddings but also provides detailed, supporting information about the required RAG architecture and semantic retrieval operations."
+    },
+    {
+      "index": 14,
+      "query": "For user vladbuyel@gmail.com, what key information is in '\u041a\u0443\u0440\u0441\u043e\u0432\u0430\u044f \u0440\u0430\u0431\u043e\u0442\u0430: LLM Semantic File System' related to: Retrieval-Augmented Generation Actually Works, accessed April 28, 2026, https://bigdataboutique.com/blog/rag-a?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is a direct, unadulterated list of the sources provided in the retrieved context, meaning every piece of information stated is present in the context itself.",
+      "relevance_score": 80,
+      "relevance_reasoning": "The context includes numerous highly relevant academic and technical sources detailing RAG, LLMs, and vector databases, but the inclusion of multiple commercial product listings and unrelated topics significantly degrades the overall relevance."
+    },
+    {
+      "index": 15,
+      "query": "For user vladbuyel@gmail.com, what key information is in '\u041a\u0443\u0440\u0441\u043e\u0432\u0430\u044f \u0440\u0430\u0431\u043e\u0442\u0430: LLM Semantic File System' related to: Management and Document Automation: A Systematic Literature Review - MDPI, accessed April 28, 2026, https://ww?",
+      "groundedness_score": 0,
+      "groundedness_reasoning": "The generated answer merely repeats the list of retrieved context sources instead of answering the query or synthesizing key information about the specified topic.",
+      "relevance_score": 10,
+      "relevance_reasoning": "The retrieved context provides general background on RAG and semantic search but fails entirely to retrieve or provide specific key information from the user's specified source document, '\u041a\u0443\u0440\u0441\u043e\u0432\u0430\u044f \u0440\u0430\u0431\u043e\u0442\u0430: LLM Semantic File System'."
+    },
+    {
+      "index": 16,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: Comprehensive Analysis of AI Engineering Personnel and Global Labor Economics: 2026 Professional Evaluation an?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The answer is a verbatim reproduction of the retrieved context, meaning every claim made is fully and directly supported by the source material.",
+      "relevance_score": 90,
+      "relevance_reasoning": "The context is highly relevant as it matches the specified document topic and evaluation criteria (AI Engineering, 2026 evaluation), only failing to directly name or link the analysis to the specific user email address."
+    },
+    {
+      "index": 17,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: context of the 2026 labor market, the professional profile provided is assigned a rating of 8.0 out of 10. Whi?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The answer is a near-verbatim copy of the retrieved context, meaning every claim presented in the answer is directly and completely supported by the source material.",
+      "relevance_score": 95,
+      "relevance_reasoning": "The context is highly relevant as it directly provides the required market context and rating, and all subsequent detail elaborates on the professional profile's value proposition within the 2026 IT market."
+    },
+    {
+      "index": 18,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: more modern and commercially viable choice for backend development in 2026 compared to traditional frameworks.?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The answer is a direct, verbatim repetition of the key informational content provided in the retrieved context, ensuring full groundedness.",
+      "relevance_score": 95,
+      "relevance_reasoning": "The retrieved context is highly relevant, offering specific, modern, and commercially viable recommendations (FastAPI, LangChain, C/C++) that directly address the query's comparison request for 2026 backend development."
+    },
+    {
+      "index": 19,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: C/C++ knowledge. As organizations look to reduce token costs and improve inter-token latency for real-time app?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The answer is an exact repetition of the provided context, meaning every claim made is fully and directly supported by the source material.",
+      "relevance_score": 90,
+      "relevance_reasoning": "The context directly addresses the technical link between C/C++ and improving real-time performance, latency, and efficiency for LLMs, making it highly relevant to the specific query parameters."
+    },
+    {
+      "index": 20,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: scale.1 United States Market Analysis: The Premium on Specialized Performance The United States remains the gl?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an almost perfect reproduction of the retrieved context, meaning every factual claim is directly supported by the source material.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The context is perfectly relevant, directly analyzing the U.S. market, detailing the 'Premium on Specialized Performance,' and providing specific data points on AI compensation and market growth as requested."
+    },
+    {
+      "index": 21,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: various Silicon Valley startups are locked in a \"war for talent\" that can see specialized compensation package?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "Every phrase and specific data point provided in the generated answer is directly copied and fully supported by the retrieved context.",
+      "relevance_score": 95,
+      "relevance_reasoning": "The retrieved context highly relevantly addresses the specialized compensation packages and salary differentials related to the 'war for talent' in tech hubs like Silicon Valley."
+    },
+    {
+      "index": 22,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: C++ Multiplier in the U.S. Market For the professional profile in question, the C++ component is the primary c?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an exact copy of the retrieved context, meaning every factual claim is fully supported by the provided source material.",
+      "relevance_score": 95,
+      "relevance_reasoning": "The context is highly relevant, providing specific salary details, technical applications, and direct confirmation that C++ is the primary multiplier in the U.S. market, despite including a brief, off-topic segment about the European market."
+    },
+    {
+      "index": 23,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: sovereign AI, data privacy, and the ethical deployment of machine learning systems, largely driven by the full?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an exact reproduction of the retrieved context, meaning every single factual claim is fully and directly supported by the provided material.",
+      "relevance_score": 80,
+      "relevance_reasoning": "The initial sentences highly relevantly address the core policy themes (sovereign AI, data privacy, and ethical deployment) as specified by the query, but the majority of the retrieved context devolves into market analysis and salary figures, which are largely off-topic."
+    },
+    {
+      "index": 24,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: starting between \u20ac55,000 and \u20ac70,000.28 Switzerland remains the outlier in Europe, offering salaries that appr?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The answer is a direct repetition of the retrieved context, meaning every factual claim presented is fully and explicitly supported by the source material.",
+      "relevance_score": 90,
+      "relevance_reasoning": "The context is highly relevant as it directly addresses the starting salary range and the status of Switzerland, while the subsequent material provides necessary and related market context by comparing salaries across different global regions."
+    },
+    {
+      "index": 25,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: average AI engineer salaries around $48,800 to $55,200.20 The 2026 trend for Eastern Europe is the \"Narrowing?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The answer is a direct and comprehensive extraction of all factual claims provided within the retrieved context.",
+      "relevance_score": 100,
+      "relevance_reasoning": "All parts of the context directly address the requested salary ranges, the 2026 Eastern European trend, and provide highly relevant market analysis supporting the query's topic."
+    },
+    {
+      "index": 26,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: (SCO) and the Chinese market.29 Despite geopolitical challenges, the IT sector contributed 6.1% to the Belarus?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The answer is an almost complete reproduction of the factual claims found within the retrieved context, meaning every claim is fully supported.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The retrieved context is highly relevant as it immediately addresses the required geopolitical focus (China and the SCO) and provides detailed, structured market analysis for the Belarusian IT sector."
+    },
+    {
+      "index": 27,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: self-reported developer data.33 The Great Stone China-Belarus Industrial Park has emerged as a regional hub fo?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an almost verbatim repetition of the key information contained within the retrieved context, meaning every factual claim is fully supported.",
+      "relevance_score": 90,
+      "relevance_reasoning": "The context is highly relevant because it addresses both the specific details about the Great Stone China-Belarus Industrial Park and the salary/remote developer market analysis requested in the query."
+    },
+    {
+      "index": 28,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: charge a premium over local rates.35 The candidate\u2019s FastAPI and LangChain skills are particularly marketable?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an exact reproduction of the context and therefore all claims are fully supported by the retrieved text.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The retrieved context directly addresses all parts of the query, specifically detailing the concept of 'salary premiums,' confirming the marketability of FastAPI and LangChain skills, and providing supporting data on high-demand specialized roles."
+    },
+    {
+      "index": 29,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: systems, receive premiums of 20-35%.1 The professional profile in question is perfectly positioned to capture?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an exact reproduction of the retrieved context, meaning every claim is fully supported.",
+      "relevance_score": 95,
+      "relevance_reasoning": "The retrieved context is highly relevant because it directly provides the specific salary information (20-35% premiums) and lists the highly valued, full-stack technical skills (LangChain, FastAPI, C++) that determine the professional's market positioning and earning potential."
+    },
+    {
+      "index": 30,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: as the framework allows for the implementation of iterative loops\u2014dynamic cycles where the model, the prompts,?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is a near-verbatim repetition of the retrieved context, meaning every factual claim made in the answer is directly supported by the source material.",
+      "relevance_score": 75,
+      "relevance_reasoning": "The initial sentences directly address and complete the highly technical concept of dynamic cycles and iterative loops, but the remaining context shifts into general career advice regarding certifications and portfolios, which is off-topic."
+    },
+    {
+      "index": 31,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: recruiters as helpful supplements that demonstrate a commitment to continuous learning, but they are rarely su?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The answer is a verbatim repetition of the retrieved context, meaning every claim is fully supported by the provided source material.",
+      "relevance_score": 95,
+      "relevance_reasoning": "The context directly addresses the user's specific topic regarding recruiters and continuous learning, and subsequently provides highly relevant, actionable 'key information' about measurable outcomes and technical skills needed in the IT market."
+    },
+    {
+      "index": 32,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: the Eurozone and the continued growth of the global AI agent market\u2014the following salary projections represent?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an exact replication of the retrieved context, meaning every single factual claim made is fully and directly supported by the source material.",
+      "relevance_score": 95,
+      "relevance_reasoning": "The retrieved context is highly relevant because it immediately defines the salary projections and provides specific, actionable details about the European market and the unique benefits associated with AI-related roles."
+    },
+    {
+      "index": 33,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: Recommendations The professional profile characterized by 1+ year of experience with Python, FastAPI, LangChai?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "Every sentence and factual claim in the generated answer is copied directly from the provided retrieved context.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The retrieved context provides detailed, actionable market recommendations that directly address the query's request for key information regarding the specified professional profile."
+    },
+    {
+      "index": 34,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: backend skills with an understanding of AI governance and the EU AI Act. Building \"Trustworthy AI\" systems usi?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is a near-perfect reproduction of the key factual claims provided in the retrieved context.",
+      "relevance_score": 80,
+      "relevance_reasoning": "The context contains the precise key information regarding AI governance, the EU AI Act, and Trustworthy AI systems, but it is mixed with several paragraphs of general market trends and salary advice that are off-topic."
+    },
+    {
+      "index": 35,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: and extreme specialization. Those who can navigate the \"Inference Stack\"\u2014from the high-level logic of LangChai?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is a direct, verbatim extraction of the key claims and associated supporting citations found within the provided context.",
+      "relevance_score": 95,
+      "relevance_reasoning": "The retrieved context is highly relevant because it directly discusses 'extreme specialization,' the 'Inference Stack,' and the connection between these technical skills (like LangChain to C++) and top-tier salaries in the IT market."
+    },
+    {
+      "index": 36,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: accessed March 1, 2026, https://medium.com/@digvijay17july/ml-inference-runtimes-in-2026-an-architects-guide-t?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is merely a list of sources and does not contain any factual claims or claims regarding IT market analysis or salary predictions, making it vacuously grounded.",
+      "relevance_score": 95,
+      "relevance_reasoning": "The retrieved context is highly relevant as it successfully provides multiple resources covering both the requested salary/market analysis aspects and detailed technical deep dives related to ML inference runtimes."
+    },
+    {
+      "index": 37,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: Months? : r/generativeAI - Reddit, accessed March 1, 2026, https://www.reddit.com/r/generativeAI/comments/1q9q?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer merely lists the source titles and URLs provided in the retrieved context, meaning every piece of information presented is fully supported by the context itself.",
+      "relevance_score": 75,
+      "relevance_reasoning": "A significant portion of the context is highly relevant, providing multiple sources on salary trends, market analysis, and predictions for IT roles, despite including some off-topic architectural and career advice links."
+    },
+    {
+      "index": 38,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: in 2025 - Alcor, accessed March 1, 2026, https://alcor.com/ai-engineer-salary-by-country-2023/ AI Engineer Sal?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer does not make any substantive factual claims; it simply repeats the full list of sources provided in the context, meaning every part of the output is directly supported by the input context.",
+      "relevance_score": 95,
+      "relevance_reasoning": "The retrieved context consists almost entirely of links and titles directly related to AI Engineer and Machine Learning salaries and IT market analysis, highly aligning with the query's core topic."
+    },
+    {
+      "index": 39,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: | Built In - Tech Jobs Personalized, accessed March 1, 2026, https://builtin.com/salaries/us/machine-learning-?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer lists citations without making any declarative factual claims, thus containing no unsupported claims.",
+      "relevance_score": 30,
+      "relevance_reasoning": "While one context snippet is highly relevant to the US/Built In ML salary query, the majority of the retrieved context is entirely off-topic, focusing on Belarus, Germany, or general AI concepts."
+    },
+    {
+      "index": 40,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: Belarus - TalentUp.io, accessed March 1, 2026, https://talentup.io/salary/Machine%20Learning%20Engineer/Belaru?",
+      "groundedness_score": 0,
+      "groundedness_reasoning": "The answer merely repeats all the source links and titles instead of extracting or summarizing the key market information requested by the query.",
+      "relevance_score": 20,
+      "relevance_reasoning": "While the retrieved context discusses general topics related to salaries and AI in Belarus, none of the sources reference the required document ('IT Market Analysis and Salary Prediction') or contain the specific information requested from the precise TalentUp.io URL."
+    },
+    {
+      "index": 41,
+      "query": "For user vladbuyel@gmail.com, what key information is in 'IT Market Analysis and Salary Prediction' related to: 2026, https://www.ibm.com/new/training/unlock-your-ai-career-with-the-recently-updated-ibm-ai-engineering-prof?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is a verbatim concatenation of all the discrete items found in the retrieved context, meaning every piece of information presented is fully supported by the context.",
+      "relevance_score": 75,
+      "relevance_reasoning": "The context contains highly relevant information regarding 2026 AI careers and salary predictions (IBM, ERI, WEF), but the inclusion of an off-topic Reddit resume critique significantly lowers the overall relevance score."
+    },
+    {
+      "index": 42,
+      "query": "For user vladbuyel@gmail.com, what key information is in '\u043f\u0437_8.pdf' related to: \u041f\u0417 8 (\u0411\u0443\u0435\u043b\u044c \u0412. \u0410., \u041a\u0430\u0440\u0431\u0430\u043d\u043e\u0432\u0438\u0447 \u0421. \u0410., \u041c\u043e\u0440\u043e\u0437\u043e\u0432 \u0418. \u0410.) \u041f\u043b\u0430\u043d \u043c\u0430\u0440\u043a\u0435\u0442\u0438\u043d\u0433\u043e\u0432\u043e\u0439 \u0434\u0435\u044f\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u0438 \u0438 \u044d\u043a\u043e\u043d\u043e\u043c\u0438\u0447\u0435\u0441\u043a\u043e\u0435 \u043e\u0431\u043e\u0441\u043d\u043e\u0432\u0430\u043d\u0438?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an exact copy of the retrieved context, meaning every claim presented is fully and directly supported by the source material.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The retrieved context is a perfect match for the query, providing detailed information covering both the marketing plan development and the full economic justification, with no irrelevant material included."
+    },
+    {
+      "index": 43,
+      "query": "For user vladbuyel@gmail.com, what key information is in '\u043f\u0437_8.pdf' related to: 257,000 BYN. \u2022 \u0418\u043d\u0444\u0440\u0430\u0441\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0430 \u0438 \u041f\u041e: 15,000 BYN. \u2022 \u0418\u0442\u043e\u0433\u043e \u0438\u043d\u0432\u0435\u0441\u0442\u0438\u0446\u0438\u0438 \u0432 \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u043a\u0443: 272,000 BYN. 2.2. \u041e\u0446\u0435\u043d\u043a\u0430 \u044d\u043a\u043e\u043d?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an exact copy of the retrieved context, meaning every factual claim is fully supported by the provided source material.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The retrieved context starts with the exact data points requested and then provides a comprehensive, highly relevant elaboration on the economic assessment (2.2 onwards), which directly answers the query's intent."
+    },
+    {
+      "index": 44,
+      "query": "For user vladbuyel@gmail.com, what key information is in '\u043f\u0437_8.pdf' related to: / K_p * 100%. 2.4. \u041e\u0431\u0449\u0438\u0439 \u0432\u044b\u0432\u043e\u0434 \u043e\u0431 \u044d\u043a\u043e\u043d\u043e\u043c\u0438\u0447\u0435\u0441\u043a\u043e\u0439 \u0446\u0435\u043b\u0435\u0441\u043e\u043e\u0431\u0440\u0430\u0437\u043d\u043e\u0441\u0442\u0438 \u041f\u0440\u043e\u0435\u043a\u0442 \u044f\u0432\u043b\u044f\u0435\u0442\u0441\u044f \u044d\u043a\u043e\u043d\u043e\u043c\u0438\u0447\u0435\u0441\u043a\u0438 \u0446\u0435\u043b\u0435\u0441\u043e\u043e\u0431\u0440\u0430\u0437\u043d\u044b\u043c.?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an exact replication of the retrieved context, ensuring every factual claim is fully supported.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The entire retrieved context is highly relevant as it directly addresses and elaborates on the exact section and topic (economic feasibility) requested in the query."
+    },
+    {
+      "index": 45,
+      "query": "For user vladbuyel@gmail.com, what key information is in '\u043f\u0437_7.pdf' related to: \u041f\u0417 7 (\u0411\u0443\u0435\u043b\u044c \u0412. \u0410., \u041a\u0430\u0440\u0431\u0430\u043d\u043e\u0432\u0438\u0447 \u0421. \u0410., \u041c\u043e\u0440\u043e\u0437\u043e\u0432 \u0418. \u0410.) \u0421\u043e\u0437\u0434\u0430\u043d\u0438\u0435 \u0438\u0441\u0442\u043e\u0440\u0438\u0438 \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u043d\u043e\u0433\u043e \u043f\u0440\u043e\u0434\u0443\u043a\u0442\u0430 1. \u0426\u0435\u043b\u044c: \u042d\u043c\u043e\u0446\u0438\u043e\u043d\u0430\u043b\u044c?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is an exact, comprehensive reproduction of all facts presented in the retrieved context.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The retrieved context provides a detailed, structured project outline that directly elaborates on the emotional goal and execution details requested in the query."
+    },
+    {
+      "index": 46,
+      "query": "For user vladbuyel@gmail.com, what key information is in '\u043f\u0437_6.pdf' related to: \u041f\u0417 6 (\u0411\u0443\u0435\u043b\u044c \u0412. \u0410., \u041a\u0430\u0440\u0431\u0430\u043d\u043e\u0432\u0438\u0447 \u0421. \u0410., \u041c\u043e\u0440\u043e\u0437\u043e\u0432 \u0418. \u0410.) \u0412\u044b\u0431\u043e\u0440 \u043e\u043f\u0442\u0438\u043c\u0430\u043b\u044c\u043d\u043e\u0433\u043e \u043a\u0430\u043d\u0430\u043b\u0430 \u0440\u0430\u0441\u043f\u0440\u0435\u0434\u0435\u043b\u0435\u043d\u0438\u044f 1. \u0421\u043f\u0438\u0441\u043e\u043a \u0432\u043e\u0437\u043c\u043e\u0436\u043d\u044b?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "Every factual claim listed in the generated answer is directly and accurately replicated from the retrieved context.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The retrieved context is a direct, highly detailed summary covering the exact topic and scope requested by the query, making virtually all the information relevant."
+    },
+    {
+      "index": 47,
+      "query": "For user vladbuyel@gmail.com, what key information is in '\u043f\u0437_4.pdf' related to: \u041f\u0417 4 (\u0411\u0443\u0435\u043b\u044c \u0412. \u0410., \u041a\u0430\u0440\u0431\u0430\u043d\u043e\u0432\u0438\u0447 \u0421. \u0410., \u041c\u043e\u0440\u043e\u0437\u043e\u0432 \u0418. \u0410.) \u041e\u043f\u0440\u0435\u0434\u0435\u043b\u0435\u043d\u0438\u0435 \u0433\u0440\u0430\u043d\u0438\u0446 \u0438 \u043e\u0431\u0440\u0430\u0437\u0430 \u043f\u0440\u043e\u0434\u0443\u043a\u0442\u0430 1. \u041e\u043f\u0440\u0435\u0434\u0435\u043b\u0435\u043d\u0438\u0435 \u0431\u0438\u0437\u043d\u0435\u0441?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is a direct, verbatim copy of the retrieved context, meaning every claim is fully and explicitly supported by the source material.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The retrieved context is perfectly relevant, as it directly titles and provides detailed business requirements and market analysis for the exact project and topic specified in the query."
+    },
+    {
+      "index": 48,
+      "query": "For user vladbuyel@gmail.com, what key information is in '\u043f\u0437_4.pdf' related to: \u0438\u0433\u0440\u043e\u043a\u0430\u043c\u0438, \u0440\u043e\u0441\u0442 \u043c\u0435\u0434\u0438\u0430\u043d\u043d\u043e\u0439 \u0437\u0430\u0440\u043f\u043b\u0430\u0442\u044b \u0432 \u0418\u0422-\u0441\u0444\u0435\u0440\u0435 \u041c\u0438\u043d\u0441\u043a\u0430 (\u0434\u043e $8416$ BYN \u043a \u043d\u0430\u0447\u0430\u043b\u0443 2025 \u0433\u043e\u0434\u0430) \u0438 \u043d\u0430\u043b\u043e\u0433\u0438 \u0434\u043b\u044f \u0441\u0430\u043c\u043e\u0437\u0430\u043d\u044f\u0442\u044b?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The generated answer is identical to the retrieved context, meaning every claim presented is fully supported by the source material.",
+      "relevance_score": 40,
+      "relevance_reasoning": "While the context immediately contains the precise key information requested (salaries, self-employment taxes), the bulk of the retrieved text is dedicated to irrelevant details about restaurant tech development and business scope."
+    },
+    {
+      "index": 49,
+      "query": "For user vladbuyel@gmail.com, what key information is in '\u041f\u043e\u0438\u0441\u043a \u043f\u0430\u0442\u0435\u043d\u0442\u043e\u0432 \u0438 \u0441\u0442\u0430\u0442\u0435\u0439 \"\u041a\u0440\u0443\u0448\u043a\u0430 \u043d\u043e\u0447\u043d\u0438\u043a' related to: \u0410\u043d\u0430\u043b\u0438\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u043e\u0431\u0437\u043e\u0440 \u043f\u0430\u0442\u0435\u043d\u0442\u043d\u043e\u0433\u043e \u043b\u0430\u043d\u0434\u0448\u0430\u0444\u0442\u0430 \u0438 \u043d\u0430\u0443\u0447\u043d\u043e-\u0442\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u0438\u0445 \u0434\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u0439 \u0432 \u043e\u0431\u043b\u0430\u0441\u0442\u0438 \u0438\u043d\u0442\u0435\u043b\u043b\u0435\u043a\u0442\u0443\u0430\u043b\u044c\u043d\u044b\u0445 \u0441\u0438\u0441\u0442\u0435\u043c \u043e\u0441\u0432?",
+      "groundedness_score": 100,
+      "groundedness_reasoning": "The provided answer is an almost direct, verbatim copy of the retrieved context, meaning every claim made is fully and explicitly supported by the source material.",
+      "relevance_score": 100,
+      "relevance_reasoning": "The retrieved context is a direct, highly relevant analytical report that precisely matches the scope, keywords, and focus (patent landscape and smart lighting for mug nightlights) requested in the query."
+    }
+  ]
+}
