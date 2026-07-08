@@ -226,7 +226,7 @@ cd src/file_ops
 ```
 
 ### Benchmark Results (Load Testing)
-The repository includes `load_test.py` for basic RPS and latency percentile measurements (p50/p95/p99).
+The repository includes `benchmarks/load_test.py` for basic RPS and latency percentile measurements (p50/p95/p99).
 
 | Scenario | Gateway-only |
 | :--- | :--- |
@@ -257,12 +257,12 @@ The repository includes `load_test.py` for basic RPS and latency percentile meas
 ### RAG Evaluation Metrics (LLM-as-judge)
 | Metric | Value |
 | :--- | :--- |
-| Command | `python rag_eval.py --input test_cases.json --output results.json --judge ollama --model gemma4:e4b` |
+| Command | `python benchmarks/rag_eval.py --input benchmarks/test_cases.json --output benchmarks/results.json --judge ollama --model gemma4:e4b` |
 | Judge model | `ollama/gemma4:e4b` |
 | Test cases (n) | 50 |
 | Avg groundedness | 96% |
 | Avg context relevance | 87.7% |
-| Output artifact | `results.json` |
+| Output artifact | `benchmarks/results.json` |
 
 ---
 
