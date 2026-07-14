@@ -3,14 +3,24 @@ Run the server:
     uvicorn src.llm.endpoints.main:app --port 8001
 """
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from langfuse import get_client
 
 from domain.domain import SearchResponse, SearchRequest
 from adapters.agent import AgentResearcher
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    yield
+    # Ensure queued traces are sent on shutdown (long-running FastAPI still benefits)
+    get_client().flush()
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

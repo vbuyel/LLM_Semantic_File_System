@@ -14,3 +14,8 @@ os.environ["REQUEST_TOPIC_RAG"] = "mock-request-topic"
 os.environ["REPLY_TOPIC_RAG"] = "mock-reply-topic"
 os.environ["EVENT_DB_TOPIC"] = "mock-event-topic"
 os.environ["RAG_KAFKA_TIMEOUT_SEC"] = "5.0"
+# Disable Langfuse network I/O during unit/system tests
+os.environ["LANGFUSE_TRACING_ENABLED"] = "false"
+os.environ.setdefault("LANGFUSE_PUBLIC_KEY", "pk-lf-test")
+os.environ.setdefault("LANGFUSE_SECRET_KEY", "sk-lf-test")
+os.environ.setdefault("LANGFUSE_BASE_URL", "http://localhost:3000")

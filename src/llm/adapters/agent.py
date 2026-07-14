@@ -6,13 +6,20 @@ import re
 from pathlib import Path
 
 from dotenv import load_dotenv
-from openai import OpenAI
+
+# Load env BEFORE Langfuse imports so the client picks up credentials
+# (Langfuse initializes from LANGFUSE_* on first use / get_client()).
+_llm_dir = Path(__file__).resolve().parents[1]
+_repo_root = Path(__file__).resolve().parents[3]
+load_dotenv(dotenv_path=_repo_root / ".env")
+load_dotenv(dotenv_path=_llm_dir / ".env", override=True)
+
+from langfuse import get_client, propagate_attributes
+from langfuse.openai import OpenAI
 
 from domain.domain import SearchRequest, SearchResponse
 from adapters.rag_search import RAGSearch
 from adapters.web_search import WebSearch
-
-load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
 
 class AgentResearcher:
@@ -116,6 +123,7 @@ class AgentResearcher:
 
 
     async def get_response(self, request: SearchRequest) -> SearchResponse:
+        langfuse = get_client()
         messages = [
             {
                 "role": "system",
@@ -144,78 +152,118 @@ class AgentResearcher:
             },
             {"role": "user", "content": request.text},
         ]
-        try:
-            # Prepare parameters for model
-            request_kwargs = {
-                "model": self.model,
-                "messages": messages,
-                "tools": self.tools,
-                "top_p": 0.95,
-                "temperature": 0.3,
-                "max_tokens": 5000,
-            }
-            if self._should_force_rag(request.text):
-                request_kwargs["tool_choice"] = {
-                    "type": "function",
-                    "function": {"name": "call_rag"},
-                }
-            
-            # Call model with paramesters
-            response = self.client.chat.completions.create(**request_kwargs)
-        except Exception as e:
-            return SearchResponse(text=f"Error: {e}")
 
-        # Get what tools should be used
-        tool_calls = response.choices[0].message.tool_calls or []
-        while tool_calls:
-            messages.append(self._assistant_message_payload(response.choices[0].message))
-            for tool_call in tool_calls:
-                function_name = tool_call.function.name
-                function_args = tool_call.function.arguments
-
-                callable_func = self.tool_functions.get(function_name)
-                if callable_func is None:
-                    return SearchResponse(text=f"Unknown function: {function_name}")
-
+        # Parent span for the full agent turn; OpenAI generations + tools nest under it.
+        # Explicit input = user message only (not the whole SearchRequest / system prompt).
+        with langfuse.start_as_current_observation(
+            as_type="span",
+            name="ai-agent-turn",
+            input={"text": request.text},
+        ) as root_span:
+            with propagate_attributes(
+                user_id=request.owner,
+                session_id=request.correlation_id,
+                tags=["ai-agent", "semantic-fs"],
+                metadata={
+                    "correlation_id": request.correlation_id,
+                    "model": self.model,
+                },
+            ):
                 try:
-                    func_args = json.loads(function_args)
-                except json.JSONDecodeError:
-                    return SearchResponse(text=f"Invalid JSON args for function: {function_name}")
-
-                tool_text = func_args.get("text")
-                if not isinstance(tool_text, str) or not tool_text.strip():
-                    return SearchResponse(
-                        text="Tool call missing required argument: text"
-                    )
-
-                tool_owner = request.owner
-                corr_id = request.correlation_id
-                if inspect.iscoroutinefunction(callable_func):
-                    tool_result = await callable_func(tool_text, tool_owner, corr_id)
-                else:
-                    tool_result = await asyncio.to_thread(callable_func, tool_text, tool_owner, corr_id)
-                messages.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": tool_call.id,
-                        "content": tool_result.text,
+                    request_kwargs = {
+                        "name": "agent-reasoning",
+                        "model": self.model,
+                        "messages": messages,
+                        "tools": self.tools,
+                        "top_p": 0.95,
+                        "temperature": 0.3,
+                        "max_tokens": 5000,
                     }
-                )
+                    if self._should_force_rag(request.text):
+                        request_kwargs["tool_choice"] = {
+                            "type": "function",
+                            "function": {"name": "call_rag"},
+                        }
 
-            try:
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    tools=self.tools,
-                    top_p=0.9,
-                    temperature=0.3,
-                    max_tokens=5000,
-                )
+                    response = self.client.chat.completions.create(**request_kwargs)
+                except Exception as e:
+                    error_text = f"Error: {e}"
+                    root_span.update(output={"text": error_text}, level="ERROR")
+                    return SearchResponse(text=error_text)
+
                 tool_calls = response.choices[0].message.tool_calls or []
-            except Exception as e:
-                return SearchResponse(text=f"{e}")
+                while tool_calls:
+                    messages.append(
+                        self._assistant_message_payload(response.choices[0].message)
+                    )
+                    for tool_call in tool_calls:
+                        function_name = tool_call.function.name
+                        function_args = tool_call.function.arguments
 
-        content = response.choices[0].message.content
-        if content is None:
-            content = "Please try again"
-        return SearchResponse(text=content)
+                        callable_func = self.tool_functions.get(function_name)
+                        if callable_func is None:
+                            error_text = f"Unknown function: {function_name}"
+                            root_span.update(output={"text": error_text}, level="ERROR")
+                            return SearchResponse(text=error_text)
+
+                        try:
+                            func_args = json.loads(function_args)
+                        except json.JSONDecodeError:
+                            error_text = (
+                                f"Invalid JSON args for function: {function_name}"
+                            )
+                            root_span.update(output={"text": error_text}, level="ERROR")
+                            return SearchResponse(text=error_text)
+
+                        tool_text = func_args.get("text")
+                        if not isinstance(tool_text, str) or not tool_text.strip():
+                            error_text = "Tool call missing required argument: text"
+                            root_span.update(output={"text": error_text}, level="ERROR")
+                            return SearchResponse(text=error_text)
+
+                        tool_owner = request.owner
+                        corr_id = request.correlation_id
+                        with langfuse.start_as_current_observation(
+                            as_type="tool",
+                            name=function_name,
+                            input={"text": tool_text},
+                        ) as tool_span:
+                            if inspect.iscoroutinefunction(callable_func):
+                                tool_result = await callable_func(
+                                    tool_text, tool_owner, corr_id
+                                )
+                            else:
+                                tool_result = await asyncio.to_thread(
+                                    callable_func, tool_text, tool_owner, corr_id
+                                )
+                            tool_span.update(output={"text": tool_result.text})
+
+                        messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": tool_call.id,
+                                "content": tool_result.text,
+                            }
+                        )
+
+                    try:
+                        response = self.client.chat.completions.create(
+                            name="agent-reasoning-followup",
+                            model=self.model,
+                            messages=messages,
+                            tools=self.tools,
+                            top_p=0.9,
+                            temperature=0.3,
+                            max_tokens=5000,
+                        )
+                        tool_calls = response.choices[0].message.tool_calls or []
+                    except Exception as e:
+                        error_text = f"{e}"
+                        root_span.update(output={"text": error_text}, level="ERROR")
+                        return SearchResponse(text=error_text)
+
+                content = response.choices[0].message.content
+                if content is None:
+                    content = "Please try again"
+                root_span.update(output={"text": content})
+                return SearchResponse(text=content)

@@ -57,7 +57,7 @@ Respond with ONLY a JSON object: {{"score": <int 0-100>, "reasoning": "<one sent
 """
 
 
-def call_ollama(prompt, model="gemma4:e4d", url=None):
+def call_ollama(prompt, model="gemma4:e4b", url=None):
     url = url or os.environ.get("OLLAMA_URL", "http://localhost:11434/api/generate")
     body = json.dumps({"model": model, "prompt": prompt, "stream": False}).encode()
     req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
@@ -149,7 +149,7 @@ def main():
     parser.add_argument("--input", required=True, help="Path to test_cases.json")
     parser.add_argument("--output", default="results.json", help="Path to write results")
     parser.add_argument("--judge", choices=["ollama", "anthropic"], default="ollama")
-    parser.add_argument("--model", default="gemma4:e4d", help="Judge model name")
+    parser.add_argument("--model", default="gemma4:e4b", help="Judge model name")
     args = parser.parse_args()
 
     with open(args.input) as f:
