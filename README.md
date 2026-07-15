@@ -267,9 +267,9 @@ LLM-as-judge evaluators run on production agent traces in Langfuse (same 50-quer
 
 | Evaluator | Scores (n) | Avg | Score 0 | Score 1 |
 | :--- | ---: | ---: | ---: | ---: |
-| Hallucination | 56 | 0.18 | 42 | 7 |
-| Relevance | 56 | 0.83 | 2 | 39 |
-| Helpfulness | 48 | 0.78 | 1 | 30 |
+| Hallucination | 78 | 0.18 | 59 | 10 |
+| Relevance | 80 | 0.84 | 4 | 58 |
+| Helpfulness | 71 | 0.82 | 1 | 49 |
 
 Hallucination: lower average is better (0 = grounded, 1 = unsupported claim). Relevance and helpfulness: higher average is better (1 = pass).
 
