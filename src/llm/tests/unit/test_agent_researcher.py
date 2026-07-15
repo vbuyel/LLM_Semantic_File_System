@@ -79,6 +79,15 @@ def test_assistant_message_payload():
         ]
     }
 
+    # Gemini 3 thought_signature must round-trip on follow-up tool turns
+    tool_call.extra_content = {
+        "google": {"thought_signature": "sig-abc123"}
+    }
+    payload = AgentResearcher._assistant_message_payload(msg)
+    assert payload["tool_calls"][0]["extra_content"] == {
+        "google": {"thought_signature": "sig-abc123"}
+    }
+
 
 @pytest.mark.asyncio
 async def test_get_response_no_tools(mock_dependencies):

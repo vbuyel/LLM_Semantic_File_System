@@ -7,12 +7,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Load env BEFORE Langfuse imports so the client picks up credentials
-# (Langfuse initializes from LANGFUSE_* on first use / get_client()).
 _llm_dir = Path(__file__).resolve().parents[1]
-_repo_root = Path(__file__).resolve().parents[3]
-load_dotenv(dotenv_path=_repo_root / ".env")
-load_dotenv(dotenv_path=_llm_dir / ".env", override=True)
+load_dotenv(dotenv_path=_llm_dir / ".env")
 
 from langfuse import get_client, propagate_attributes
 from langfuse.openai import OpenAI

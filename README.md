@@ -34,7 +34,9 @@
   - [The Solution: Service-Specific Environments](#the-solution-service-specific-environments)
   - [Running All Tests Sequentially](#running-all-tests-sequentially)
 - [Benchmarks](#benchmarks)
-  - [RAG Evaluation Metrics (LLM-as-judge)](#rag-evaluation-metrics-llm-as-judge)
+  - [Gateway & Load Testing](#gateway--load-testing)
+  - [Agent Latency (Langfuse)](#agent-latency-langfuse)
+  - [Agent Quality Scores (Langfuse)](#agent-quality-scores-langfuse)
 - [API Reference](#api-reference)
   - [Gateway Service (Port 8000)](#gateway-service-port-8000)
   - [LLM Service (Port 8001)](#llm-service-port-8001)
@@ -227,8 +229,11 @@ cd src/file_ops
 ./.venv/bin/pytest -v
 ```
 
-# Benchmarks
-The repository includes `benchmarks/load_test.py` for basic RPS and latency percentile measurements (p50/p95/p99).
+## Benchmarks
+
+The repository includes `benchmarks/load_test.py` for gateway RPS/latency and `benchmarks/run_agent_traces.sh` to replay the 50-case test set against the live agent (with Langfuse tracing).
+
+### Gateway & Load Testing
 
 | Scenario | Gateway-only |
 | :--- | :--- |
@@ -243,28 +248,30 @@ The repository includes `benchmarks/load_test.py` for basic RPS and latency perc
 | Max latency | 48.86 ms |
 | Environment | Local |
 
-| Scenario | Full pipeline (LLM agent via Ollama) |
-| :--- | :--- |
-| Endpoint + Model | `POST /gateway/ai_agent` + `gemma4:e4d` |
-| Setup | `--concurrency 1 --duration 120` (single-request sequential) |
-| Total requests (n) | 37 |
-| Errors | 0 |
-| RPS | 0.3 |
-| p50 latency | 2.85 s |
-| p95 latency | 5.5 s |
-| p99 latency | 8.69 s |
-| Max latency | 9.85 s |
-| Environment | M4 MacBook Air (24GB RAM) |
+### Agent Latency (Langfuse)
 
-### RAG Evaluation Metrics (LLM-as-judge)
-| Metric | Value |
-| :--- | :--- |
-| Command | `python benchmarks/rag_eval.py --input benchmarks/test_cases.json --output benchmarks/results.json --judge ollama --model gemma4:e4b` |
-| Judge model | `ollama/gemma4:e4b` |
-| Test cases (n) | 50 |
-| Avg groundedness | 96% |
-| Avg context relevance | 87.7% |
-| Output artifact | `benchmarks/results.json` |
+End-to-end agent turns from `benchmarks/run_agent_traces.sh` (50 queries from `test_cases.json`, `POST /get_response`, model `llama3.2:latest` via Ollama). Percentiles in seconds.
+
+| Observation | p50 | p90 | p95 | p99 |
+| :--- | ---: | ---: | ---: | ---: |
+| **Trace** `ai-agent-turn` | 8.52 | 14.07 | 18.39 | 34.26 |
+| **Generation** `agent-reasoning` (initial) | 2.06 | 2.76 | 3.57 | 14.74 |
+| **Generation** `agent-reasoning-followup` | 6.21 | 10.62 | 14.26 | 29.14 |
+| **Tool** `call_rag` | 0.08 | 0.11 | 0.15 | 0.22 |
+
+RAG retrieval (`call_rag`) stays sub-second; most wall-clock time is LLM inference across the tool loop.
+
+### Agent Quality Scores (Langfuse)
+
+LLM-as-judge evaluators run on production agent traces in Langfuse (same 50-query benchmark run).
+
+| Evaluator | Scores (n) | Avg | Score 0 | Score 1 |
+| :--- | ---: | ---: | ---: | ---: |
+| Hallucination | 56 | 0.18 | 42 | 7 |
+| Relevance | 56 | 0.83 | 2 | 39 |
+| Helpfulness | 48 | 0.78 | 1 | 30 |
+
+Hallucination: lower average is better (0 = grounded, 1 = unsupported claim). Relevance and helpfulness: higher average is better (1 = pass).
 
 ---
 
